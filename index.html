@@ -108,6 +108,7 @@ window.onload = () => {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
     routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map);
+    
     L.marker([warehouse.lat, warehouse.lng], {
         icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">W</div>` })
     }).addTo(map).bindPopup("<b>Warehouse</b>");
@@ -168,7 +169,7 @@ async function loadRoute() {
             document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
             const geo = await geocode(rows[i][addrKey]);
             if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], ...geo });
-            await new Promise(r => setTimeout(r, 1100));
+            await new Promise(r => setTimeout(r, 1500));
         }
 
         stops = optimize(tempStops);
