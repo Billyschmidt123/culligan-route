@@ -1,123 +1,199 @@
-<div class="mgr-tabs">
-    <button class="mgr-tab-btn active" onclick="switchTab('reports')">DAILY SUMMARY</button>
-    <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
-    <button class="mgr-tab-btn" onclick="switchTab('cust-mgr')">CUSTOMER MGR</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Culligan Route Pro</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
+    #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
+    #sidebar-header { padding:15px; border-bottom:1px solid #444;}
+    #stop-list { flex:1; overflow-y:auto; padding:10px;}
+    .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
+    #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
+    .profile-group { margin-bottom:12px; }
+    .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
+    .profile-group input, .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+    #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555;}
+    .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
+    #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
+    #current-stop-info { background:#001a33; padding:10px; border-bottom:2px solid #0078ff; display:flex; justify-content:space-between; align-items:center; min-height:60px;}
+    #controls { background:#222; padding:10px; border-bottom:1px solid #444; display: flex; align-items: center; gap: 10px;}
+    #map { flex:1; }
+    .mgr-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; padding:20px; box-sizing: border-box;}
+    .mgr-panel.open { bottom: 0; }
+</style>
+</head>
+
+<body>
+
+<div id="sidebar">
+    <div id="list-view">
+        <div id="sidebar-header">
+            <h3 style="margin:0">Route Stops</h3>
+            <p id="stop-count" style="font-size:12px; color:#aaa;">Ready</p>
+        </div>
+        <div id="stop-list"></div>
+    </div>
+    <div id="customer-profile">
+        <button class="btn" style="background:#444;" onclick="closeProfile()">← BACK</button>
+        <h3 id="prof-name">Customer</h3>
+        <p id="prof-addr" style="font-size:12px; color:#aaa;"></p>
+        <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l" value="0"></div>
+        <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div>
+        <div class="profile-group"><label>NOTES</label><textarea id="p-notes" rows="3"></textarea></div>
+        <canvas id="sig-canvas"></canvas>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn" onclick="submitLog('DELIVERED')">DELIVERED</button>
+            <button class="btn" style="background:#dc3545;" onclick="submitLog('FAILED')">FAILED</button>
+        </div>
+    </div>
 </div>
 
-<div id="cust-mgr" class="mgr-content">
-    <div style="display:flex; gap:10px; margin-bottom:20px;">
-        <input type="text" id="cust-search-input" placeholder="Enter Customer Name..." style="flex:1; padding:10px; border-radius:4px; border:1px solid #0078ff; background:#333; color:white;">
-        <button class="btn" onclick="searchCustomer()">SEARCH</button>
+<div id="main-view">
+    <div id="current-stop-info">
+        <div id="info-text"><b id="head-name">No Route Loaded</b><br><span id="head-addr">Select route</span></div>
     </div>
-    
-    <div id="edit-modal" style="display:none; background:#222; padding:15px; border:1px solid #444; border-radius:4px;">
-        <h3 id="modal-title">Edit Customer</h3>
-        <div class="profile-group"><label>NAME</label><input type="text" id="m-name"></div>
-        <div class="profile-group"><label>ADDRESS</label><input type="text" id="m-addr"></div>
-        <div class="profile-group"><label>PHONE</label><input type="text" id="m-phone"></div>
-        <div class="profile-group"><label>EMAIL</label><input type="text" id="m-email"></div>
-        <div class="profile-group"><label>NOTES</label><textarea id="m-notes"></textarea></div>
-        <div class="profile-group">
-            <label>ROUTE & DAY</label>
-            <select id="m-route" style="width:100%; padding:8px; background:#333; color:white; border:1px solid #444;">
-                <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
-                </select>
-        </div>
-        <div style="display:flex; gap:10px;">
-            <button class="btn" style="flex:1" onclick="saveCustomer()">SAVE TO ROUTE</button>
-            <button class="btn-mgr" style="flex:1; background:#dc3545" onclick="triggerRush()">CREATE RUSH ORDER</button>
-        </div>
+    <div id="controls">
+        <select id="route-select" class="btn" style="background:#333;">
+            <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
+            <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
+            <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
+            <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
+            <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
+            <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
+            <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
+            <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
+            <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
+            <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
+            <option value="VALLEY VIEW">VALLEY VIEW</option>
+            <option value="DAWSON CREEK">DAWSON CREEK</option>
+            <option value="SALT">SALT</option>
+        </select>
+        <button class="btn" onclick="loadRoute()">Load</button>
+        <button class="btn" style="background:#666;" onclick="toggleManager()">Manager Panel</button>
+    </div>
+    <div id="map"></div>
+
+    <div id="manager-panel" class="mgr-panel">
+        <button class="btn" style="background:red;" onclick="toggleManager()">CLOSE</button>
+        <h2>Global Search</h2>
+        <input type="text" id="global-search-input" style="width:100%; padding:10px; margin-bottom:10px;" placeholder="Company Name...">
+        <button class="btn" onclick="runGlobalSearch()">SEARCH ALL SHEETS</button>
+        <select id="global-results-drop" style="width:100%; margin-top:10px; padding:10px;"></select>
+        <button class="btn" style="background:#ffc107; color:black; margin-top:20px; width:100%;" onclick="executeEOD()">END OF DAY</button>
     </div>
 </div>
 
 <script>
-let pendingRushOrder = null;
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec"; 
+    const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 
-async function searchCustomer() {
-    const name = document.getElementById('cust-search-input').value.toLowerCase();
-    document.getElementById('status').innerText = "Searching all sheets...";
-    
-    // Logic to search via the Google Script across all sheets
-    try {
-        const res = await fetch(`${SCRIPT_URL}?action=search&name=${encodeURIComponent(name)}`);
-        const data = await res.json();
-        
-        if (data.found) {
-            fillModal(data.customer);
-        } else {
-            if (confirm("Customer not found. Add new customer?")) {
-                fillModal({name: document.getElementById('cust-search-input').value, address:'', phone:'', email:'', notes:'', route:''});
-            }
+    let map, stops = [], currentStopIndex = 0, deliveryLog = [], canvas, ctx, drawing = false;
+
+    window.onload = () => {
+        map = L.map('map').setView([55.1707, -118.7947], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        initSig();
+        // Check for special orders only after the DOM is fully loaded
+        if (typeof checkSpecialOrders === "function") {
+            checkSpecialOrders();
         }
-    } catch (e) { alert("Search failed. Check Google Script connection."); }
-    document.getElementById('status').innerText = "Ready";
-}
-
-function fillModal(c) {
-    document.getElementById('edit-modal').style.display = 'block';
-    document.getElementById('m-name').value = c.name || "";
-    document.getElementById('m-addr').value = c.address || "";
-    document.getElementById('m-phone').value = c.phone || "";
-    document.getElementById('m-email').value = c.email || "";
-    document.getElementById('m-notes').value = c.notes || "";
-    document.getElementById('m-route').value = c.route || "WEEK 1 MONDAY";
-}
-
-async function saveCustomer() {
-    const payload = {
-        action: "saveCustomer",
-        name: document.getElementById('m-name').value,
-        address: document.getElementById('m-addr').value,
-        phone: document.getElementById('m-phone').value,
-        email: document.getElementById('m-email').value,
-        notes: document.getElementById('m-notes').value,
-        route: document.getElementById('m-route').value
     };
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-    alert("Saved to " + payload.route);
-}
 
-function triggerRush() {
-    const instr = prompt("ENTER RUSH INSTRUCTIONS:");
-    if (!instr) return;
-    
-    const rushPayload = {
-        action: "RUSH",
-        route: document.getElementById('m-route').value,
-        instructions: instr,
-        customer: document.getElementById('m-name').value,
-        address: document.getElementById('m-addr').value
-    };
-    
-    // This sends the rush order to the backend to be picked up by the specific route
-    fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(rushPayload) });
-    alert("Rush Order Sent to " + rushPayload.route);
-}
+    function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
 
-// DRIVER SIDE LOGIC: In your existing submitLog function, add this at the very end:
-async function checkSpecialOrders() {
-    const currentRoute = document.getElementById('route-select').value;
-    try {
-        const res = await fetch(`${SCRIPT_URL}?action=checkRush&route=${currentRoute}`);
-        const data = await res.json();
-        if (data.hasRush) {
-            // This is the blocking popup the driver must accept
-            alert("⚠️ SPECIAL ORDER ENTERED!\n\nCustomer: " + data.customer + "\nInstructions: " + data.instructions);
-            
-            // Add the rush stop to the current map/list and optimize
-            let geo = await geocodeArcGIS(data.address);
-            stops.splice(currentStopIndex + 1, 0, {
-                company: "🚨 RUSH: " + data.customer,
-                address: data.address,
-                ...geo
+    async function runGlobalSearch() {
+        const term = document.getElementById('global-search-input').value;
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`, {
+                method: 'GET',
+                redirect: 'follow'
             });
-            renderRoute();
-            renderSidebar();
-        }
-    } catch (e) { console.log("Rush check failed"); }
-}
+            const data = await res.json();
+            const drop = document.getElementById('global-results-drop');
+            drop.innerHTML = '';
+            data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.text = `${item.company} (${item.route})`;
+                drop.add(opt);
+            });
+            alert("Search Complete.");
+        } catch (e) { alert("Search Error."); }
+    }
 
-// Modify your submitLog at the end:
-// ... after alert(status...)
-checkSpecialOrders(); 
+    async function loadRoute() {
+        const sheetName = document.getElementById('route-select').value;
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+        const res = await fetch(url);
+        const text = await res.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        stops = json.table.rows.map(r => ({ company: r.c[0]?.v || "Unknown", address: r.c[1]?.v || "" }));
+        renderSidebar();
+    }
+
+    function renderSidebar() {
+        const list = document.getElementById('stop-list');
+        list.innerHTML = "";
+        stops.forEach((s, i) => {
+            const d = document.createElement('div');
+            d.className = 'stop-card';
+            d.innerHTML = `<b>${i+1}. ${s.company}</b>`;
+            d.onclick = () => openProfile(i);
+            list.appendChild(d);
+        });
+    }
+
+    function openProfile(i) {
+        currentStopIndex = i;
+        document.getElementById('list-view').style.display = 'none';
+        document.getElementById('customer-profile').style.display = 'block';
+        document.getElementById('prof-name').innerText = stops[i].company;
+        document.getElementById('prof-addr').innerText = stops[i].address;
+    }
+
+    function closeProfile() {
+        document.getElementById('list-view').style.display = 'block';
+        document.getElementById('customer-profile').style.display = 'none';
+    }
+
+    function submitLog(status) {
+        deliveryLog.push({ 
+            customer: stops[currentStopIndex].company, 
+            status: status, 
+            time: new Date().toLocaleTimeString(),
+            v18l: document.getElementById('p-18l').value,
+            vSmall: document.getElementById('p-small').value,
+            notes: document.getElementById('p-notes').value
+        });
+        closeProfile();
+    }
+
+    function initSig() {
+        canvas = document.getElementById('sig-canvas');
+        if(!canvas) return;
+        ctx = canvas.getContext('2d');
+        const getPos = e => {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        };
+        const start = e => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); };
+        const move = e => { if(drawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); } };
+        const end = () => drawing = false;
+        canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+        canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); window.addEventListener('touchend', end);
+    }
+
+    async function executeEOD() {
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "EOD", driver: "User", log: deliveryLog }) });
+        alert("EOD Saved.");
+    }
 </script>
+</body>
+</html>
