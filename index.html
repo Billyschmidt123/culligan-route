@@ -1,57 +1,69 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Culligan Route Manager</title>
+    <title>Culligan Delivery Manager</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        #map { flex: 1; width: 100%; }
-        .stop-list { height: 30%; overflow-y: auto; background: #f4f4f4; padding: 10px; }
-        .stop-card { background: white; padding: 10px; margin-bottom: 5px; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        #dataModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; color: white; }
-        #sig-canvas { background: white; border: 1px solid #000; width: 90%; max-width: 400px; touch-action: none; }
-        #ticket-output { display: none; width: 400px; padding: 20px; background: white; color: black; }
-        .number-pin { background: #0078ff; color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; }
+        body { font-family: sans-serif; margin: 0; background: #f0f2f5; }
+        #map { height: 350px; width: 100%; border-bottom: 2px solid #ccc; }
+        .stop-list { padding: 15px; }
+        .stop-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
+        #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 20px; }
+        #sig-canvas { background: white; border-radius: 5px; margin: 15px 0; touch-action: none; width: 100%; max-width: 400px; height: 150px; }
+        #ticket-output { display: none; width: 500px; padding: 40px; background: white; color: black; }
+        input, textarea { width: 90%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 16px; }
+        .btn { padding: 15px 30px; border: none; border-radius: 5px; font-weight: bold; margin: 10px; width: 45%; font-size: 16px; }
+        .btn-save { background: #28a745; color: white; }
+        .btn-cancel { background: #dc3545; color: white; }
     </style>
 </head>
 <body>
 
-    <div id="map"></div>
-    <div class="stop-list" id="stop-list"></div>
+<div id="map"></div>
+<div class="stop-list" id="stop-list"></div>
 
-    <div id="dataModal">
-        <h2 id="mCustName">Customer Name</h2>
-        <input type="number" id="inv18L" placeholder="18L Bottles" style="width: 80%; padding: 10px; margin: 10px;">
-        <textarea id="driverNotes" placeholder="Notes" style="width: 80%; padding: 10px; margin: 10px;"></textarea>
-        <canvas id="sig-canvas"></canvas>
-        <div style="margin-top: 20px;">
-            <button onclick="processStop('Delivered')" style="padding: 15px; background: green; color: white; border: none; border-radius: 5px;">Submit Delivery</button>
-            <button onclick="document.getElementById('dataModal').style.display='none'" style="padding: 15px; background: red; color: white; border: none; border-radius: 5px;">Cancel</button>
-        </div>
+<div id="dataModal">
+    <h2 id="mCustName">Customer</h2>
+    <input type="number" id="inv18L" placeholder="18L Bottles Delivered">
+    <textarea id="driverNotes" rows="3" placeholder="Notes (optional)"></textarea>
+    <p>Customer Signature:</p>
+    <canvas id="sig-canvas"></canvas>
+    <div style="width: 100%; text-align: center;">
+        <button class="btn btn-save" onclick="processStop('Delivered')">SUBMIT</button>
+        <button class="btn btn-cancel" onclick="closeModal()">CANCEL</button>
     </div>
+</div>
 
-    <div id="ticket-output">
-        <h1 style="color: #0078ff;">CULLIGAN DELIVERY SLIP</h1>
-        <hr>
+<div id="ticket-output">
+    <div style="text-align: center; border-bottom: 2px solid #0078ff; padding-bottom: 10px;">
+        <h1 style="color: #0078ff; margin: 0;">CULLIGAN WATER</h1>
+        <p style="margin: 0;">Delivery Confirmation</p>
+    </div>
+    <div style="margin-top: 20px;">
         <p><b>Customer:</b> <span id="t-cust"></span></p>
         <p><b>Date:</b> <span id="t-date"></span></p>
         <p><b>Driver:</b> <span id="t-driver"></span></p>
-        <p><b>Items:</b> 18L Bottles: <span id="t-inv"></span></p>
+        <p><b>Quantity:</b> 18L Bottles: <span id="t-inv"></span></p>
         <p><b>Notes:</b> <span id="t-notes"></span></p>
-        <p><b>Signature:</b></p>
-        <img id="t-sig" style="width: 100%; border-bottom: 1px solid black;">
     </div>
+    <div style="margin-top: 30px;">
+        <p><b>Authorized Signature:</b></p>
+        <img id="t-sig" style="width: 100%; border: 1px solid #eee;">
+    </div>
+</div>
 
 <script>
-    const SHEETS_API_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
-    let map, markerLayer, routeLine, activeIndex, canvas, ctx, drawing = false;
-    let driverName = "Driver 1"; // Replace with your driver login logic
+    // YOUR URL INTEGRATED BELOW
+    const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
+
+    let map, activeIndex, canvas, ctx, drawing = false;
+    let driverName = "Driver_1";
     let stops = [
         { company: "TEST_UFA_FARM", address: "123 Farm Road", lat: 55.17, lng: -118.79 },
-        { company: "Culligan Main", address: "Warehouse", lat: 55.18, lng: -118.80 }
+        { company: "Culligan Warehouse", address: "101 Main St", lat: 55.18, lng: -118.80 }
     ];
 
     async function processStop(status) {
@@ -60,7 +72,6 @@
         const bottles = document.getElementById('inv18L').value;
         const notes = document.getElementById('driverNotes').value;
 
-        // Populate PDF template
         document.getElementById('t-cust').innerText = stops[activeIndex].company;
         document.getElementById('t-driver').innerText = driverName;
         document.getElementById('t-date').innerText = longDate;
@@ -71,58 +82,58 @@
         const ticket = document.getElementById('ticket-output');
         ticket.style.display = "block";
 
-        // Generate PDF as Data URI String
-        html2pdf().from(ticket).outputPdf('datauristring').then(pdfData => {
+        const opt = { margin: 0.5, filename: 'delivery.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+
+        html2pdf().set(opt).from(ticket).outputPdf('datauristring').then(pdfData => {
             ticket.style.display = "none";
             
             const payload = {
-                Timestamp: now.toLocaleString(), 
-                DriverID: driverName, 
                 Customer: stops[activeIndex].company,
-                Address: stops[activeIndex].address, 
-                Status: status, 
-                Notes: notes,
+                DriverID: driverName,
                 LongDate: longDate,
-                FileName: `${stops[activeIndex].company}_${Date.now()}.pdf`, 
-                pdfData: pdfData
+                pdfData: pdfData,
+                FileName: `${stops[activeIndex].company} - ${longDate}.pdf`
             };
 
-            fetch(SHEETS_API_URL, { 
-                method: 'POST', 
-                mode: 'no-cors', 
-                body: JSON.stringify(payload) 
-            }).then(() => {
-                document.getElementById('dataModal').style.display = 'none';
-                alert("Delivery Saved and PDF Uploaded to Drive");
-            });
+            fetch(SHEETS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                alert("Success! PDF Sent to Drive.");
+                closeModal();
+            })
+            .catch(err => alert("Error: " + err));
         });
     }
 
     function initCanvas() {
         canvas = document.getElementById('sig-canvas');
         ctx = canvas.getContext('2d');
-        canvas.width = 400; canvas.height = 150;
-        ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
-        canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
-        canvas.onmousemove = (e) => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
-        window.onmouseup = () => drawing = false;
-        // Touch support
-        canvas.ontouchstart = (e) => { 
-            drawing = true; ctx.beginPath(); 
-            let t = e.touches[0];
-            ctx.moveTo(t.clientX - canvas.getBoundingClientRect().left, t.clientY - canvas.getBoundingClientRect().top);
+        canvas.width = canvas.offsetWidth; 
+        canvas.height = 150;
+        ctx.strokeStyle = "#000"; ctx.lineWidth = 3;
+
+        const getXY = (e) => {
+            const r = canvas.getBoundingClientRect();
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+            return { x: clientX - r.left, y: clientY - r.top };
         };
-        canvas.ontouchmove = (e) => {
-            if(drawing) {
-                let t = e.touches[0];
-                ctx.lineTo(t.clientX - canvas.getBoundingClientRect().left, t.clientY - canvas.getBoundingClientRect().top);
-                ctx.stroke();
-            }
-        };
+        const start = (e) => { drawing = true; const p = getXY(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+        const move = (e) => { if(!drawing) return; e.preventDefault(); const p = getXY(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+        const stop = () => drawing = false;
+
+        canvas.onmousedown = start; canvas.onmousemove = move; window.onmouseup = stop;
+        canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = stop;
     }
 
-    // Simplified Render for this example
-    function render() {
+    function closeModal() { document.getElementById('dataModal').style.display = 'none'; }
+
+    window.onload = () => {
+        map = L.map("map").setView([55.17, -118.79], 13);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+        
         const list = document.getElementById('stop-list');
         stops.forEach((s, i) => {
             const card = document.createElement('div');
@@ -131,17 +142,12 @@
             card.onclick = () => {
                 activeIndex = i;
                 document.getElementById('mCustName').innerText = s.company;
-                document.getElementById('dataModal').style.display = "flex";
-                initCanvas();
+                document.getElementById('dataModal').style.display = 'flex';
+                setTimeout(initCanvas, 100);
             };
             list.appendChild(card);
+            L.marker([s.lat, s.lng]).addTo(map);
         });
-    }
-
-    window.onload = () => {
-        map = L.map("map").setView([55.17, -118.79], 12);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-        render();
     };
 </script>
 </body>
