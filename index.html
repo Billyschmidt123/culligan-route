@@ -17,27 +17,23 @@
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer; position: relative;}
     .stop-card.flagged { border-left-color: #ffc107; background: #443c20; }
     .stop-card.rush-order { border-left-color: #a335ee; background: #331d44; border-left-width: 8px;}
-    .stop-card:hover { background:#444;}
     #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
     .profile-group { margin-bottom:12px; }
     .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
-    .profile-group input, .profile-group textarea, .profile-group select { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+    .profile-group input, .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
     #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555;}
     .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-    .back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold;}
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
-    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 5;}
+    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
     #map { flex:1; }
     .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-rush { background:#a335ee; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold; width:100%; margin-top:10px;}
     .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
     #status { font-size:13px; color:#0078ff; font-weight: bold;}
-    #route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; }
-    .custom-div-icon { background:transparent; border:none;}
     .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
-    .rush-pin { background:#a335ee !important; border-color: white !important;}
+    .rush-pin { background:#a335ee !important; }
 
     /* Manager Panel */
     #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
@@ -49,13 +45,9 @@
     .mgr-content.active { display: block; }
     .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
 
-    /* Search Container */
-    #search-results-area { margin-top: 15px; max-height: 300px; overflow-y: auto; border: 1px solid #444; background: #111; padding: 10px; border-radius: 4px; }
-    .tab-badge { position: absolute; top: 5px; right: 5px; font-size: 10px; background: #0078ff; color: white; padding: 2px 6px; border-radius: 4px; }
-
     /* Modal Styling */
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; }
-    .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; box-shadow: 0 0 20px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;}
+    .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; max-height: 90vh; overflow-y: auto;}
     .rush-border { border-color: #a335ee !important; }
 </style>
 </head>
@@ -75,6 +67,7 @@
         <button class="back-btn" onclick="closeProfile()">← BACK TO LIST</button>
         <h3 id="prof-name">Customer Name</h3>
         <p id="prof-addr" style="font-size:12px; color:#aaa;"></p>
+        
         <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l" value="0"></div>
         <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div>
         <div class="profile-group"><label>18L RETURNS</label><input type="number" id="p-18l-ret" value="0"></div>
@@ -82,8 +75,10 @@
         <div class="profile-group"><label>SMALL BOTTLES RETURNED</label><input type="number" id="p-small-ret" value="0"></div>
         <div class="profile-group"><label>RECEIVED BY</label><input type="text" id="p-rec-by" placeholder="Name"></div>
         <div class="profile-group"><label>NOTES / INSTRUCTIONS</label><textarea id="p-notes" rows="3"></textarea></div>
+        
         <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
+
         <div class="form-btns">
             <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
             <button class="btn-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button>
@@ -108,7 +103,6 @@
         <div class="mgr-tabs">
             <button class="mgr-tab-btn active" onclick="switchTab('customer-area')">CUSTOMER MAINTENANCE</button>
             <button class="mgr-tab-btn" onclick="switchTab('reports')">DAILY SUMMARY</button>
-            <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
         </div>
 
         <div id="customer-area" class="mgr-content active">
@@ -125,16 +119,13 @@
                 <button class="btn-rush" onclick="triggerRushWorkflow()">BUILD A RUSH ORDER</button>
             </div>
             
-            <div id="search-results-area">
-                <div style="text-align:center; color:#777; padding:20px;">Enter name to search or add</div>
+            <div id="search-results-area" style="margin-top:15px;">
+                <div style="text-align:center; color:#777; padding:20px;">Results will appear here</div>
             </div>
         </div>
-        
-        <div id="reports" class="mgr-content"></div>
-        <div id="live-report" class="mgr-content"></div>
 
-        <div class="mgr-footer">
-            <button class="btn-eod" onclick="executeEOD()">END OF DAY</button>
+        <div id="reports" class="mgr-content">
+             <div id="summary-data"></div>
         </div>
     </div>
 </div>
@@ -142,55 +133,29 @@
 <div class="modal-overlay" id="global-modal-overlay" onclick="closeGlobalModal()"></div>
 <div id="global-modal" class="edit-modal">
     <h3 id="modal-title" style="color:#0078ff; margin-top:0;">Customer Details</h3>
-    
-    <div class="profile-group">
-        <label>NAME</label>
-        <input type="text" id="m-cust-name">
-    </div>
-    
+    <div class="profile-group"><label>NAME</label><input type="text" id="m-cust-name"></div>
     <div class="profile-group">
         <label>ADDRESS</label>
         <input type="text" id="m-cust-addr">
         <small style="color:#ffc107; font-size:10px; margin-top:4px; display:block;">* MUST include City and Postal Code</small>
     </div>
-
-    <div class="profile-group">
-        <label>PHONE NUMBER</label>
-        <input type="tel" id="m-cust-phone">
-    </div>
-
-    <div class="profile-group">
-        <label>EMAIL</label>
-        <input type="email" id="m-cust-email">
-    </div>
-
-    <div class="profile-group">
-        <label>NOTES</label>
-        <textarea id="m-cust-notes" rows="3"></textarea>
-    </div>
+    <div class="profile-group"><label>PHONE NUMBER</label><input type="tel" id="m-cust-phone"></div>
+    <div class="profile-group"><label>EMAIL</label><input type="email" id="m-cust-email"></div>
+    <div class="profile-group"><label>NOTES</label><textarea id="m-cust-notes" rows="3"></textarea></div>
 
     <div style="display:flex; gap:10px; margin-top:20px;">
-        <button id="modal-primary-btn" class="btn" style="flex:1;" onclick="handleModalSubmit()">SAVE TO DATABASE</button>
+        <button id="modal-primary-btn" class="btn" style="flex:1;" onclick="handleModalSubmit()">SAVE</button>
         <button class="btn-not" style="flex:1;" onclick="closeGlobalModal()">CANCEL</button>
     </div>
 </div>
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-const TABS = [
-    "Week 1 Monday", "Week 1 Tuesday", "Week 1 Wednessday", "Week 1 Thursday", "Week 1 Friday",
-    "Week 2 Monday", "Week 2 Tuesday", "week 2 tues north ", "Week 2 Wednessday", "Week 2 Thursday", "Week 2 Friday",
-    "Week 3 Monday ", "Week 3 Tuesday", "Week 3 Wednessday", "Week3 Thursday", "Week 3 Friday",
-    "Week 4 Monday ", "Week 4 Tuesday", "Week 4 Wednessday", "Week 4 Thursday ", "Week 4 Friday",
-    "Valleyview ", "North", "Dawson creek", "Salt"
-];
-
-let map, markerLayer, stops = [], deliveryLog = [], pendingAlert = null, currentStopIndex = null;
-let currentModalMode = 'add'; // 'add', 'edit', 'rush'
-const warehouse = [55.1707, -118.7947];
+const TABS = ["Week 1 Monday", "Week 1 Tuesday", "Salt"];
+let map, markerLayer, stops = [], deliveryLog = [], pendingAlert = null, currentStopIndex = null, currentModalMode = 'add';
 
 window.onload = () => {
-    map = L.map("map").setView(warehouse, 11);
+    map = L.map("map").setView([55.1707, -118.7947], 11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
 };
@@ -198,26 +163,16 @@ window.onload = () => {
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
 function switchTab(tabId) {
     document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
 }
 
-/** MODAL WORKFLOWS **/
 function openAddCustomerModal(name = "") {
     currentModalMode = 'add';
     document.getElementById('modal-title').innerText = "ADD NEW CUSTOMER";
     document.getElementById('modal-title').style.color = "#0078ff";
-    document.getElementById('global-modal').classList.remove('rush-border');
     document.getElementById('modal-primary-btn').innerText = "SAVE TO DATABASE";
-    
-    // Clear / Set fields
     document.getElementById('m-cust-name').value = name;
     document.getElementById('m-cust-addr').value = "";
-    document.getElementById('m-cust-phone').value = "";
-    document.getElementById('m-cust-email').value = "";
-    document.getElementById('m-cust-notes').value = "";
-    
     document.getElementById('global-modal-overlay').style.display = 'block';
     document.getElementById('global-modal').style.display = 'block';
 }
@@ -226,15 +181,9 @@ function openRushModal(data) {
     currentModalMode = 'rush';
     document.getElementById('modal-title').innerText = "BUILD RUSH ORDER";
     document.getElementById('modal-title').style.color = "#a335ee";
-    document.getElementById('global-modal').classList.add('rush-border');
     document.getElementById('modal-primary-btn').innerText = "ALERT DRIVER & ADD";
-    
     document.getElementById('m-cust-name').value = data.company || "";
     document.getElementById('m-cust-addr').value = data.address || "";
-    document.getElementById('m-cust-phone').value = data.phone || "";
-    document.getElementById('m-cust-email').value = data.email || "";
-    document.getElementById('m-cust-notes').value = data.notes || "";
-    
     document.getElementById('global-modal-overlay').style.display = 'block';
     document.getElementById('global-modal').style.display = 'block';
 }
@@ -247,9 +196,8 @@ function closeGlobalModal() {
 async function performGlobalSearch(isRush = false) {
     const term = document.getElementById('global-search-input').value.trim();
     if (!term) return;
-    
     const list = document.getElementById('search-results-area');
-    list.innerHTML = `<div style="text-align:center; padding:20px;">Searching...</div>`;
+    list.innerHTML = "Searching...";
     
     let items = [];
     for (let tab of TABS) {
@@ -257,14 +205,11 @@ async function performGlobalSearch(isRush = false) {
             const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tab)}`;
             const res = await fetch(url);
             const json = JSON.parse((await res.text()).substring(47).slice(0, -2));
-            if (json.table.rows) {
-                json.table.rows.forEach(row => {
-                    const r = row.c.map(c => c ? String(c.v) : "");
-                    if (r.join(" ").toLowerCase().includes(term.toLowerCase())) {
-                        items.push({ company: r[2] || r[1], address: r[3], notes: r[10], email: r[15], phone: r[16], tab: tab });
-                    }
-                });
-            }
+            json.table.rows.forEach(row => {
+                const r = row.c.map(c => c ? String(c.v) : "");
+                if (r.join(" ").toLowerCase().includes(term.toLowerCase())) 
+                    items.push({ company: r[2] || r[1], address: r[3] });
+            });
         } catch(e) {}
     }
 
@@ -273,13 +218,11 @@ async function performGlobalSearch(isRush = false) {
         items.forEach(item => {
             const div = document.createElement("div");
             div.className = "stop-card";
-            div.innerHTML = `<span class="tab-badge">${item.tab}</span><b>${item.company}</b><br><small>${item.address}</small>`;
+            div.innerHTML = `<b>${item.company}</b><br><small>${item.address}</small>`;
             div.onclick = () => isRush ? openRushModal(item) : openAddCustomerModal(item.company);
             list.appendChild(div);
         });
-        if (isRush) openRushModal(items[0]);
     } else {
-        list.innerHTML = `<div style="padding:10px; color:#ffc107; text-align:center;">No match found. Opening Add Customer modal...</div>`;
         openAddCustomerModal(term);
     }
 }
@@ -287,46 +230,34 @@ async function performGlobalSearch(isRush = false) {
 async function handleModalSubmit() {
     const data = {
         company: document.getElementById('m-cust-name').value,
-        address: document.getElementById('m-cust-addr').value,
-        phone: document.getElementById('m-cust-phone').value,
-        email: document.getElementById('m-cust-email').value,
-        notes: document.getElementById('m-cust-notes').value
+        address: document.getElementById('m-cust-addr').value
     };
 
     if (currentModalMode === 'rush') {
         const geo = await geocodeArcGIS(data.address);
-        const newStop = { ...data, lat: geo?geo.lat:warehouse[0], lng: geo?geo.lng:warehouse[1], flagged: !geo, isRush: true };
+        const newStop = { ...data, lat: geo?geo.lat:55.1707, lng: geo?geo.lng:-118.7947, isRush: true };
         stops.splice(currentStopIndex === null ? 0 : currentStopIndex + 1, 0, newStop);
         pendingAlert = `RUSH ORDER: ${data.company} at ${data.address}.`;
         renderSidebar(); renderRoute();
         alert("Alert Sent to Driver.");
     } else {
-        alert("Customer " + data.company + " saved to database.");
+        alert("Customer Saved.");
     }
-    
     closeGlobalModal();
-    if (currentModalMode === 'rush') toggleManager();
 }
 
-function triggerRushWorkflow() {
-    performGlobalSearch(true);
-}
+function triggerRushWorkflow() { performGlobalSearch(true); }
 
-// (Submit Log alert intercept)
 async function submitLog(status) {
-    const entry = { customer: stops[currentStopIndex].company, status: status, time: new Date().toLocaleTimeString() };
-    deliveryLog.push(entry);
     closeProfile();
     if (pendingAlert) {
-        setTimeout(() => { alert("⚠️ ALERT: " + pendingAlert); pendingAlert = null; }, 600);
+        setTimeout(() => { alert("⚠️ SYSTEM ALERT: " + pendingAlert); pendingAlert = null; }, 600);
     }
 }
 
-// (Standard Helpers - Geocoding, Sidebar, etc remain unchanged)
 async function geocodeArcGIS(addr) {
-    const query = encodeURIComponent(addr + ", Grande Prairie, AB");
     try {
-        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${query}&maxLocations=1`);
+        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`);
         const data = await res.json();
         return data.candidates.length ? { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x } : null;
     } catch (e) { return null; }
@@ -347,43 +278,10 @@ function renderSidebar() {
     stops.forEach((s, i) => {
         const div = document.createElement("div");
         div.className = `stop-card ${s.isRush ? 'rush-order' : ''}`;
-        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
-        div.onclick = () => { map.setView([s.lat, s.lng], 16); openProfile(i); };
+        div.innerHTML = `<b>${i+1}. ${s.company}</b>`;
+        div.onclick = () => openProfile(i);
         list.appendChild(div);
     });
-}
-
-async function loadRoute() {
-    const sheetName = document.getElementById("route-select").value;
-    document.getElementById("status").innerText = "Reading Sheet...";
-    try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
-        const res = await fetch(url);
-        const text = await res.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        stops = [];
-        json.table.rows.forEach(async (row) => {
-            const r = row.c;
-            if (r[3]) {
-                const geo = await geocodeArcGIS(r[3].v);
-                stops.push({ company: r[2]?r[2].v : "Cust", address: r[3].v, lat: geo?geo.lat:warehouse[0], lng: geo?geo.lng:warehouse[1] });
-            }
-        });
-        setTimeout(() => { renderRoute(); renderSidebar(); document.getElementById("status").innerText = "Ready"; }, 2000);
-    } catch (e) {}
-}
-
-function openProfile(i) {
-    currentStopIndex = i;
-    document.getElementById('list-view').style.display = 'none';
-    document.getElementById('customer-profile').style.display = 'block';
-    document.getElementById('prof-name').innerText = stops[i].company;
-    document.getElementById('prof-addr').innerText = stops[i].address;
-}
-
-function closeProfile() {
-    document.getElementById('list-view').style.display = 'block';
-    document.getElementById('customer-profile').style.display = 'none';
 }
 </script>
 </body>
