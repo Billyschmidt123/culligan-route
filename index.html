@@ -17,6 +17,7 @@
         .stop-card.active-card { background: #444; border-left-color: #28a745; }
         .card-label { color: #0078ff; font-weight: bold; font-size: 11px; text-transform: uppercase; display: block; margin-top: 4px; }
         .card-val { color: #eee; display: block; margin-bottom: 2px; }
+        .inv-grid-sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; border-top: 1px solid #444; padding-top: 5px; }
         #main-view { flex: 1; display: flex; flex-direction: column; }
         #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         #current-stop-bar { background: #0078ff; color: white; padding: 10px; font-weight: bold; text-align: center; font-size: 16px; display: none; }
@@ -31,6 +32,7 @@
         .field-row { margin-bottom: 12px; }
         .field-row label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
         .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; border-radius: 4px; }
+        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         #sig-canvas { background: white; border-radius: 4px; cursor: crosshair; width: 100%; height: 100px; }
         .nav-container { display: flex; justify-content: space-between; padding: 10px; background: #222; border-top: 1px solid #444; }
     </style>
@@ -65,7 +67,15 @@
         <h3 id="mCustName" style="color:#0078ff; margin-top:0;">Customer</h3>
         <p id="mCustAddr" style="color:#aaa; font-size:13px; margin-bottom:15px;"></p>
         
-        <div class="field-row"><label>Received By (Name)</label><input type="text" id="receivedBy"></div>
+        <div class="inv-grid">
+            <div class="field-row"><label>18L Bottles</label><input type="number" id="inv18L"></div>
+            <div class="field-row"><label>Small Bottles</label><input type="number" id="invSmall"></div>
+            <div class="field-row"><label>Cases</label><input type="number" id="invCases"></div>
+            <div class="field-row"><label>18L Return</label><input type="number" id="ret18L"></div>
+            <div class="field-row"><label>Small Return</label><input type="number" id="retSmall"></div>
+            <div class="field-row"><label>Received By</label><input type="text" id="receivedBy"></div>
+        </div>
+
         <div class="field-row"><label>Signature</label><canvas id="sig-canvas"></canvas><button class="btn btn-nav" style="width:100%; margin-top:5px;" onclick="clearSig()">Clear Signature</button></div>
         <div class="field-row"><label>Notes / Reason for Skip</label><textarea id="driverNotes" rows="2"></textarea></div>
         
@@ -91,7 +101,6 @@
     let map, markerLayer, routeLine, stops = [], markers = [], activeIndex = -1, canvas, ctx, drawing = false;
     const warehouse = { lat: 55.1707, lng: -118.7947 };
 
-    // --- LOGIC ---
     async function fetchRouteList() {
         try {
             const res = await fetch(SHEETS_API_URL);
@@ -112,10 +121,16 @@
         try {
             const dataRes = await fetch(`${SHEETS_API_URL}?sheet=${encodeURIComponent(selectedTab)}`);
             const rows = await dataRes.json();
-            const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
-            const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
-            const phoneKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("phone"));
-            const noteKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("note"));
+            const h = Object.keys(rows[0]);
+            const addrKey = h.find(k => k.toLowerCase().includes("addr"));
+            const nameKey = h.find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
+            const phoneKey = h.find(k => k.toLowerCase().includes("phone"));
+            const noteKey = h.find(k => k.toLowerCase().includes("note"));
+            
+            // New column matches
+            const key18L = h.find(k => k.includes("18 l bottles") || k.includes("18L"));
+            const keySmall = h.find(k => k.includes("small bottles"));
+            const keyCases = h.find(k => k.includes("cases"));
 
             let tempStops = [];
             for (let i = 0; i < rows.length; i++) {
@@ -126,6 +141,9 @@
                     address: rows[i][addrKey], 
                     phone: rows[i][phoneKey] || "N/A",
                     notes: rows[i][noteKey] || "No instructions",
+                    inv18L: rows[i][key18L] || 0,
+                    invSmall: rows[i][keySmall] || 0,
+                    invCases: rows[i][keyCases] || 0,
                     fullData: rows[i], ...geo 
                 });
                 await new Promise(r => setTimeout(r, 1200));
@@ -187,8 +205,12 @@
             card.innerHTML = `
                 <b style="font-size:15px;">#${i + 1} ${s.company}</b>
                 <span class="card-label">Address</span><span class="card-val">${s.address}</span>
-                <span class="card-label">Phone</span><span class="card-val">${s.phone}</span>
                 <span class="card-label">Notes</span><span class="card-val" style="font-style:italic; color:#aaa;">${s.notes}</span>
+                <div class="inv-grid-sidebar">
+                    <span>18L: ${s.inv18L}</span>
+                    <span>Small: ${s.invSmall}</span>
+                    <span>Cases: ${s.invCases}</span>
+                </div>
             `;
             card.onclick = () => selectStop(i);
             listDiv.appendChild(card);
@@ -213,6 +235,11 @@
     function openEntryModal(s) {
         document.getElementById('mCustName').innerText = s.company;
         document.getElementById('mCustAddr').innerText = s.address;
+        document.getElementById('inv18L').value = s.inv18L;
+        document.getElementById('invSmall').value = s.invSmall;
+        document.getElementById('invCases').value = s.invCases;
+        document.getElementById('ret18L').value = "";
+        document.getElementById('retSmall').value = "";
         document.getElementById('receivedBy').value = "";
         document.getElementById('driverNotes').value = "";
         clearSig();
@@ -229,6 +256,9 @@
         canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
         canvas.onmousemove = (e) => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
         window.onmouseup = () => { drawing = false; };
+        // Touch support
+        canvas.ontouchstart = (e) => { e.preventDefault(); drawing = true; const t = e.touches[0]; const r = canvas.getBoundingClientRect(); ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+        canvas.ontouchmove = (e) => { e.preventDefault(); if (drawing) { const t = e.touches[0]; const r = canvas.getBoundingClientRect(); ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); } };
     }
     function clearSig() { if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
@@ -249,7 +279,20 @@
         const receiver = document.getElementById('receivedBy').value;
         if (status === 'Not Delivered' && !notes.trim()) return alert("Reason required for skip.");
         const now = new Date();
-        let formData = { Customer: stops[activeIndex].company, Address: stops[activeIndex].address, Status: status, Timestamp: now.toLocaleString(), Notes: notes, ReceivedBy: receiver, Signature: canvas.toDataURL() };
+        let formData = { 
+            Customer: stops[activeIndex].company, 
+            Address: stops[activeIndex].address, 
+            Status: status, 
+            Timestamp: now.toLocaleString(), 
+            Notes: notes, 
+            ReceivedBy: receiver, 
+            Del18L: document.getElementById('inv18L').value,
+            DelSmall: document.getElementById('invSmall').value,
+            DelCases: document.getElementById('invCases').value,
+            Ret18L: document.getElementById('ret18L').value,
+            RetSmall: document.getElementById('retSmall').value,
+            Signature: canvas.toDataURL() 
+        };
         fetch(SHEETS_API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) }).then(() => { closeModal(); alert(`Recorded.`); });
     }
 
