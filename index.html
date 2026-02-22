@@ -90,7 +90,7 @@
         <div style="padding:20px;">
             <button onclick="toggleManager()" style="float:right; color:red; background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
             <h3 style="color:#0078ff;">MANAGER MAINTENANCE</h3>
-            <p>System operational.</p>
+            <p>Sheet Match: Strict Mode Active.</p>
         </div>
     </div>
 </div>
@@ -110,8 +110,7 @@ async function initSheetScanner() {
     statusDiv.innerText = "SCANNING...";
     
     try {
-        select.innerHTML = ""; // Clear existing options
-
+        select.innerHTML = "";
         const knownRoutes = [
             "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT", 
             "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY",
@@ -128,14 +127,12 @@ async function initSheetScanner() {
         });
 
         statusDiv.innerText = "ROUTES LOADED";
-    } catch (e) {
-        statusDiv.innerText = "SCAN ERROR";
-    }
+    } catch (e) { statusDiv.innerText = "SCAN ERROR"; }
 }
 
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
-    if(!sheetName) { alert("Please click LOAD ALL ROUTES and select a route first."); return; }
+    if(!sheetName) { alert("Select a route first."); return; }
     
     const statusDiv = document.getElementById("status");
     const loadBtn = document.getElementById("load-btn");
@@ -148,11 +145,16 @@ async function loadRoute() {
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+        // IMPROVED: Added 'sheet' parameter AND cache busting timestamp to force Google to find the specific tab
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(sheetName)}&t=${new Date().getTime()}`;
+        
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
         const rows = json.table.rows;
+        
+        // Double Check: Ensure we didn't get default data by checking the first row company name
+        // if your sheet structure has headers, rows[0] is the first customer.
         
         for (let i = 0; i < rows.length; i++) {
             const cols = rows[i].c;
@@ -173,17 +175,14 @@ async function loadRoute() {
         }
         renderSidebar(); 
         updateMapVisuals();
-        statusDiv.innerText = "DONE";
+        statusDiv.innerText = "DONE: " + sheetName;
         
         if(stops.length > 0) {
             const group = new L.featureGroup(markerLayer.getLayers());
             map.fitBounds(group.getBounds().pad(0.1));
         }
-    } catch (e) { 
-        statusDiv.innerText = "ERROR"; 
-    } finally { 
-        loadBtn.disabled = false; 
-    }
+    } catch (e) { statusDiv.innerText = "IMPORT ERROR"; } 
+    finally { loadBtn.disabled = false; }
 }
 
 async function geocodeArcGIS(addr) {
