@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan Route - Hardwired GID</title>
+<title>Culligan Route - Driver View</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -17,25 +17,14 @@
     #stop-list { flex:1; overflow-y:auto; padding:10px;}
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
     .stop-card.done { border-left-color: #28a745; opacity: 0.8; }
-    .stop-card.failed { border-left-color: #dc3545; opacity: 0.8; }
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
-    #controls { background:#222; padding:10px; border-bottom:2px solid #0078ff; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; z-index: 100; overflow-x: auto;}
-    #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; }
+    #controls { background:#222; padding:10px; border-bottom:2px solid #0078ff; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; z-index: 100;}
     #map { flex:1; z-index: 1;}
     .btn-import { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
-    .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
-    #status { font-size:12px; color:#0078ff; font-weight: bold; white-space: nowrap; margin-left: auto; padding-right: 10px;}
-    .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white;}
-    .pin-pending { background:#0078ff; }
-    .pin-delivered { background:#28a745; }
-    .pin-not-delivered { background:#dc3545; }
+    .btn-scan { background:#0078ff; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
+    #status { font-size:12px; color:#0078ff; font-weight: bold; margin-left: auto; padding-right: 10px;}
+    .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white; background:#0078ff;}
     #customer-profile { display:none; padding:15px; background:#222; height: 100%; overflow-y: auto;}
-    .profile-group { margin-bottom: 15px; }
-    .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:5px; text-transform: uppercase;}
-    .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
-    .form-btns { display:flex; gap:10px; margin-top:20px; }
-    .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-    .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
 </style>
 </head>
 
@@ -57,92 +46,78 @@
         <button onclick="closeProfile()" style="background:none; border:none; color:#0078ff; cursor:pointer; margin-bottom:10px;">← BACK TO LIST</button>
         <h3 id="prof-name"></h3>
         <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:15px;"></p>
-        <div class="profile-group"><label>DELIVERY NOTES</label><textarea id="p-notes" rows="4"></textarea></div>
-        <div class="form-btns">
-            <button class="btn-del" onclick="markStop('delivered')">DELIVERED</button>
-            <button class="btn-not" onclick="markStop('not-delivered')">NOT DELIVERED</button>
-        </div>
+        <button onclick="markStop('delivered')" style="background:#28a745; color:white; padding:12px; border:none; border-radius:4px; cursor:pointer; width:100%;">COMPLETE STOP</button>
     </div>
 </div>
 
 <div id="main-view">
     <div id="controls">
+        <button class="btn-scan" onclick="initRoutes()">LOAD ALL ROUTES</button>
         <select id="route-select" style="padding:10px; min-width:200px; background:#333; color:white; border:1px solid #444; border-radius:4px;">
             <option value="">-- Select Route --</option>
-            <optgroup label="Specialized Routes">
-                <option value="600570743">VALLEY VIEW</option>
-                <option value="423376712">NORTH</option>
-                <option value="567832101">DAWSON CREEK</option>
-                <option value="123456789">SALT</option>
-            </optgroup>
-            <optgroup label="Week 1">
-                <option value="0">WEEK 1 MONDAY</option>
-                <option value="1285038317">WEEK 1 TUESDAY</option>
-                <option value="1547432021">WEEK 1 WEDNESDAY</option>
-                <option value="1211029272">WEEK 1 THURSDAY</option>
-                <option value="1144026362">WEEK 1 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 2">
-                <option value="1090629633">WEEK 2 MONDAY</option>
-                <option value="1855644723">WEEK 2 TUESDAY</option>
-                <option value="103991206">WEEK 2 WEDNESDAY</option>
-                <option value="1750530747">WEEK 2 THURSDAY</option>
-                <option value="1561081699">WEEK 2 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 3">
-                <option value="1173641214">WEEK 3 MONDAY</option>
-                <option value="1382442220">WEEK 3 TUESDAY</option>
-                <option value="1410444322">WEEK 3 WEDNESDAY</option>
-                <option value="1119420011">WEEK 3 THURSDAY</option>
-                <option value="1904422332">WEEK 3 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 4">
-                <option value="1122334455">WEEK 4 MONDAY</option>
-                <option value="1122334466">WEEK 4 TUESDAY</option>
-                <option value="1122334477">WEEK 4 WEDNESDAY</option>
-                <option value="1122334488">WEEK 4 THURSDAY</option>
-                <option value="1122334499">WEEK 4 FRIDAY</option>
-            </optgroup>
         </select>
-        <button class="btn-import" id="load-btn" onclick="loadRoute()">IMPORT ROUTE</button>
+        <button class="btn-import" onclick="loadData()">IMPORT</button>
         <div id="status">STATUS: READY</div>
-    </div>
-    
-    <div id="map-info-header">
-        <h4 id="head-name"></h4>
-        <p id="head-addr"></p>
-        <p id="head-phone"></p>
     </div>
     <div id="map"></div>
 </div>
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-let map, markerLayer, routeLine, stops = [], currentIdx = null;
-const warehouse = [55.1707, -118.7947];
+// HIDDEN DATA TABLE
+const routeData = [
+    { name: "VALLEY VIEW", gid: "600570743" },
+    { name: "NORTH", gid: "423376712" },
+    { name: "DAWSON CREEK", gid: "567832101" },
+    { name: "WEEK 1 MONDAY", gid: "0" },
+    { name: "WEEK 1 TUESDAY", gid: "1285038317" },
+    { name: "WEEK 1 WEDNESDAY", gid: "1547432021" },
+    { name: "WEEK 1 THURSDAY", gid: "1211029272" },
+    { name: "WEEK 1 FRIDAY", gid: "1144026362" },
+    { name: "WEEK 2 MONDAY", gid: "1090629633" },
+    { name: "WEEK 2 TUESDAY", gid: "1855644723" },
+    { name: "WEEK 2 WEDNESDAY", gid: "103991206" },
+    { name: "WEEK 2 THURSDAY", gid: "1750530747" },
+    { name: "WEEK 2 FRIDAY", gid: "1561081699" },
+    { name: "WEEK 3 MONDAY", gid: "1173641214" },
+    { name: "WEEK 3 TUESDAY", gid: "1382442220" },
+    { name: "WEEK 3 WEDNESDAY", gid: "1410444322" },
+    { name: "WEEK 3 THURSDAY", gid: "1119420011" },
+    { name: "WEEK 3 FRIDAY", gid: "1904422332" },
+    { name: "WEEK 4 MONDAY", gid: "1122334455" },
+    { name: "WEEK 4 TUESDAY", gid: "1122334466" },
+    { name: "WEEK 4 WEDNESDAY", gid: "1122334477" },
+    { name: "WEEK 4 THURSDAY", gid: "1122334488" },
+    { name: "WEEK 4 FRIDAY", gid: "1122334499" }
+];
 
-map = L.map("map").setView(warehouse, 11);
+let map = L.map("map").setView([55.1707, -118.7947], 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-markerLayer = L.layerGroup().addTo(map);
+let markerLayer = L.layerGroup().addTo(map);
+let stops = [], currentIdx = null;
 
-async function loadRoute() {
+function initRoutes() {
+    const select = document.getElementById("route-select");
+    select.innerHTML = '<option value="">-- Select Route --</option>';
+    routeData.forEach(r => {
+        let opt = document.createElement("option");
+        opt.value = r.gid; // Computer sees GID
+        opt.text = r.name;  // Driver sees Name
+        select.appendChild(opt);
+    });
+    document.getElementById("status").innerText = "ROUTES LOADED";
+}
+
+async function loadData() {
     const gid = document.getElementById("route-select").value;
-    if(gid === "") { alert("Please select a route from the list."); return; }
+    if(!gid) return;
     
-    const statusDiv = document.getElementById("status");
-    const loadBtn = document.getElementById("load-btn");
-    
-    loadBtn.disabled = true;
-    stops = []; 
-    currentIdx = null;
-    markerLayer.clearLayers();
-    if (routeLine) map.removeLayer(routeLine);
+    document.getElementById("status").innerText = "IMPORTING...";
+    stops = []; markerLayer.clearLayers();
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        // HARDWIRED GID ACCESS
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&gid=${gid}&t=${Date.now()}`;
-        
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}&t=${Date.now()}`;
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
@@ -151,54 +126,35 @@ async function loadRoute() {
         for (let i = 0; i < rows.length; i++) {
             const cols = rows[i].c;
             if (cols && cols[3] && cols[3].v) {
-                const name = cols[2] ? cols[2].v : "Unknown";
-                statusDiv.innerText = `LOADING: ${name}`;
                 const geo = await geocodeArcGIS(cols[3].v);
                 stops.push({
-                    company: name, 
+                    company: cols[2] ? cols[2].v : "Customer", 
                     address: cols[3].v, 
-                    phone: cols[4] ? cols[4].v : "N/A",
-                    lat: geo ? geo.lat : warehouse[0], 
-                    lng: geo ? geo.lng : warehouse[1],
-                    status: 'pending', 
-                    notes: ""
+                    lat: geo ? geo.lat : 55.1707, 
+                    lng: geo ? geo.lng : -118.7947,
+                    status: 'pending'
                 });
             }
         }
-        renderSidebar(); 
-        updateMapVisuals();
-        statusDiv.innerText = "ROUTE IMPORTED";
-        
-        if(stops.length > 0) {
-            const group = new L.featureGroup(markerLayer.getLayers());
-            map.fitBounds(group.getBounds().pad(0.1));
-        }
-    } catch (e) { statusDiv.innerText = "IMPORT ERROR"; } 
-    finally { loadBtn.disabled = false; }
+        renderSidebar(); updateMapVisuals();
+        document.getElementById("status").innerText = "SUCCESS";
+    } catch (e) { document.getElementById("status").innerText = "ERROR"; }
 }
 
 async function geocodeArcGIS(addr) {
-    try {
-        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`);
-        const data = await res.json();
-        return data.candidates.length ? { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x } : null;
-    } catch (e) { return null; }
+    const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`);
+    const data = await res.json();
+    return data.candidates.length ? { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x } : null;
 }
 
 function updateMapVisuals() {
-    markerLayer.clearLayers(); 
-    if (routeLine) map.removeLayer(routeLine);
-    const polyCoords = [];
+    markerLayer.clearLayers();
     stops.forEach((s, i) => {
-        let pinColor = s.status === 'delivered' ? 'pin-delivered' : (s.status === 'not-delivered' ? 'pin-not-delivered' : 'pin-pending');
+        let pinClass = s.status === 'delivered' ? 'background:#28a745;' : 'background:#0078ff;';
         L.marker([s.lat, s.lng], { 
-            icon: L.divIcon({ className:'custom-icon', html:`<div class="pin ${pinColor}">${i+1}</div>`, iconSize: [26, 26] }) 
+            icon: L.divIcon({ className:'', html:`<div class="pin" style="${pinClass}">${i+1}</div>`, iconSize: [26, 26] }) 
         }).addTo(markerLayer);
-        if (s.status === 'pending') polyCoords.push([s.lat, s.lng]);
     });
-    if (polyCoords.length > 1) {
-        routeLine = L.polyline(polyCoords, { color: '#0078ff', weight: 5, opacity: 0.7, dashArray: '10, 15' }).addTo(map);
-    }
 }
 
 function renderSidebar() {
@@ -207,7 +163,8 @@ function renderSidebar() {
     document.getElementById("stop-count").innerText = `${stops.length} Stops`;
     stops.forEach((s, i) => {
         const div = document.createElement("div");
-        div.className = `stop-card ${s.status === 'delivered' ? 'done' : (s.status === 'not-delivered' ? 'failed' : '')}`;
+        div.className = `stop-card ${s.status === 'delivered' ? 'done' : ''}`;
+        div.style.opacity = s.status === 'delivered' ? '0.5' : '1';
         div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
         div.onclick = () => openProfile(i);
         list.appendChild(div);
@@ -220,11 +177,17 @@ function openProfile(i) {
     document.getElementById('customer-profile').style.display = 'block';
     document.getElementById('prof-name').innerText = s.company;
     document.getElementById('prof-addr').innerText = s.address;
-    document.getElementById('map-info-header').style.display = 'block';
-    document.getElementById('head-name').innerText = s.company;
-    document.getElementById('head-addr').innerText = s.address;
-    document.getElementById('head-phone').innerText = "Phone: " + s.phone;
-    map.setView([s.lat, s.lng], 16);
+    map.setView([s.lat, s.lng], 15);
+}
+
+function closeProfile() {
+    document.getElementById('list-view').style.display = 'block';
+    document.getElementById('customer-profile').style.display = 'none';
+}
+
+function markStop(status) {
+    stops[currentIdx].status = 'delivered';
+    renderSidebar(); updateMapVisuals(); closeProfile();
 }
 
 function navStop(dir) {
@@ -233,18 +196,6 @@ function navStop(dir) {
     if (nIdx < 0) nIdx = stops.length - 1;
     if (nIdx >= stops.length) nIdx = 0;
     openProfile(nIdx);
-}
-
-function closeProfile() {
-    document.getElementById('list-view').style.display = 'block';
-    document.getElementById('customer-profile').style.display = 'none';
-    document.getElementById('map-info-header').style.display = 'none';
-}
-
-function markStop(status) {
-    if (currentIdx === null) return;
-    stops[currentIdx].status = status;
-    renderSidebar(); updateMapVisuals(); closeProfile();
 }
 </script>
 </body>
