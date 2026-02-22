@@ -23,6 +23,7 @@
     #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; }
     #map { flex:1; z-index: 1;}
     .btn { padding:12px 20px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
+    .btn-scan { background:#0078ff; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-mgr { background:#6c757d; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     #status { font-size:13px; color:#0078ff; font-weight: bold; white-space: nowrap;}
     .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white;}
@@ -69,12 +70,13 @@
 
 <div id="main-view">
     <div id="controls">
-        <select id="route-select" style="padding:10px; background:#333; color:white; border-radius:4px;">
-            <option>Scanning spreadsheet tabs...</option>
+        <button class="btn-scan" onclick="initSheetScanner()">FIND ALL TABS</button>
+        <select id="route-select" style="padding:10px; min-width:150px; background:#333; color:white; border-radius:4px;">
+            <option value="">-- Select Route --</option>
         </select>
-        <button class="btn" id="load-btn" onclick="loadRoute()">LOAD ROUTE</button>
+        <button class="btn" id="load-btn" onclick="loadRoute()">IMPORT ROUTE</button>
         <button class="btn-mgr" onclick="toggleManager()">MANAGER PANEL</button>
-        <div id="status">STATUS: INITIALIZING</div>
+        <div id="status">STATUS: READY</div>
     </div>
     
     <div id="map-info-header">
@@ -102,44 +104,47 @@ map = L.map("map").setView(warehouse, 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 markerLayer = L.layerGroup().addTo(map);
 
-// NEW: Auto-Scan Spreadsheet Tabs on Startup
 async function initSheetScanner() {
     const statusDiv = document.getElementById("status");
+    statusDiv.innerText = "SCANNING TABS...";
     try {
-        // We use a basic fetch to the spreadsheet's metadata to find tab names
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`;
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&t=${Date.now()}`;
         const res = await fetch(url);
-        const html = await res.text();
+        const text = await res.text();
+        // Extract tab info from the JSON response
+        const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
         
-        // This parses the sheet names hidden in the Google Sheets HTML data
+        // This method fetches the sheet names from the visualization API metadata
+        const urlMeta = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`;
+        const resMeta = await fetch(urlMeta);
+        const html = await resMeta.text();
         const regex = /"name":"([^"]+)"/g;
         let matches, names = [];
         while ((matches = regex.exec(html)) !== null) {
-            if (!names.includes(matches[1]) && !matches[1].includes("Sheet")) {
+            if (!names.includes(matches[1]) && !matches[1].includes("Sheet") && matches[1] !== "Template") {
                 names.push(matches[1]);
             }
         }
 
         const select = document.getElementById("route-select");
-        select.innerHTML = ""; // Clear loader
-        
-        // Sort and build the dropdown from the actual tabs found
+        select.innerHTML = ""; 
         names.sort().forEach(name => {
             const opt = document.createElement("option");
             opt.value = name;
             opt.text = name;
             select.appendChild(opt);
         });
-        statusDiv.innerText = "STATUS: READY";
+        statusDiv.innerText = "STATUS: TABS LOADED";
     } catch (e) {
-        // Fallback if metadata scan is blocked
-        document.getElementById("route-select").innerHTML = '<option value="VALLEY VIEW">VALLEY VIEW</option><option value="NORTH">NORTH</option>';
-        statusDiv.innerText = "STATUS: SCAN ERROR (USING FALLBACK)";
+        statusDiv.innerText = "STATUS: SCAN ERROR";
+        console.error(e);
     }
 }
 
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
+    if(!sheetName) { alert("Please click FIND ALL TABS and select a route first."); return; }
+    
     const statusDiv = document.getElementById("status");
     const loadBtn = document.getElementById("load-btn");
     
@@ -157,13 +162,11 @@ async function loadRoute() {
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
         const rows = json.table.rows;
         
-        if (!rows || rows.length === 0) throw new Error("No data");
-
         for (let i = 0; i < rows.length; i++) {
             const cols = rows[i].c;
             if (cols && cols[3] && cols[3].v) {
                 const name = cols[2] ? cols[2].v : "Unknown";
-                statusDiv.innerText = `LOADING: ${name}`;
+                statusDiv.innerText = `IMPORTING: ${name}`;
                 const geo = await geocodeArcGIS(cols[3].v);
                 stops.push({
                     company: name, 
@@ -178,9 +181,9 @@ async function loadRoute() {
         }
         renderSidebar(); 
         updateMapVisuals();
-        statusDiv.innerText = "STATUS: COMPLETE";
+        statusDiv.innerText = "STATUS: IMPORT COMPLETE";
     } catch (e) { 
-        statusDiv.innerText = "STATUS: LOAD ERROR"; 
+        statusDiv.innerText = "STATUS: IMPORT ERROR"; 
     } finally { 
         loadBtn.disabled = false; 
     }
@@ -231,7 +234,6 @@ function openProfile(i, isScrollingBack = false) {
     } else {
         document.getElementById('p-notes').value = "";
     }
-
     currentIdx = i; const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
@@ -265,9 +267,6 @@ function markStop(status) {
 }
 
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
-
-// Run the tab scanner when the page opens
-initSheetScanner();
 </script>
 </body>
 </html>
