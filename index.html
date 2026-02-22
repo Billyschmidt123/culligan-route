@@ -117,7 +117,7 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec"; 
 let map, markerLayer, routeLine, canvas, ctx, drawing = false;
 let stops = [];
 let currentStopIndex = null;
@@ -203,25 +203,24 @@ async function submitLog(status) {
     const sigData = canvas.toDataURL("image/png");
     doc.addImage(sigData, 'PNG', 20, 145, 60, 30);
 
-    // FIXED BASE64 CONVERSION
-    const pdfOutput = doc.output('arraybuffer');
-    const base64PDF = btoa(new Uint8Array(pdfOutput).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
 
     const payload = {
         filename: `Culligan_${stops[currentStopIndex].company}_${new Date().getTime()}.pdf`,
-        pdfData: base64PDF,
+        pdfData: pdfBase64,
         customer: stops[currentStopIndex].company,
         status: status
     };
 
     try {
-        const response = await fetch(SCRIPT_URL, {
+        await fetch(SCRIPT_URL, {
             method: 'POST',
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
         alert("PDF SENT TO GOOGLE DRIVE");
     } catch (e) {
-        alert("PDF GENERATED - Sending Failed. Check SCRIPT_URL connection.");
+        alert("ERROR: Connection failed. Verify Web App is deployed as 'Anyone'.");
     }
 
     document.getElementById('status').innerText = "Ready";
