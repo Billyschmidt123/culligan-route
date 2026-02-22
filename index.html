@@ -14,22 +14,24 @@
         #sidebar-header { padding: 15px; border-bottom: 1px solid #444; }
         #stop-list { flex: 1; overflow-y: auto; padding: 10px; }
         .stop-card { background: #333; padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 14px; cursor: pointer; }
-        .stop-card:hover { background: #444; }
+        .stop-card.active-card { background: #444; border-left-color: #28a745; }
         #main-view { flex: 1; display: flex; flex-direction: column; }
-        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 15px; align-items: center; }
+        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         #current-stop-bar { background: #0078ff; color: white; padding: 10px; font-weight: bold; text-align: center; font-size: 16px; display: none; }
         #map { flex: 1; width: 100%; }
         .btn { padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        select { padding: 9px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; font-size: 14px; width: 180px; }
+        .btn-nav { background: #444; padding: 5px 10px; font-size: 12px; }
+        .btn-mgr { background: #f39c12; }
+        select { padding: 9px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; font-size: 14px; width: 160px; }
         
-        #dataModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; align-items:center; justify-content:center; }
+        #dataModal, #mgrModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; align-items:center; justify-content:center; }
         .modal-content { background:#222; padding:20px; border-radius:8px; width:380px; border:1px solid #444; max-height: 90vh; overflow-y: auto; }
         .field-row { margin-bottom: 12px; }
         .field-row label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
         .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; border-radius: 4px; }
-        .custom-div-icon { background: transparent; border: none; }
-        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5); font-size: 13px; }
+        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; font-size: 13px; }
         .warehouse-pin { background: #222 !important; border-color: #f39c12 !important; color: #f39c12 !important; }
+        .nav-container { display: flex; justify-content: space-between; padding: 10px; background: #222; border-top: 1px solid #444; }
     </style>
 </head>
 <body>
@@ -37,16 +39,19 @@
 <div id="sidebar">
     <div id="sidebar-header">
         <h3 style="margin:0">Route Stops</h3>
-        <p id="stop-count" style="font-size: 12px; color: #aaa; margin: 5px 0 0 0;">No route loaded</p>
+        <p id="stop-count" style="font-size: 12px; color: #aaa; margin: 5px 0 10px 0;">No route loaded</p>
+        <button class="btn btn-mgr" style="width:100%;" onclick="openManagerMenu()">Manager Menu</button>
     </div>
     <div id="stop-list"></div>
+    <div class="nav-container">
+        <button class="btn btn-nav" onclick="prevStop()">⬅ Prev</button>
+        <button class="btn btn-nav" onclick="nextStop()">Next ➡</button>
+    </div>
 </div>
 
 <div id="main-view">
     <div id="controls">
-        <select id="routeSelector">
-            <option value="">Fetch Routes...</option>
-        </select>
+        <select id="routeSelector"><option value="">Fetch Routes...</option></select>
         <button class="btn" onclick="loadSelectedRoute()">Load Route</button>
         <div id="status" style="font-size: 13px; color: #aaa;">Status: Ready</div>
     </div>
@@ -58,10 +63,7 @@
     <div class="modal-content">
         <h3 id="mCustName" style="color:#0078ff; margin-top:0;">Customer</h3>
         <p id="mCustAddr" style="color:#aaa; font-size:13px; margin-bottom:15px;"></p>
-        <div class="field-row">
-            <label>Notes / Reason for Skip</label>
-            <textarea id="driverNotes" rows="2"></textarea>
-        </div>
+        <div class="field-row"><label>Notes / Reason for Skip</label><textarea id="driverNotes" rows="2"></textarea></div>
         <button class="btn" style="width:100%; background:#0078ff; margin-bottom:10px;" onclick="openGoogleMaps()">Google Maps</button>
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1;" onclick="processStop('Delivered')">DELIVERED</button>
@@ -71,13 +73,18 @@
     </div>
 </div>
 
+<div id="mgrModal">
+    <div class="modal-content">
+        <h3 style="color:#f39c12; margin-top:0;">Manager Stop View</h3>
+        <div id="mgrFields"></div>
+        <button class="btn" style="width:100%; background:#444; margin-top:10px;" onclick="document.getElementById('mgrModal').style.display='none'">Exit Manager View</button>
+    </div>
+</div>
+
 <script>
     const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbyECaDUnW3yvG5J8dWmT1a-5YTykHuwDxEiAgByH91A5zAwIzONqV64_r9olmyd07MSMA/exec";
-
-    let map, markerLayer, routeLine, stops = [], markers = [], activeStop = null;
+    let map, markerLayer, routeLine, stops = [], markers = [], activeIndex = -1;
     const warehouse = { lat: 55.1707, lng: -118.7947 };
-
-    // --- FUNCTIONS FIRST ---
 
     async function fetchRouteList() {
         try {
@@ -85,46 +92,34 @@
             const tabs = await res.json();
             const selector = document.getElementById('routeSelector');
             selector.innerHTML = "";
-            
             tabs.filter(t => t !== 'Deliveries').forEach(tabName => {
                 let opt = document.createElement('option');
-                opt.value = tabName;
-                opt.innerHTML = tabName;
-                selector.appendChild(opt);
+                opt.value = tabName; opt.innerHTML = tabName; selector.appendChild(opt);
             });
             document.getElementById('status').textContent = "Routes Loaded.";
-        } catch (e) {
-            document.getElementById('status').textContent = "Connection Error.";
-        }
+        } catch (e) { document.getElementById('status').textContent = "Connection Error."; }
     }
 
     async function loadSelectedRoute() {
         const selectedTab = document.getElementById('routeSelector').value;
         if (!selectedTab) return;
-
         document.getElementById('status').textContent = `Loading ${selectedTab}...`;
         try {
             const dataRes = await fetch(`${SHEETS_API_URL}?sheet=${encodeURIComponent(selectedTab)}`);
             const rows = await dataRes.json();
-            
             const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
             const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
-
             let tempStops = [];
             for (let i = 0; i < rows.length; i++) {
                 document.getElementById('status').textContent = `Locating ${i + 1}/${rows.length}...`;
                 const geo = await geocodeAddress(rows[i][addrKey]);
-                if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], ...geo });
+                if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], fullData: rows[i], ...geo });
                 await new Promise(r => setTimeout(r, 1200));
             }
-            
             stops = optimizeRoute(tempStops);
-            renderRoute();
-            updateSidebar();
+            renderRoute(); updateSidebar();
             document.getElementById('status').textContent = `${selectedTab} Ready.`;
-        } catch (e) { 
-            document.getElementById('status').textContent = "Failed to load data.";
-        }
+        } catch (e) { document.getElementById('status').textContent = "Failed to load."; }
     }
 
     async function geocodeAddress(address) {
@@ -140,9 +135,7 @@
         let unvisited = [...rawList], ordered = [], currentPos = warehouse;
         while (unvisited.length > 0) {
             unvisited.sort((a, b) => getDistance(currentPos, a) - getDistance(currentPos, b));
-            let closest = unvisited.shift();
-            ordered.push(closest);
-            currentPos = closest;
+            let closest = unvisited.shift(); ordered.push(closest); currentPos = closest;
         }
         return ordered;
     }
@@ -156,8 +149,7 @@
     }
 
     function renderRoute() {
-        markerLayer.clearLayers();
-        markers = [];
+        markerLayer.clearLayers(); markers = [];
         let pathCoords = [[warehouse.lat, warehouse.lng]];
         stops.forEach((s, i) => {
             pathCoords.push([s.lat, s.lng]);
@@ -177,19 +169,27 @@
         document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
         stops.forEach((s, i) => {
             const card = document.createElement('div');
-            card.className = 'stop-card';
+            card.className = `stop-card ${i === activeIndex ? 'active-card' : ''}`;
             card.innerHTML = `<b>${i + 1}.</b> ${s.company}<br><small style="color:#aaa">${s.address}</small>`;
-            card.onclick = () => {
-                activeStop = s;
-                document.getElementById('current-stop-bar').style.display = 'block';
-                document.getElementById('active-addr').innerText = s.address;
-                map.setView([s.lat, s.lng], 16);
-                markers[i].openPopup();
-                openEntryModal(s);
-            };
+            card.onclick = () => selectStop(i);
             listDiv.appendChild(card);
         });
     }
+
+    function selectStop(index) {
+        if (index < 0 || index >= stops.length) return;
+        activeIndex = index;
+        const s = stops[index];
+        document.getElementById('current-stop-bar').style.display = 'block';
+        document.getElementById('active-addr').innerText = s.address;
+        map.setView([s.lat, s.lng], 16);
+        markers[index].openPopup();
+        updateSidebar();
+        openEntryModal(s);
+    }
+
+    function nextStop() { if (activeIndex < stops.length - 1) selectStop(activeIndex + 1); }
+    function prevStop() { if (activeIndex > 0) selectStop(activeIndex - 1); }
 
     function openEntryModal(s) {
         document.getElementById('mCustName').innerText = s.company;
@@ -198,55 +198,51 @@
         document.getElementById('dataModal').style.display = 'flex';
     }
 
+    function openManagerMenu() {
+        const pin = prompt("Enter Manager PIN:");
+        if (pin !== "5678") return alert("Unauthorized");
+        if (activeIndex === -1) return alert("Please select a stop first to view details.");
+        
+        const s = stops[activeIndex];
+        const fieldsDiv = document.getElementById('mgrFields');
+        fieldsDiv.innerHTML = "";
+        
+        for (const [key, value] of Object.entries(s.fullData)) {
+            fieldsDiv.innerHTML += `
+                <div class="field-row">
+                    <label>${key}</label>
+                    <input type="text" value="${value}" readonly>
+                </div>`;
+        }
+        document.getElementById('mgrModal').style.display = 'flex';
+    }
+
     function closeModal() { document.getElementById("dataModal").style.display = "none"; }
 
     async function processStop(status) {
         const notes = document.getElementById('driverNotes').value;
-        if (status === 'Not Delivered' && !notes.trim()) {
-            alert("Please enter a reason for skip.");
-            return;
-        }
+        if (status === 'Not Delivered' && !notes.trim()) return alert("Please enter a reason for skip.");
         const now = new Date();
-        let formData = {
-            Customer: activeStop.company,
-            Address: activeStop.address,
-            Status: status,
-            Timestamp: now.toLocaleString(),
-            Notes: notes
-        };
-        fetch(SHEETS_API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) })
-        .then(() => {
-            closeModal();
-            alert(`Stop recorded.`);
-        });
+        let formData = { Customer: stops[activeIndex].company, Address: stops[activeIndex].address, Status: status, Timestamp: now.toLocaleString(), Notes: notes };
+        fetch(SHEETS_API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) }).then(() => { closeModal(); alert(`Stop recorded.`); });
     }
 
     function openGoogleMaps() {
-        if (!activeStop) return;
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeStop.address + ", Grande Prairie, AB")}`;
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(stops[activeIndex].address + ", Grande Prairie, AB")}`;
         window.open(url, '_blank');
     }
 
-    // --- STARTUP LOGIC LAST ---
-
     window.onload = async () => {
         const password = prompt("Please enter the driver access code:");
-
         if (password !== "1234") {
-            alert("Incorrect code. Access denied.");
             document.body.innerHTML = "<h1 style='color:white; text-align:center; margin-top:50px;'>Access Denied</h1>";
             return;
         }
-
         map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
         markerLayer = L.layerGroup().addTo(map);
         routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map);
-
-        L.marker([warehouse.lat, warehouse.lng], {
-            icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
-        }).addTo(map).bindPopup("<b>Warehouse</b>");
-
+        L.marker([warehouse.lat, warehouse.lng], { icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>`, iconSize: [30, 42], iconAnchor: [15, 21] }) }).addTo(map).bindPopup("<b>Warehouse</b>");
         fetchRouteList();
     };
 </script>
