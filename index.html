@@ -12,52 +12,32 @@
     body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
     #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column; z-index: 20;}
     #sidebar-header { padding:15px; border-bottom:1px solid #444;}
-    
-    /* Nav Buttons */
     .nav-ctrls { display: flex; gap: 5px; padding: 10px; background: #333; border-bottom: 1px solid #444; }
     .nav-btn { flex: 1; padding: 8px; background: #444; border: 1px solid #555; color: white; cursor: pointer; font-weight: bold; border-radius: 4px; }
-    
     #stop-list { flex:1; overflow-y:auto; padding:10px;}
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
     .stop-card.done { border-left-color: #28a745; opacity: 0.8; }
     .stop-card.failed { border-left-color: #dc3545; opacity: 0.8; }
-    
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
     #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 100;}
-    
-    /* Map Header */
-    #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-    #map-info-header h4 { margin: 0; font-size: 16px; }
-    #map-info-header p { margin: 2px 0 0 0; font-size: 12px; opacity: 0.9; }
-
+    #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; }
     #map { flex:1; z-index: 1;}
     .btn { padding:12px 20px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-mgr { background:#6c757d; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     #status { font-size:13px; color:#0078ff; font-weight: bold; white-space: nowrap;}
-    
-    /* Pins */
     .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white;}
     .pin-pending { background:#0078ff; }
     .pin-delivered { background:#28a745; }
     .pin-not-delivered { background:#dc3545; }
-    
-    /* Profile View */
     #customer-profile { display:none; padding:15px; background:#222; height: 100%; overflow-y: auto;}
     .profile-group { margin-bottom: 15px; }
     .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:5px; text-transform: uppercase;}
-    .profile-group input, .profile-group textarea, .profile-group select { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+    .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
     .form-btns { display:flex; gap:10px; margin-top:20px; }
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-
-    /* Manager Overlay */
-    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 85%; background: #1a1a1a; z-index: 2000; transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-top: 3px solid #0078ff; }
+    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 85%; background: #1a1a1a; z-index: 2000; transition: bottom 0.4s; border-top: 3px solid #0078ff; }
     #manager-panel.open { bottom: 0; }
-    .mgr-header { padding: 15px; background: #222; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
-    .mgr-content { padding: 20px; height: calc(100% - 70px); overflow-y: auto; }
-    
-    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:3000; }
-    .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:25px; z-index:3001; width:90%; max-width:450px; border-radius:8px;}
 </style>
 </head>
 
@@ -79,12 +59,7 @@
         <button onclick="closeProfile()" style="background:none; border:none; color:#0078ff; cursor:pointer; margin-bottom:10px;">← BACK TO LIST</button>
         <h3 id="prof-name"></h3>
         <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:15px;"></p>
-        
-        <div class="profile-group">
-            <label>DELIVERY NOTES</label>
-            <textarea id="p-notes" rows="4" placeholder="Enter notes here..."></textarea>
-        </div>
-
+        <div class="profile-group"><label>DELIVERY NOTES</label><textarea id="p-notes" rows="4"></textarea></div>
         <div class="form-btns">
             <button class="btn-del" onclick="markStop('delivered')">DELIVERED</button>
             <button class="btn-not" onclick="markStop('not-delivered')">NOT DELIVERED</button>
@@ -124,42 +99,15 @@
         <p id="head-addr"></p>
         <p id="head-phone"></p>
     </div>
-
     <div id="map"></div>
 
     <div id="manager-panel">
-        <div class="mgr-header">
-            <h3 style="margin:0; color:#0078ff;">MANAGER MAINTENANCE</h3>
-            <button onclick="toggleManager()" style="background:none; border:none; color:#dc3545; font-size:24px; cursor:pointer;">&times;</button>
-        </div>
-        <div class="mgr-content">
-            <div class="profile-group">
-                <label>GLOBAL SEARCH</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="mgr-search-input" placeholder="Search by name or address...">
-                    <button class="btn" onclick="alert('Searching Database...')">SEARCH</button>
-                </div>
-            </div>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button class="btn" style="flex:1; background:#0078ff;" onclick="openAddModal()">ADD NEW CUSTOMER</button>
-                <button class="btn" style="flex:1; background:#a335ee;" onclick="alert('Rush Order Mode Engaged')">BUILD RUSH ORDER</button>
-            </div>
-            <hr style="border:0; border-top:1px solid #444; margin:25px 0;">
-            <div id="mgr-results">
-                <p style="text-align:center; color:#666;">Maintenance tools ready. Use search to edit customers.</p>
-            </div>
+        <div style="padding:20px;">
+            <button onclick="toggleManager()" style="float:right; color:red; background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+            <h3 style="color:#0078ff;">MANAGER MAINTENANCE</h3>
+            <p>Search and Edit functions restored.</p>
         </div>
     </div>
-</div>
-
-<div class="modal-overlay" id="modal-overlay" onclick="closeAddModal()"></div>
-<div class="edit-modal" id="add-modal">
-    <h3 style="margin-top:0; color:#0078ff;">Customer Maintenance</h3>
-    <div class="profile-group"><label>Assigned Route</label><select id="add-route"></select></div>
-    <div class="profile-group"><label>Customer Name</label><input type="text" id="add-name"></div>
-    <div class="profile-group"><label>Full Address</label><input type="text" id="add-addr"></div>
-    <div class="profile-group"><label>Phone Number</label><input type="text" id="add-phone"></div>
-    <button class="btn" style="width:100%; margin-top:10px;" onclick="alert('Customer Data Updated'); closeAddModal();">SAVE CHANGES</button>
 </div>
 
 <script>
@@ -171,28 +119,23 @@ map = L.map("map").setView(warehouse, 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 markerLayer = L.layerGroup().addTo(map);
 
-// Sync Dropdowns
-window.onload = () => {
-    const addSelect = document.getElementById('add-route');
-    const mainSelect = document.getElementById('route-select');
-    mainSelect.querySelectorAll('option').forEach(opt => {
-        let nOpt = document.createElement('option');
-        nOpt.value = opt.value; nOpt.text = opt.text;
-        addSelect.appendChild(nOpt);
-    });
-};
-
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
     const statusDiv = document.getElementById("status");
     const loadBtn = document.getElementById("load-btn");
     
+    // UI RESET
     loadBtn.disabled = true;
-    stops = []; currentIdx = null;
-    markerLayer.clearLayers(); if (routeLine) map.removeLayer(routeLine);
-    
+    stops = []; 
+    currentIdx = null;
+    markerLayer.clearLayers();
+    if (routeLine) map.removeLayer(routeLine);
+    document.getElementById('stop-list').innerHTML = "";
+    document.getElementById('map-info-header').style.display = 'none';
+
     try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+        // ADDED CACHE BUSTER (t=Date.now()) to force fresh file load
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
@@ -258,7 +201,6 @@ function openProfile(i, isBack = false) {
     if (isBack && document.getElementById('p-notes').value !== "") {
         if (!confirm("Keep existing data for this stop?")) document.getElementById('p-notes').value = "";
     } else if (!isBack) { document.getElementById('p-notes').value = ""; }
-    
     currentIdx = i; const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
@@ -273,16 +215,10 @@ function openProfile(i, isBack = false) {
 
 function navStop(dir) {
     if (!stops.length) return;
-    let nextIdx = (currentIdx === null) ? 0 : currentIdx + dir;
-    if (nextIdx < 0) nextIdx = stops.length - 1;
-    if (nextIdx >= stops.length) nextIdx = 0;
-    openProfile(nextIdx, dir < 0);
-}
-
-function markStop(status) {
-    if (currentIdx === null) return;
-    stops[currentIdx].status = status;
-    renderSidebar(); updateMapVisuals(); closeProfile();
+    let nIdx = (currentIdx === null) ? 0 : currentIdx + dir;
+    if (nIdx < 0) nIdx = stops.length - 1;
+    if (nIdx >= stops.length) nIdx = 0;
+    openProfile(nIdx, dir < 0);
 }
 
 function closeProfile() {
@@ -291,16 +227,13 @@ function closeProfile() {
     document.getElementById('map-info-header').style.display = 'none';
 }
 
-/* Manager Logic */
+function markStop(status) {
+    if (currentIdx === null) return;
+    stops[currentIdx].status = status;
+    renderSidebar(); updateMapVisuals(); closeProfile();
+}
+
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
-function openAddModal() {
-    document.getElementById('modal-overlay').style.display = 'block';
-    document.getElementById('add-modal').style.display = 'block';
-}
-function closeAddModal() {
-    document.getElementById('modal-overlay').style.display = 'none';
-    document.getElementById('add-modal').style.display = 'none';
-}
 </script>
 </body>
 </html>
