@@ -1,129 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan Route - Brute Force Debug</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-    body { margin:0; height:100vh; display:flex; font-family:sans-serif; background:#111; color:white; overflow:hidden;}
-    #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
-    #stop-list { flex:1; overflow-y:auto; padding:10px;}
-    .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
-    #main-view { flex:1; position: relative; display:flex; flex-direction:column;}
-    #map { flex:1; }
-    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display:flex; gap:10px; align-items:center;}
-    .btn { padding:10px; background:#0078ff; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-    input { padding:10px; background:#333; border:1px solid #444; color:white; border-radius:4px; flex:1;}
-    
-    #debug-panel { position:absolute; bottom:0; left:0; right:0; height:150px; background:rgba(0,0,0,0.9); border-top:2px solid #ffc107; font-family:monospace; font-size:11px; padding:10px; overflow-y:auto; z-index:2000; display:none;}
-    .debug-err { color: #ff4d4d; }
-    .debug-ok { color: #2ecc71; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Culligan Route Pro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin:0; height:100vh; display:flex; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#1a1a1a; color:white; overflow:hidden;}
+        #sidebar { width:380px; background:#252525; border-right:3px solid #0078ff; display:flex; flex-direction:column; box-shadow: 4px 0 15px rgba(0,0,0,0.5); z-index:10;}
+        #stop-list { flex:1; overflow-y:auto; padding:15px; gap:10px; display:flex; flex-direction:column; }
+        .stop-card { background:#333; padding:15px; border-radius:8px; border-left:5px solid #0078ff; cursor:pointer; transition: transform 0.2s; position:relative;}
+        .stop-card:hover { transform: scale(1.02); background:#3d3d3d; }
+        .sheet-label { position:absolute; top:8px; right:8px; font-size:9px; background:#0078ff; padding:2px 6px; border-radius:10px; text-transform:uppercase;}
+        #main-view { flex:1; position: relative; display:flex; flex-direction:column;}
+        #map { flex:1; }
+        #controls { background:#252525; padding:20px; border-bottom:1px solid #444; display:flex; gap:12px; align-items:center;}
+        .btn { padding:12px 20px; background:#0078ff; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; transition: 0.2s;}
+        .btn:hover { background:#0056b3; }
+        input { padding:12px; background:#333; border:1px solid #444; color:white; border-radius:6px; flex:1; font-size:16px;}
+        #loader { display:none; color:#0078ff; font-weight:bold; margin-left:10px; animation: blink 1s infinite;}
+        @keyframes blink { 0% {opacity:1} 50% {opacity:0.3} 100% {opacity:1}}
+    </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <div id="sidebar-header" style="padding:15px; border-bottom:1px solid #444;">
-        <h3 style="margin:0">Culligan Route</h3>
-        <p id="status" style="font-size:12px; color:#0078ff;">Ready</p>
+    <div style="padding:20px; background:#0078ff;">
+        <h2 style="margin:0; font-size:20px;">Culligan Water</h2>
+        <div id="status" style="font-size:12px; margin-top:5px; opacity:0.9;">System Ready</div>
     </div>
-    <div id="stop-list"></div>
+    <div id="stop-list">
+        <div style="text-align:center; margin-top:50px; color:#666;">
+            Search for a customer name to begin
+        </div>
+    </div>
 </div>
 
 <div id="main-view">
     <div id="controls">
-        <input type="text" id="search-input" placeholder="Search customer (e.g. Rexall)">
-        <button class="btn" onclick="runGlobalSearch()">Global Search</button>
-        <button class="btn" style="background:#6c757d" onclick="toggleDebug()">Debug Log</button>
+        <input type="text" id="search-input" placeholder="Type Company Name (e.g. Rexall)">
+        <button class="btn" onclick="searchAll()">Search Route</button>
+        <span id="loader">SCANNING SHEETS...</span>
     </div>
     <div id="map"></div>
-    <div id="debug-panel" id="debug-log">
-        <div style="color:#ffc107; font-weight:bold; margin-bottom:5px;">SYSTEM DEBUG LOG:</div>
-        <div id="log-content"></div>
-    </div>
 </div>
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-const ALL_SHEETS = ["WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY", "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT"];
+// These are the exact names from your file tabs
+const TABS = [
+    "Week 1 Monday", "Week 1 Tuesday", "Week 1 Wednessday", "Week 1 Thursday", "Week 1 Friday",
+    "Week 2 Monday", "Week 2 Tuesday", "week 2 tues north ", "Week 2 Wednessday", "Week 2 Thursday", "Week 2 Friday",
+    "Week 3 Monday ", "Week 3 Tuesday", "Week 3 Wednessday", "Week3 Thursday", "Week 3 Friday",
+    "Week 4 Monday ", "Week 4 Tuesday", "Week 4 Wednessday", "Week 4 Thursday ", "Week 4 Friday",
+    "Valleyview ", "North", "Dawson creek", "Salt"
+];
 
 let map = L.map("map").setView([55.1707, -118.7947], 11);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '© OpenStreetMap'
+}).addTo(map);
 
-function addLog(msg, type='') {
-    const log = document.getElementById('log-content');
-    log.innerHTML += `<div class="${type}">${new Date().toLocaleTimeString()}: ${msg}</div>`;
-    log.scrollTop = log.scrollHeight;
-}
-
-function toggleDebug() {
-    const p = document.getElementById('debug-panel');
-    p.style.display = p.style.display === 'none' ? 'block' : 'none';
-}
-
-async function runGlobalSearch() {
+async function searchAll() {
     const term = document.getElementById('search-input').value.trim().toLowerCase();
-    if(!term) return alert("Enter a name");
+    if(!term) return;
 
-    document.getElementById('status').innerText = "Scanning Sheets...";
-    document.getElementById('stop-list').innerHTML = "";
-    document.getElementById('debug-panel').style.display = 'block';
-    addLog(`Starting global search for: "${term}"`);
+    const list = document.getElementById('stop-list');
+    const loader = document.getElementById('loader');
+    const status = document.getElementById('status');
+    
+    list.innerHTML = "";
+    loader.style.display = "inline";
+    status.innerText = "Searching all weeks...";
 
-    let totalMatches = 0;
+    let foundCount = 0;
 
-    for (let name of ALL_SHEETS) {
-        addLog(`Requesting Sheet: ${name}...`);
+    for (let tab of TABS) {
         try {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}`;
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tab)}`;
             const res = await fetch(url);
             const text = await res.text();
-            
-            // Clean the JSON response from Google
             const json = JSON.parse(text.substring(47).slice(0, -2));
             
-            if (!json.table || !json.table.rows) {
-                addLog(`Sheet ${name} returned no data structure.`, 'debug-err');
-                continue;
+            if (json.table && json.table.rows) {
+                json.table.rows.forEach(row => {
+                    // Combine all cell data to search
+                    const content = row.c.map(c => c ? String(c.v).toLowerCase() : "").join(" ");
+                    if (content.includes(term)) {
+                        foundCount++;
+                        addResultToUI(row, tab);
+                    }
+                });
             }
-
-            const rows = json.table.rows;
-            addLog(`Sheet ${name} loaded. Rows found: ${rows.length}`, 'debug-ok');
-
-            rows.forEach((row, idx) => {
-                // Flatten row to searchable text
-                const rowStr = row.c.map(cell => (cell && cell.v) ? cell.v.toString() : "").join(" ").toLowerCase();
-                
-                if (rowStr.includes(term)) {
-                    totalMatches++;
-                    createResultCard(row, name);
-                }
-            });
-
         } catch (e) {
-            addLog(`Error reading ${name}: ${e.message}`, 'debug-err');
+            console.error("Error reading tab: " + tab);
         }
     }
 
-    document.getElementById('status').innerText = `Done: ${totalMatches} found`;
-    addLog(`Search finished. Total matches: ${totalMatches}`);
+    loader.style.display = "none";
+    status.innerText = `Found ${foundCount} matches`;
+    if(foundCount === 0) list.innerHTML = `<div style="padding:20px; color:#ff4d4d;">No results found for "${term}". Check spelling or sharing permissions.</div>`;
 }
 
-function createResultCard(row, sheetName) {
+function addResultToUI(row, tabName) {
     const list = document.getElementById('stop-list');
-    // Attempt to extract Company/Address by skipping "NONE"
-    const data = row.c.map(c => (c && c.v) ? c.v.toString() : "").filter(v => v !== "NONE" && v !== "");
-    
-    const div = document.createElement('div');
-    div.className = 'stop-card';
-    div.innerHTML = `
-        <div style="font-size:10px; color:#0078ff;">FOUND IN: ${sheetName}</div>
-        <b>${data[1] || "Unknown"}</b><br>
-        <small>${data[2] || "No Address Found"}</small>
+    // Map columns: 2 is Company, 3 is Address
+    const company = row.c[2] ? row.c[2].v : "Unknown Company";
+    const address = row.c[3] ? row.c[3].v : "No Address";
+    const phone = row.c[5] ? row.c[5].v : "";
+    const notes = row.c[6] ? row.c[6].v : "";
+
+    const card = document.createElement('div');
+    card.className = 'stop-card';
+    card.innerHTML = `
+        <span class="sheet-label">${tabName}</span>
+        <div style="font-weight:bold; color:#0078ff; margin-bottom:4px; padding-right:60px;">${company}</div>
+        <div style="font-size:13px; color:#bbb;">${address}</div>
+        ${phone ? `<div style="font-size:12px; color:#2ecc71; margin-top:5px;">📞 ${phone}</div>` : ''}
+        ${notes ? `<div style="font-size:11px; color:#999; margin-top:5px; font-style:italic;">Note: ${notes}</div>` : ''}
     `;
-    list.appendChild(div);
+    
+    card.onclick = () => {
+        // Simple search on map for address
+        const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Grande Prairie")}`;
+        fetch(searchUrl).then(r => r.json()).then(data => {
+            if(data.length > 0) {
+                const loc = [data[0].lat, data[0].lon];
+                map.setView(loc, 15);
+                L.marker(loc).addTo(map).bindPopup(`<b>${company}</b><br>${address}`).openPopup();
+            } else {
+                alert("Could not find address on map, but customer is in the list.");
+            }
+        });
+    };
+    
+    list.appendChild(card);
 }
 </script>
 </body>
