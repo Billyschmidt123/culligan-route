@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan Route - Driver View</title>
+<title>Culligan Route - Hardwired List</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -21,14 +21,13 @@
     #controls { background:#222; padding:10px; border-bottom:2px solid #0078ff; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; z-index: 100;}
     #map { flex:1; z-index: 1;}
     .btn-import { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
-    .btn-scan { background:#0078ff; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
     #status { font-size:12px; color:#0078ff; font-weight: bold; margin-left: auto; padding-right: 10px;}
     .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white; background:#0078ff;}
     #customer-profile { display:none; padding:15px; background:#222; height: 100%; overflow-y: auto;}
 </style>
 </head>
 
-<body>
+<body onload="populateDropdown()">
 
 <div id="sidebar">
     <div class="nav-ctrls">
@@ -52,11 +51,33 @@
 
 <div id="main-view">
     <div id="controls">
-        <button class="btn-scan" onclick="initRoutes()">LOAD ALL ROUTES</button>
-        <select id="route-select" style="padding:10px; min-width:200px; background:#333; color:white; border:1px solid #444; border-radius:4px;">
-            <option value="">-- Select Route --</option>
+        <select id="route-select" style="padding:10px; min-width:220px; background:#333; color:white; border:1px solid #444; border-radius:4px;">
+            <option value="">-- CHOOSE ROUTE --</option>
+            <option value="600570743">VALLEY VIEW</option>
+            <option value="423376712">NORTH</option>
+            <option value="567832101">DAWSON CREEK</option>
+            <option value="0">WEEK 1 MONDAY</option>
+            <option value="1285038317">WEEK 1 TUESDAY</option>
+            <option value="1547432021">WEEK 1 WEDNESDAY</option>
+            <option value="1211029272">WEEK 1 THURSDAY</option>
+            <option value="1144026362">WEEK 1 FRIDAY</option>
+            <option value="1090629633">WEEK 2 MONDAY</option>
+            <option value="1855644723">WEEK 2 TUESDAY</option>
+            <option value="103991206">WEEK 2 WEDNESDAY</option>
+            <option value="1750530747">WEEK 2 THURSDAY</option>
+            <option value="1561081699">WEEK 2 FRIDAY</option>
+            <option value="1173641214">WEEK 3 MONDAY</option>
+            <option value="1382442220">WEEK 3 TUESDAY</option>
+            <option value="1410444322">WEEK 3 WEDNESDAY</option>
+            <option value="1119420011">WEEK 3 THURSDAY</option>
+            <option value="1904422332">WEEK 3 FRIDAY</option>
+            <option value="1122334455">WEEK 4 MONDAY</option>
+            <option value="1122334466">WEEK 4 TUESDAY</option>
+            <option value="1122334477">WEEK 4 WEDNESDAY</option>
+            <option value="1122334488">WEEK 4 THURSDAY</option>
+            <option value="1122334499">WEEK 4 FRIDAY</option>
         </select>
-        <button class="btn-import" onclick="loadData()">IMPORT</button>
+        <button class="btn-import" onclick="loadData()">IMPORT ROUTE</button>
         <div id="status">STATUS: READY</div>
     </div>
     <div id="map"></div>
@@ -64,53 +85,14 @@
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-// HIDDEN DATA TABLE
-const routeData = [
-    { name: "VALLEY VIEW", gid: "600570743" },
-    { name: "NORTH", gid: "423376712" },
-    { name: "DAWSON CREEK", gid: "567832101" },
-    { name: "WEEK 1 MONDAY", gid: "0" },
-    { name: "WEEK 1 TUESDAY", gid: "1285038317" },
-    { name: "WEEK 1 WEDNESDAY", gid: "1547432021" },
-    { name: "WEEK 1 THURSDAY", gid: "1211029272" },
-    { name: "WEEK 1 FRIDAY", gid: "1144026362" },
-    { name: "WEEK 2 MONDAY", gid: "1090629633" },
-    { name: "WEEK 2 TUESDAY", gid: "1855644723" },
-    { name: "WEEK 2 WEDNESDAY", gid: "103991206" },
-    { name: "WEEK 2 THURSDAY", gid: "1750530747" },
-    { name: "WEEK 2 FRIDAY", gid: "1561081699" },
-    { name: "WEEK 3 MONDAY", gid: "1173641214" },
-    { name: "WEEK 3 TUESDAY", gid: "1382442220" },
-    { name: "WEEK 3 WEDNESDAY", gid: "1410444322" },
-    { name: "WEEK 3 THURSDAY", gid: "1119420011" },
-    { name: "WEEK 3 FRIDAY", gid: "1904422332" },
-    { name: "WEEK 4 MONDAY", gid: "1122334455" },
-    { name: "WEEK 4 TUESDAY", gid: "1122334466" },
-    { name: "WEEK 4 WEDNESDAY", gid: "1122334477" },
-    { name: "WEEK 4 THURSDAY", gid: "1122334488" },
-    { name: "WEEK 4 FRIDAY", gid: "1122334499" }
-];
-
 let map = L.map("map").setView([55.1707, -118.7947], 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 let markerLayer = L.layerGroup().addTo(map);
 let stops = [], currentIdx = null;
 
-function initRoutes() {
-    const select = document.getElementById("route-select");
-    select.innerHTML = '<option value="">-- Select Route --</option>';
-    routeData.forEach(r => {
-        let opt = document.createElement("option");
-        opt.value = r.gid; // Computer sees GID
-        opt.text = r.name;  // Driver sees Name
-        select.appendChild(opt);
-    });
-    document.getElementById("status").innerText = "ROUTES LOADED";
-}
-
 async function loadData() {
     const gid = document.getElementById("route-select").value;
-    if(!gid) return;
+    if(!gid) { alert("Please select a route name from the box."); return; }
     
     document.getElementById("status").innerText = "IMPORTING...";
     stops = []; markerLayer.clearLayers();
@@ -138,21 +120,23 @@ async function loadData() {
         }
         renderSidebar(); updateMapVisuals();
         document.getElementById("status").innerText = "SUCCESS";
-    } catch (e) { document.getElementById("status").innerText = "ERROR"; }
+    } catch (e) { document.getElementById("status").innerText = "ERROR LOADING SHEET"; }
 }
 
 async function geocodeArcGIS(addr) {
-    const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`);
-    const data = await res.json();
-    return data.candidates.length ? { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x } : null;
+    try {
+        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`);
+        const data = await res.json();
+        return data.candidates.length ? { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x } : null;
+    } catch (e) { return null; }
 }
 
 function updateMapVisuals() {
     markerLayer.clearLayers();
     stops.forEach((s, i) => {
-        let pinClass = s.status === 'delivered' ? 'background:#28a745;' : 'background:#0078ff;';
+        let pinColor = s.status === 'delivered' ? '#28a745' : '#0078ff';
         L.marker([s.lat, s.lng], { 
-            icon: L.divIcon({ className:'', html:`<div class="pin" style="${pinClass}">${i+1}</div>`, iconSize: [26, 26] }) 
+            icon: L.divIcon({ className:'', html:`<div class="pin" style="background:${pinColor}">${i+1}</div>`, iconSize: [26, 26] }) 
         }).addTo(markerLayer);
     });
 }
