@@ -254,15 +254,19 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-/* GLOBAL SEARCH FUNCTIONALITY */
+/**
+ * FIXED SEARCH FUNCTION
+ * Scans all 24 tabs for a match. 
+ */
 async function performGlobalSearch() {
     const term = document.getElementById('global-search-input').value.trim().toLowerCase();
     if (!term) return;
 
     const list = document.getElementById('search-results-area');
-    list.innerHTML = `<div style="text-align:center; padding:20px; color:#0078ff;">Scanning 25 routes...</div>`;
+    list.innerHTML = `<div style="text-align:center; padding:20px; color:#0078ff;">Searching 24 routes...</div>`;
     
     let foundCount = 0;
+    const resultsBuffer = [];
 
     for (let tab of TABS) {
         try {
@@ -277,23 +281,33 @@ async function performGlobalSearch() {
                     const combined = rowData.join(" ").toLowerCase();
 
                     if (combined.includes(term)) {
-                        if (foundCount === 0) list.innerHTML = ""; 
                         foundCount++;
-                        const name = rowData[2] || rowData[1] || "Customer";
+                        const name = rowData[2] || "Customer";
                         const addr = rowData[3] || "No Address";
                         
-                        const card = document.createElement('div');
-                        card.className = 'stop-card';
-                        card.innerHTML = `<span class="tab-badge">${tab}</span><b>${name}</b><br><small>${addr}</small>`;
-                        card.onclick = () => openEditModal({company: name, address: addr}, tab);
-                        list.appendChild(card);
+                        resultsBuffer.push({ name, addr, tab, rowData });
                     }
                 });
             }
         } catch (e) { console.error("Search error on tab: " + tab); }
     }
 
-    if (foundCount === 0) {
+    if (foundCount > 0) {
+        list.innerHTML = "";
+        resultsBuffer.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'stop-card';
+            card.innerHTML = `<span class="tab-badge">${item.tab}</span><b>${item.name}</b><br><small>${item.addr}</small>`;
+            card.onclick = () => openEditModal({
+                company: item.name, 
+                address: item.addr,
+                email: item.rowData[15] || "", 
+                phone: item.rowData[16] || "",
+                notes: item.rowData[10] || ""
+            }, item.tab);
+            list.appendChild(card);
+        });
+    } else {
         list.innerHTML = `<div style="padding:20px; color:#dc3545; text-align:center;">No matching customers found.</div>`;
     }
 }
