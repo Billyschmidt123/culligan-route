@@ -39,27 +39,14 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 <div id="main-view">
 <div id="controls">
 <select id="route-select">
-    <option value="917509026">Monday Route</option>
-    <option value="GID_HERE">Tuesday Route</option>
-    <option value="GID_HERE">Wednesday Route</option>
-    <option value="GID_HERE">Thursday Route</option>
-    <option value="GID_HERE">Friday Route</option>
-    <option value="GID_HERE">Route 6</option>
-    <option value="GID_HERE">Route 7</option>
-    <option value="GID_HERE">Route 8</option>
-    <option value="GID_HERE">Route 9</option>
-    <option value="GID_HERE">Route 10</option>
-    <option value="GID_HERE">Route 11</option>
-    <option value="GID_HERE">Route 12</option>
-    <option value="GID_HERE">Route 13</option>
-    <option value="GID_HERE">Route 14</option>
-    <option value="GID_HERE">Route 15</option>
-    <option value="GID_HERE">Route 16</option>
-    <option value="GID_HERE">Route 17</option>
-    <option value="GID_HERE">Route 18</option>
-    <option value="GID_HERE">Route 19</option>
-    <option value="GID_HERE">Route 20</option>
-</select>
+    <option value="917509026">WEEK 1 MONDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 1 TUESDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 1 WEDNESDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 1 THURSDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 1 FRIDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 2 MONDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 2 TUESDAY</option>
+    </select>
 <button class="btn" onclick="loadRoute()">Load Route</button>
 <div id="status">Status: Ready</div>
 </div>
@@ -87,9 +74,11 @@ window.onload = () => {
 };
 
 async function loadRoute() {
+    [cite_start]// Get the GID from the selected option in the dropdown [cite: 1]
     const selectedGid = document.getElementById("route-select").value;
     document.getElementById("status").innerText = "Loading Google Sheet...";
 
+    [cite_start]// Updated URL to use the selectedGid instead of a constant [cite: 1]
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
     const res = await fetch(url);
     const text = await res.text();
