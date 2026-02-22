@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan - Strict GID Loading</title>
+<title>Culligan - Force Load Route</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -16,12 +16,11 @@
     .nav-btn { flex: 1; padding: 8px; background: #444; border: 1px solid #555; color: white; cursor: pointer; font-weight: bold; border-radius: 4px; }
     #stop-list { flex:1; overflow-y:auto; padding:10px;}
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
-    .stop-card.done { border-left-color: #28a745; opacity: 0.5; }
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
     #controls { background:#222; padding:10px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 100;}
     #map { flex:1; z-index: 1;}
     .btn-import { padding:10px 20px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-    #status { font-size:12px; color:#0078ff; font-weight: bold; margin-left: auto; padding-right: 10px;}
+    #status { font-size:12px; color:#ffcc00; font-weight: bold; margin-left: auto; padding-right: 10px;}
     .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white; background:#0078ff;}
 </style>
 </head>
@@ -54,8 +53,8 @@
             <option value="1211029272">WEEK 1 THURSDAY</option>
             <option value="1144026362">WEEK 1 FRIDAY</option>
         </select>
-        <button class="btn-import" onclick="loadData()">IMPORT ROUTE</button>
-        <div id="status">STATUS: IDLE</div>
+        <button class="btn-import" onclick="forceLoadCSV()">FORCE LOAD</button>
+        <div id="status">MODE: CSV_DIRECT</div>
     </div>
     <div id="map"></div>
 </div>
@@ -67,38 +66,39 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 let markerLayer = L.layerGroup().addTo(map);
 let stops = [], currentIdx = null;
 
-async function loadData() {
+async function forceLoadCSV() {
     const gid = document.getElementById("route-select").value;
     const statusDiv = document.getElementById("status");
     
-    statusDiv.innerText = "IMPORTING GID: " + gid;
+    statusDiv.innerText = "FORCING DOWNLOAD...";
     stops = []; 
     markerLayer.clearLayers();
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        // 't=' parameter forces a fresh download, bypassing the "Monday" cache
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}&t=${Date.now()}`;
+        // Direct CSV export link - bypasses the Visualization API entirely
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}&t=${Date.now()}`;
         
         const res = await fetch(url);
-        const text = await res.text();
-        const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
-        const rows = json.table.rows;
+        const data = await res.text();
         
-        for (let i = 0; i < rows.length; i++) {
-            const cols = rows[i].c;
-            if (cols && cols[3] && cols[3].v) {
-                const companyName = cols[2] ? cols[2].v : "Unknown";
-                const address = cols[3].v;
+        // Simple CSV parser (assumes Company Name is Column C and Address is Column D)
+        const lines = data.split('\n');
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // RegEx to handle commas inside quotes
+            if (cols.length > 3) {
+                const companyName = cols[2]?.replace(/"/g, '').trim();
+                const address = cols[3]?.replace(/"/g, '').trim();
                 
-                const geo = await geocodeArcGIS(address);
-                stops.push({
-                    company: companyName, 
-                    address: address, 
-                    lat: geo ? geo.lat : 55.1707, 
-                    lng: geo ? geo.lng : -118.7947,
-                    status: 'pending'
-                });
+                if (address && address.length > 5) {
+                    const geo = await geocodeArcGIS(address);
+                    stops.push({
+                        company: companyName || "Unknown",
+                        address: address,
+                        lat: geo ? geo.lat : 55.1707,
+                        lng: geo ? geo.lng : -118.7947
+                    });
+                }
             }
         }
         
@@ -108,10 +108,13 @@ async function loadData() {
         if (stops.length > 0) {
             const group = new L.featureGroup(markerLayer.getLayers());
             map.fitBounds(group.getBounds().pad(0.1));
-            statusDiv.innerText = "SUCCESS: " + stops.length + " STOPS";
+            statusDiv.innerText = "FORCE LOADED: " + stops.length;
+        } else {
+            statusDiv.innerText = "NO DATA FOUND ON TAB";
         }
     } catch (e) { 
-        statusDiv.innerText = "IMPORT ERROR";
+        statusDiv.innerText = "DOWNLOAD FAILED";
+        console.error(e);
     }
 }
 
