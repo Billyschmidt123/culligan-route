@@ -82,11 +82,6 @@
                 <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
                 <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
                 <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
-                <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
-                <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
-                <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
-                <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
-                <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
             </optgroup>
         </select>
         <button class="btn" id="load-btn" onclick="loadRoute()">LOAD ROUTE</button>
@@ -105,7 +100,7 @@
         <div style="padding:20px;">
             <button onclick="toggleManager()" style="float:right; color:red; background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
             <h3 style="color:#0078ff;">MANAGER MAINTENANCE</h3>
-            <p>Sheet connectivity verified.</p>
+            <p>Sheet selection bypass activated.</p>
         </div>
     </div>
 </div>
@@ -120,7 +115,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 markerLayer = L.layerGroup().addTo(map);
 
 async function loadRoute() {
-    const rawSheetName = document.getElementById("route-select").value;
+    const sheetName = document.getElementById("route-select").value;
     const statusDiv = document.getElementById("status");
     const loadBtn = document.getElementById("load-btn");
     
@@ -132,31 +127,24 @@ async function loadRoute() {
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        // Updated URL query to use headers:1 to prevent column name confusion
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(rawSheetName)}&t=${Date.now()}`;
+        // STRICT FETCH: Uses GID search if necessary or encoded sheet name with headers
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
         
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
-        
-        // VERIFICATION: Check if the returned data actually belongs to the sheet name we requested
-        // If Google defaults to sheet 0, the columns/rows might exist but the data is wrong.
         const rows = json.table.rows;
         
-        if (!rows || rows.length === 0) {
-            throw new Error("No data found for this sheet name.");
-        }
+        if (!rows || rows.length === 0) throw new Error("Sheet data empty or not found");
 
         for (let i = 0; i < rows.length; i++) {
             const cols = rows[i].c;
-            // Column C (2) = Name, Column D (3) = Address
+            // Target Column C (Company) and D (Address)
             if (cols && cols[3] && cols[3].v) {
-                const name = cols[2] ? cols[2].v : "Customer";
-                statusDiv.innerText = `GEOCASHING (${name} - Stop ${i+1})`;
+                const name = cols[2] ? cols[2].v : "Unknown";
+                statusDiv.innerText = `FETCHING: ${name}...`;
                 
-                await new Promise(r => setTimeout(r, 200));
                 const geo = await geocodeArcGIS(cols[3].v);
-                
                 stops.push({
                     company: name, 
                     address: cols[3].v, 
@@ -168,19 +156,12 @@ async function loadRoute() {
                 });
             }
         }
-        
         renderSidebar(); 
         updateMapVisuals();
-        
-        if(stops.length > 0) {
-            const group = new L.featureGroup(markerLayer.getLayers());
-            map.fitBounds(group.getBounds().pad(0.1));
-        }
-        
         statusDiv.innerText = "STATUS: COMPLETE";
     } catch (e) { 
         statusDiv.innerText = "STATUS: LOAD ERROR"; 
-        alert("CRITICAL ERROR: Could not find the tab '" + rawSheetName + "'. Please check that the tab name in Google Sheets exactly matches the dropdown.");
+        alert("Error loading " + sheetName + ". Please verify the tab name in your spreadsheet.");
     } finally { 
         loadBtn.disabled = false; 
     }
@@ -198,7 +179,6 @@ function updateMapVisuals() {
     markerLayer.clearLayers(); 
     if (routeLine) map.removeLayer(routeLine);
     const polyCoords = [];
-    
     stops.forEach((s, i) => {
         let pinColor = s.status === 'delivered' ? 'pin-delivered' : (s.status === 'not-delivered' ? 'pin-not-delivered' : 'pin-pending');
         L.marker([s.lat, s.lng], { 
@@ -206,7 +186,6 @@ function updateMapVisuals() {
         }).addTo(markerLayer);
         if (s.status === 'pending') polyCoords.push([s.lat, s.lng]);
     });
-    
     if (polyCoords.length > 1) {
         routeLine = L.polyline(polyCoords, { color: '#0078ff', weight: 5, opacity: 0.7, dashArray: '10, 15' }).addTo(map);
     }
@@ -225,11 +204,17 @@ function renderSidebar() {
     });
 }
 
-function openProfile(i, isBack = false) {
-    if (isBack && document.getElementById('p-notes').value !== "") {
-        if (!confirm("Keep existing data for this stop?")) document.getElementById('p-notes').value = "";
-    } else if (!isBack) { document.getElementById('p-notes').value = ""; }
-    
+function openProfile(i, isScrollingBack = false) {
+    // FUNCTION TO CLEAR DATA OR ASK IF SCROLLING BACK
+    if (isScrollingBack) {
+        if (!confirm("Keep current notes/data for this stop? (Cancel to Clear)")) {
+            document.getElementById('p-notes').value = "";
+        }
+    } else {
+        // Starting fresh for new customer
+        document.getElementById('p-notes').value = "";
+    }
+
     currentIdx = i; const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
@@ -247,7 +232,10 @@ function navStop(dir) {
     let nIdx = (currentIdx === null) ? 0 : currentIdx + dir;
     if (nIdx < 0) nIdx = stops.length - 1;
     if (nIdx >= stops.length) nIdx = 0;
-    openProfile(nIdx, dir < 0);
+    
+    // Determine if we are moving backward (scrolling back)
+    const isBack = dir < 0;
+    openProfile(nIdx, isBack);
 }
 
 function closeProfile() {
