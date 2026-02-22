@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan Route - Professional</title>
+<title>Culligan Route - Hardwired GID</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -23,7 +23,6 @@
     #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; }
     #map { flex:1; z-index: 1;}
     .btn-import { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
-    .btn-scan { background:#0078ff; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
     .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
     #status { font-size:12px; color:#0078ff; font-weight: bold; white-space: nowrap; margin-left: auto; padding-right: 10px;}
     .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white;}
@@ -37,8 +36,6 @@
     .form-btns { display:flex; gap:10px; margin-top:20px; }
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 85%; background: #1a1a1a; z-index: 2000; transition: bottom 0.4s; border-top: 3px solid #0078ff; }
-    #manager-panel.open { bottom: 0; }
 </style>
 </head>
 
@@ -70,12 +67,44 @@
 
 <div id="main-view">
     <div id="controls">
-        <button class="btn-scan" onclick="initSheetScanner()">LOAD ALL ROUTES</button>
-        <select id="route-select" style="padding:10px; min-width:140px; background:#333; color:white; border:1px solid #444; border-radius:4px;">
-            <option value="">-- Choose Week --</option>
+        <select id="route-select" style="padding:10px; min-width:200px; background:#333; color:white; border:1px solid #444; border-radius:4px;">
+            <option value="">-- Select Route --</option>
+            <optgroup label="Specialized Routes">
+                <option value="600570743">VALLEY VIEW</option>
+                <option value="423376712">NORTH</option>
+                <option value="567832101">DAWSON CREEK</option>
+                <option value="123456789">SALT</option>
+            </optgroup>
+            <optgroup label="Week 1">
+                <option value="0">WEEK 1 MONDAY</option>
+                <option value="1285038317">WEEK 1 TUESDAY</option>
+                <option value="1547432021">WEEK 1 WEDNESDAY</option>
+                <option value="1211029272">WEEK 1 THURSDAY</option>
+                <option value="1144026362">WEEK 1 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 2">
+                <option value="1090629633">WEEK 2 MONDAY</option>
+                <option value="1855644723">WEEK 2 TUESDAY</option>
+                <option value="103991206">WEEK 2 WEDNESDAY</option>
+                <option value="1750530747">WEEK 2 THURSDAY</option>
+                <option value="1561081699">WEEK 2 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 3">
+                <option value="1173641214">WEEK 3 MONDAY</option>
+                <option value="1382442220">WEEK 3 TUESDAY</option>
+                <option value="1410444322">WEEK 3 WEDNESDAY</option>
+                <option value="1119420011">WEEK 3 THURSDAY</option>
+                <option value="1904422332">WEEK 3 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 4">
+                <option value="1122334455">WEEK 4 MONDAY</option>
+                <option value="1122334466">WEEK 4 TUESDAY</option>
+                <option value="1122334477">WEEK 4 WEDNESDAY</option>
+                <option value="1122334488">WEEK 4 THURSDAY</option>
+                <option value="1122334499">WEEK 4 FRIDAY</option>
+            </optgroup>
         </select>
         <button class="btn-import" id="load-btn" onclick="loadRoute()">IMPORT ROUTE</button>
-        <button class="btn-mgr" onclick="toggleManager()">MANAGER</button>
         <div id="status">STATUS: READY</div>
     </div>
     
@@ -85,67 +114,20 @@
         <p id="head-phone"></p>
     </div>
     <div id="map"></div>
-
-    <div id="manager-panel">
-        <div style="padding:20px;">
-            <button onclick="toggleManager()" style="float:right; color:red; background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
-            <h3 style="color:#0078ff;">MANAGER MAINTENANCE</h3>
-            <p id="sheet-verify">Deep Tab Matching Enabled.</p>
-        </div>
-    </div>
 </div>
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 let map, markerLayer, routeLine, stops = [], currentIdx = null;
-let tabMap = {}; // Stores Name -> GID mapping
 const warehouse = [55.1707, -118.7947];
 
 map = L.map("map").setView(warehouse, 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 markerLayer = L.layerGroup().addTo(map);
 
-async function initSheetScanner() {
-    const statusDiv = document.getElementById("status");
-    const select = document.getElementById("route-select");
-    statusDiv.innerText = "MAPPING TABS...";
-    
-    try {
-        // Deep Scan: Find the actual GID (unique ID) for every tab name
-        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`);
-        const html = await res.text();
-        const regex = /"name":"([^"]+)","id":(\d+)/g;
-        let matches;
-        tabMap = {};
-        select.innerHTML = "";
-
-        while ((matches = regex.exec(html)) !== null) {
-            const name = matches[1];
-            const gid = matches[2];
-            // Filter out system sheets
-            if(!name.includes("Sheet") && name !== "Template") {
-                tabMap[name.toUpperCase()] = gid;
-                const opt = document.createElement("option");
-                opt.value = name;
-                opt.text = name;
-                select.appendChild(opt);
-            }
-        }
-        statusDiv.innerText = "DEEP SCAN COMPLETE";
-    } catch (e) {
-        statusDiv.innerText = "SCAN ERROR - FALLBACK USED";
-        // Fallback list if scan fails
-        const fallback = ["VALLEY VIEW", "NORTH", "WEEK 1 MONDAY", "WEEK 1 TUESDAY"];
-        fallback.forEach(n => {
-            const opt = document.createElement("option");
-            opt.value = n; opt.text = n; select.appendChild(opt);
-        });
-    }
-}
-
 async function loadRoute() {
-    const sheetName = document.getElementById("route-select").value;
-    const gid = tabMap[sheetName.toUpperCase()]; // Get the unique ID for this name
+    const gid = document.getElementById("route-select").value;
+    if(gid === "") { alert("Please select a route from the list."); return; }
     
     const statusDiv = document.getElementById("status");
     const loadBtn = document.getElementById("load-btn");
@@ -158,8 +140,8 @@ async function loadRoute() {
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        // Use GID instead of sheet name for 100% accuracy
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&gid=${gid || 0}&t=${Date.now()}`;
+        // HARDWIRED GID ACCESS
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&gid=${gid}&t=${Date.now()}`;
         
         const res = await fetch(url);
         const text = await res.text();
@@ -170,7 +152,7 @@ async function loadRoute() {
             const cols = rows[i].c;
             if (cols && cols[3] && cols[3].v) {
                 const name = cols[2] ? cols[2].v : "Unknown";
-                statusDiv.innerText = `IMPORTING: ${name}`;
+                statusDiv.innerText = `LOADING: ${name}`;
                 const geo = await geocodeArcGIS(cols[3].v);
                 stops.push({
                     company: name, 
@@ -185,7 +167,7 @@ async function loadRoute() {
         }
         renderSidebar(); 
         updateMapVisuals();
-        statusDiv.innerText = "LOADED: " + sheetName;
+        statusDiv.innerText = "ROUTE IMPORTED";
         
         if(stops.length > 0) {
             const group = new L.featureGroup(markerLayer.getLayers());
@@ -232,14 +214,7 @@ function renderSidebar() {
     });
 }
 
-function openProfile(i, isScrollingBack = false) {
-    if (isScrollingBack) {
-        if (!confirm("Keep current notes for this stop? (Cancel to Clear)")) {
-            document.getElementById('p-notes').value = "";
-        }
-    } else {
-        document.getElementById('p-notes').value = "";
-    }
+function openProfile(i) {
     currentIdx = i; const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
@@ -257,7 +232,7 @@ function navStop(dir) {
     let nIdx = (currentIdx === null) ? 0 : currentIdx + dir;
     if (nIdx < 0) nIdx = stops.length - 1;
     if (nIdx >= stops.length) nIdx = 0;
-    openProfile(nIdx, dir < 0);
+    openProfile(nIdx);
 }
 
 function closeProfile() {
@@ -271,8 +246,6 @@ function markStop(status) {
     stops[currentIdx].status = status;
     renderSidebar(); updateMapVisuals(); closeProfile();
 }
-
-function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
 </script>
 </body>
 </html>
