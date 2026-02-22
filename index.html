@@ -1,90 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Culligan Route Pro</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        body { margin:0; height:100vh; display:flex; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#111; color:white; overflow:hidden;}
-        #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column; z-index: 10;}
-        #map { flex:1; background: #000; }
-        #stop-list { flex:1; overflow-y:auto; padding:10px; }
-        .stop-card { background:#333; padding:12px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
-        .stop-card:hover { background:#444; }
-        #customer-profile { display:none; padding:20px; background:#222; height:100%; overflow-y:auto; }
-        .mgr-panel { position:fixed; bottom:-100%; left:0; width:100%; height:85%; background:#1a1a1a; transition:0.4s; z-index:2000; padding:20px; box-sizing:border-box; border-top:4px solid #0078ff;}
-        .mgr-panel.open { bottom:0; }
-        .btn { padding:12px; background:#0078ff; color:white; border:none; cursor:pointer; border-radius:4px; font-weight:bold; width:100%; margin-bottom:10px; text-transform: uppercase;}
-        .btn-red { background: #dc3545; }
-        .btn-green { background: #28a745; }
-        input, select, textarea { padding:12px; width:100%; margin-bottom:15px; background:#333; color:white; border:1px solid #444; border-radius:4px; box-sizing:border-box;}
-        #sig-canvas { background:white; width:100%; height:150px; border-radius:4px; border:2px solid #555; touch-action:none; }
-        #status-bar { background:#001a33; padding:10px; font-size:12px; color:#0078ff; border-bottom:1px solid #0078ff; font-weight: bold;}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Culligan Route Pro</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
+    #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
+    #sidebar-header { padding:15px; border-bottom:1px solid #444;}
+    #stop-list { flex:1; overflow-y:auto; padding:10px;}
+    .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
+    .stop-card.flagged { border-left-color: #ffc107; background: #443c20; }
+    #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
+    .profile-group { margin-bottom:12px; }
+    .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
+    .profile-group input, .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+    #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555;}
+    .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
+    #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
+    #current-stop-info { background:#001a33; padding:10px; border-bottom:2px solid #0078ff; display:flex; justify-content:space-between; align-items:center; min-height:60px;}
+    #controls { background:#222; padding:10px; border-bottom:1px solid #444; display: flex; align-items: center; gap: 10px;}
+    #map { flex:1; }
+    .mgr-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; padding:20px; box-sizing: border-box;}
+    .mgr-panel.open { bottom: 0; }
+</style>
 </head>
+
 <body>
 
 <div id="sidebar">
-    <div id="status-bar">SYSTEM ONLINE</div>
-    
     <div id="list-view">
-        <div style="padding:15px; border-bottom:1px solid #444;">
-            <h3 style="margin:0 0 10px 0; color: #0078ff;">ROUTE SELECTION</h3>
-            <select id="route-select">
-                <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
-                <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
-                <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
-                <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
-                <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
-            </select>
-            <button class="btn" onclick="loadRoute()">Load Route</button>
-            <button class="btn" style="background:#555;" onclick="toggleManager()">Manager Tools</button>
+        <div id="sidebar-header">
+            <h3 style="margin:0">Route Stops</h3>
+            <p id="stop-count" style="font-size:12px; color:#aaa;">Ready</p>
         </div>
         <div id="stop-list"></div>
     </div>
-
     <div id="customer-profile">
-        <button class="btn" style="background:#444;" onclick="closeProfile()">← Back to List</button>
-        <h2 id="prof-name" style="margin: 10px 0; color: #0078ff;">Customer</h2>
-        <p id="prof-addr" style="color:#aaa; font-size:13px; margin-bottom: 20px;"></p>
-        
-        <label style="font-size: 11px; font-weight: bold; color: #0078ff;">DELIVERY NOTES</label>
-        <textarea id="p-notes" rows="3" placeholder="Enter service notes..."></textarea>
-        
-        <label style="font-size: 11px; font-weight: bold; color: #0078ff;">SIGNATURE</label>
+        <button class="btn" style="background:#444;" onclick="closeProfile()">← BACK</button>
+        <h3 id="prof-name">Customer</h3>
+        <p id="prof-addr" style="font-size:12px; color:#aaa;"></p>
+        <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l" value="0"></div>
+        <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div>
+        <div class="profile-group"><label>NOTES</label><textarea id="p-notes" rows="3"></textarea></div>
         <canvas id="sig-canvas"></canvas>
-        
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="btn btn-green" style="flex:2;" onclick="submitLog('DELIVERED')">Complete</button>
-            <button class="btn btn-red" style="flex:1;" onclick="submitLog('SKIPPED')">Skip</button>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn" onclick="submitLog('DELIVERED')">DELIVERED</button>
+            <button class="btn" style="background:#dc3545;" onclick="submitLog('FAILED')">FAILED</button>
         </div>
     </div>
 </div>
 
-<div id="map"></div>
-
-<div id="manager-panel" class="mgr-panel">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="margin:0; color:#0078ff;">ADMINISTRATION</h2>
-        <button class="btn btn-red" style="width:auto; padding:5px 20px;" onclick="toggleManager()">Close</button>
+<div id="main-view">
+    <div id="current-stop-info">
+        <div id="info-text"><b id="head-name">No Route Loaded</b><br><span id="head-addr">Select route</span></div>
     </div>
-    
-    <div style="background:#222; padding:20px; border-radius:8px; border: 1px solid #444;">
-        <h3 style="margin-top:0;">Global Customer Search</h3>
-        <p style="font-size: 12px; color: #888;">Queries all sheets in the database for matches.</p>
-        <input type="text" id="global-search-input" placeholder="Search Company Name...">
-        <button class="btn" onclick="runGlobalSearch()">Execute Global Search</button>
-        
-        <label style="margin-top: 10px; display: block;">Search Results:</label>
-        <select id="global-results-drop">
-            <option>-- Results will appear here --</option>
+    <div id="controls">
+        <select id="route-select" class="btn" style="background:#333;">
+            <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
+            <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
+            <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
+            <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
+            <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
         </select>
+        <button class="btn" onclick="loadRoute()">Load</button>
+        <button class="btn" style="background:#666;" onclick="toggleManager()">Manager Panel</button>
     </div>
+    <div id="map"></div>
 
-    <div style="margin-top:30px;">
-        <button class="btn" style="background:#ffc107; color:black;" onclick="executeEOD()">Submit Trip Report & End Day</button>
+    <div id="manager-panel" class="mgr-panel">
+        <button class="btn" style="background:red;" onclick="toggleManager()">CLOSE</button>
+        <h2>Global Search</h2>
+        <input type="text" id="global-search-input" style="width:100%; padding:10px; margin-bottom:10px;" placeholder="Company Name...">
+        <button class="btn" onclick="runGlobalSearch()">SEARCH ALL SHEETS</button>
+        <select id="global-results-drop" style="width:100%; margin-top:10px; padding:10px;"></select>
+        <button class="btn" style="background:#ffc107; color:black; margin-top:20px; width:100%;" onclick="executeEOD()">END OF DAY</button>
     </div>
 </div>
 
@@ -93,13 +87,11 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec"; 
     const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 
-    let map, markerLayer, stops = [], currentStopIndex = 0, deliveryLog = [], canvas, ctx, drawing = false;
-    const warehouse = [55.1707, -118.7947];
+    let map, stops = [], currentStopIndex = 0, deliveryLog = [], canvas, ctx, drawing = false;
 
     window.onload = () => {
-        map = L.map('map').setView(warehouse, 12);
+        map = L.map('map').setView([55.1707, -118.7947], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        markerLayer = L.layerGroup().addTo(map);
         initSig();
     };
 
@@ -107,56 +99,31 @@
 
     async function runGlobalSearch() {
         const term = document.getElementById('global-search-input').value;
-        if(term.length < 3) return alert("Please enter at least 3 characters.");
-        
-        document.getElementById('status-bar').innerText = "QUERYING DATABASE...";
         try {
-            const response = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`, {
+            const res = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`, {
                 method: 'GET',
                 redirect: 'follow'
             });
-            const data = await response.json();
+            const data = await res.json();
             const drop = document.getElementById('global-results-drop');
             drop.innerHTML = '';
-
-            if(!data || data.length === 0) {
-                alert("No matches found.");
-            } else {
-                data.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.text = `${item.company} | ${item.route}`;
-                    drop.add(opt);
-                });
-                alert(`Found ${data.length} matches!`);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Database Connection Error.");
-        }
-        document.getElementById('status-bar').innerText = "SYSTEM ONLINE";
+            data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.text = `${item.company} (${item.route})`;
+                drop.add(opt);
+            });
+            alert("Search Complete.");
+        } catch (e) { alert("Search Error."); }
     }
 
     async function loadRoute() {
         const sheetName = document.getElementById('route-select').value;
-        document.getElementById('status-bar').innerText = `LOADING ${sheetName}...`;
-        try {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
-            const res = await fetch(url);
-            const text = await res.text();
-            const json = JSON.parse(text.substring(47).slice(0, -2));
-            const rows = json.table.rows;
-            
-            stops = rows.map(r => ({
-                company: r.c[0]?.v || "Unknown",
-                address: r.c[1]?.v || "No Address Found"
-            })).filter(s => s.address !== "No Address Found");
-
-            renderSidebar();
-            document.getElementById('status-bar').innerText = `ROUTE READY: ${stops.length} STOPS`;
-        } catch (e) { 
-            alert("Spreadsheet Access Denied."); 
-            document.getElementById('status-bar').innerText = "OFFLINE";
-        }
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+        const res = await fetch(url);
+        const text = await res.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        stops = json.table.rows.map(r => ({ company: r.c[0]?.v || "Unknown", address: r.c[1]?.v || "" }));
+        renderSidebar();
     }
 
     function renderSidebar() {
@@ -165,7 +132,7 @@
         stops.forEach((s, i) => {
             const d = document.createElement('div');
             d.className = 'stop-card';
-            d.innerHTML = `<b>${i+1}. ${s.company}</b><br><small style="color:#aaa;">${s.address}</small>`;
+            d.innerHTML = `<b>${i+1}. ${s.company}</b>`;
             d.onclick = () => openProfile(i);
             list.appendChild(d);
         });
@@ -177,7 +144,6 @@
         document.getElementById('customer-profile').style.display = 'block';
         document.getElementById('prof-name').innerText = stops[i].company;
         document.getElementById('prof-addr').innerText = stops[i].address;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     function closeProfile() {
@@ -186,30 +152,8 @@
     }
 
     function submitLog(status) {
-        deliveryLog.push({
-            customer: stops[currentStopIndex].company,
-            status: status,
-            time: new Date().toLocaleTimeString(),
-            notes: document.getElementById('p-notes').value
-        });
-        document.getElementById('p-notes').value = "";
+        deliveryLog.push({ customer: stops[currentStopIndex].company, status: status, time: new Date().toLocaleTimeString() });
         closeProfile();
-        alert("Visit Logged Locally.");
-    }
-
-    async function executeEOD() {
-        if(deliveryLog.length === 0) return alert("Nothing to submit.");
-        document.getElementById('status-bar').innerText = "UPLOADING TO DRIVE...";
-        try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ action: "EOD", log: deliveryLog })
-            });
-            alert("Trip Report Successfully Uploaded.");
-            deliveryLog = [];
-        } catch(e) { alert("Upload Failed."); }
-        document.getElementById('status-bar').innerText = "SYSTEM ONLINE";
     }
 
     function initSig() {
@@ -226,6 +170,11 @@
         const end = () => drawing = false;
         canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
         canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); window.addEventListener('touchend', end);
+    }
+
+    async function executeEOD() {
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "EOD", driver: "User", log: deliveryLog }) });
+        alert("EOD Saved.");
     }
 </script>
 </body>
