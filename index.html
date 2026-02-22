@@ -12,20 +12,34 @@
     body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
     #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column; z-index: 20;}
     #sidebar-header { padding:15px; border-bottom:1px solid #444;}
+    
+    /* Nav Buttons */
+    .nav-ctrls { display: flex; gap: 5px; padding: 10px; background: #333; border-bottom: 1px solid #444; }
+    .nav-btn { flex: 1; padding: 8px; background: #444; border: 1px solid #555; color: white; cursor: pointer; font-weight: bold; border-radius: 4px; }
+    .nav-btn:hover { background: #555; }
+
     #stop-list { flex:1; overflow-y:auto; padding:10px;}
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
     .stop-card.done { border-left-color: #28a745; opacity: 0.8; }
     .stop-card.failed { border-left-color: #dc3545; opacity: 0.8; }
-    .warning-text { color: #ffc107; font-size: 10px; font-weight: bold; display: block; margin-top: 5px;}
+    
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
     #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 100;}
+    
+    /* Map Header Info */
+    #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    #map-info-header h4 { margin: 0; font-size: 16px; }
+    #map-info-header p { margin: 2px 0 0 0; font-size: 12px; opacity: 0.9; }
+
     #map { flex:1; z-index: 1;}
     .btn { padding:12px 20px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-    #status { font-size:13px; color:#0078ff; font-weight: bold;}
+    #status { font-size:13px; color:#0078ff; font-weight: bold; white-space: nowrap;}
+    
     .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white;}
     .pin-pending { background:#0078ff; }
     .pin-delivered { background:#28a745; }
     .pin-not-delivered { background:#dc3545; }
+    
     #customer-profile { display:none; padding:15px; background:#222; height: 100%; }
     .form-btns { display:flex; gap:10px; margin-top:20px; }
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
@@ -36,6 +50,10 @@
 <body>
 
 <div id="sidebar">
+    <div class="nav-ctrls">
+        <button class="nav-btn" onclick="navStop(-1)">← BACK</button>
+        <button class="nav-btn" onclick="navStop(1)">FORWARD →</button>
+    </div>
     <div id="list-view">
         <div id="sidebar-header">
             <h3 style="margin:0">Route Stops</h3>
@@ -44,7 +62,7 @@
         <div id="stop-list"></div>
     </div>
     <div id="customer-profile">
-        <button onclick="closeProfile()" style="background:none; border:none; color:#0078ff; cursor:pointer;">← BACK</button>
+        <button onclick="closeProfile()" style="background:none; border:none; color:#0078ff; cursor:pointer;">← BACK TO LIST</button>
         <h3 id="prof-name"></h3>
         <p id="prof-addr" style="font-size:12px; color:#aaa;"></p>
         <div class="form-btns">
@@ -56,18 +74,23 @@
 
 <div id="main-view">
     <div id="controls">
-        <select id="route-select" style="padding:10px; background:#333; color:white;">
+        <select id="route-select" style="padding:10px; background:#333; color:white; border-radius:4px;">
             <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
             <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
             <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
             <option value="NORTH">NORTH</option>
             <option value="VALLEY VIEW">VALLEY VIEW</option>
-            <option value="DAWSON CREEK">DAWSON CREEK</option>
-            <option value="SALT">SALT</option>
         </select>
         <button class="btn" id="load-btn" onclick="loadRoute()">LOAD ROUTE</button>
         <div id="status">STATUS: READY</div>
     </div>
+    
+    <div id="map-info-header">
+        <h4 id="head-name">Customer Name</h4>
+        <p id="head-addr">Address Info</p>
+        <p id="head-phone">Phone: 000-000-0000</p>
+    </div>
+
     <div id="map"></div>
 </div>
 
@@ -76,7 +99,6 @@ const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 let map, markerLayer, routeLine, stops = [], currentIdx = null;
 const warehouse = [55.1707, -118.7947];
 
-// INITIALIZE MAP FIRST
 map = L.map("map").setView(warehouse, 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 markerLayer = L.layerGroup().addTo(map);
@@ -84,7 +106,12 @@ markerLayer = L.layerGroup().addTo(map);
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
     const statusDiv = document.getElementById("status");
-    statusDiv.innerText = "FETCHING DATA...";
+    const loadBtn = document.getElementById("load-btn");
+    
+    loadBtn.disabled = true;
+    stops = [];
+    markerLayer.clearLayers();
+    if (routeLine) map.removeLayer(routeLine);
     
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
@@ -92,36 +119,37 @@ async function loadRoute() {
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
         
-        stops = [];
         const rows = json.table.rows;
         
         for (let i = 0; i < rows.length; i++) {
             const cols = rows[i].c;
             if (cols && cols[3] && cols[3].v) {
-                statusDiv.innerText = `MAPPING ${i+1}/${rows.length}...`;
-                const addr = cols[3].v;
+                const name = cols[2] ? cols[2].v : "Customer";
+                statusDiv.innerText = `GEOCASHING (${name} and ${i+1} of ${rows.length} DONE)`;
                 
-                // Rate limit protection
-                await new Promise(r => setTimeout(r, 400));
-                const geo = await geocodeArcGIS(addr);
+                await new Promise(r => setTimeout(r, 350));
+                const geo = await geocodeArcGIS(cols[3].v);
                 
                 stops.push({
-                    company: cols[2] ? cols[2].v : "Customer",
-                    address: addr,
+                    company: name,
+                    address: cols[3].v,
+                    phone: cols[4] ? cols[4].v : "N/A",
                     lat: geo ? geo.lat : warehouse[0],
                     lng: geo ? geo.lng : warehouse[1],
                     status: 'pending',
                     geoFailed: !geo
                 });
-                
-                renderSidebar();
-                updateMapMarkers();
             }
         }
-        statusDiv.innerText = "ROUTE READY";
+        
+        renderSidebar();
+        updateMapVisuals();
+        statusDiv.innerText = "STATUS: COMPLETE";
+        loadBtn.disabled = false;
+        
     } catch (e) {
-        statusDiv.innerText = "LOAD ERROR";
-        console.error(e);
+        statusDiv.innerText = "STATUS: LOAD ERROR";
+        loadBtn.disabled = false;
     }
 }
 
@@ -133,10 +161,9 @@ async function geocodeArcGIS(addr) {
     } catch (e) { return null; }
 }
 
-function updateMapMarkers() {
+function updateMapVisuals() {
     markerLayer.clearLayers();
     if (routeLine) map.removeLayer(routeLine);
-    
     const polylineCoords = [];
     
     stops.forEach((s, i) => {
@@ -144,28 +171,15 @@ function updateMapMarkers() {
         if (s.status === 'delivered') pinColor = 'pin-delivered';
         if (s.status === 'not-delivered') pinColor = 'pin-not-delivered';
         
-        L.marker([s.lat, s.lng], { 
-            icon: L.divIcon({ 
-                className:'custom-div-icon', 
-                html:`<div class="pin ${pinColor}">${i+1}</div>`,
-                iconSize: [26, 26]
-            }) 
-        }).addTo(markerLayer);
-
-        // Build route line only through pending stops
-        if (s.status === 'pending') {
-            polylineCoords.push([s.lat, s.lng]);
-        }
+        const m = L.marker([s.lat, s.lng], { 
+            icon: L.divIcon({ className:'custom-div-icon', html:`<div class="pin ${pinColor}">${i+1}</div>`, iconSize: [26, 26] }) 
+        });
+        m.addTo(markerLayer);
+        if (s.status === 'pending') polylineCoords.push([s.lat, s.lng]);
     });
 
     if (polylineCoords.length > 1) {
-        routeLine = L.polyline(polylineCoords, {
-            color: '#0078ff',
-            weight: 5,
-            opacity: 0.7,
-            dashArray: '10, 15',
-            lineJoin: 'round'
-        }).addTo(map);
+        routeLine = L.polyline(polylineCoords, { color: '#0078ff', weight: 5, opacity: 0.7, dashArray: '10, 15' }).addTo(map);
     }
 }
 
@@ -173,14 +187,10 @@ function renderSidebar() {
     const list = document.getElementById("stop-list");
     list.innerHTML = "";
     document.getElementById("stop-count").innerText = `${stops.length} Stops`;
-    
     stops.forEach((s, i) => {
         const div = document.createElement("div");
         div.className = `stop-card ${s.status === 'delivered' ? 'done' : (s.status === 'not-delivered' ? 'failed' : '')}`;
-        div.innerHTML = `
-            <b>${i+1}. ${s.company}</b><br><small>${s.address}</small>
-            ${s.geoFailed ? '<span class="warning-text">⚠️ ADDRESS CHECK REQUIRED</span>' : ''}
-        `;
+        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
         div.onclick = () => openProfile(i);
         list.appendChild(div);
     });
@@ -188,23 +198,43 @@ function renderSidebar() {
 
 function openProfile(i) {
     currentIdx = i;
+    const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
-    document.getElementById('prof-name').innerText = stops[i].company;
-    document.getElementById('prof-addr').innerText = stops[i].address;
-    map.panTo([stops[i].lat, stops[i].lng]);
+    document.getElementById('prof-name').innerText = s.company;
+    document.getElementById('prof-addr').innerText = s.address;
+    
+    // Update Map Header
+    document.getElementById('map-info-header').style.display = 'block';
+    document.getElementById('head-name').innerText = s.company;
+    document.getElementById('head-addr').innerText = s.address;
+    document.getElementById('head-phone').innerText = "Phone: " + s.phone;
+    
+    map.setView([s.lat, s.lng], 16);
+}
+
+function navStop(dir) {
+    if (stops.length === 0) return;
+    if (currentIdx === null) { currentIdx = 0; }
+    else {
+        currentIdx += dir;
+        if (currentIdx < 0) currentIdx = stops.length - 1;
+        if (currentIdx >= stops.length) currentIdx = 0;
+    }
+    openProfile(currentIdx);
 }
 
 function closeProfile() {
     document.getElementById('list-view').style.display = 'block';
     document.getElementById('customer-profile').style.display = 'none';
+    document.getElementById('map-info-header').style.display = 'none';
 }
 
 function markStop(status) {
     if (currentIdx === null) return;
     stops[currentIdx].status = status;
     renderSidebar();
-    updateMapMarkers();
+    updateMapVisuals();
     closeProfile();
 }
 </script>
