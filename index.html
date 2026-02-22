@@ -1,9 +1,9 @@
-<!DOCTYPE html google sheets with apps script>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Culligan Optimized Route</title>
+    <title>Culligan Route Manager</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -16,10 +16,12 @@
         .stop-card { background: #333; padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 14px; cursor: pointer; }
         .stop-card:hover { background: #444; }
         #main-view { flex: 1; display: flex; flex-direction: column; }
-        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 20px; align-items: center; }
+        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 15px; align-items: center; }
         #current-stop-bar { background: #0078ff; color: white; padding: 10px; font-weight: bold; text-align: center; font-size: 16px; display: none; }
         #map { flex: 1; width: 100%; }
         .btn { padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        select { padding: 9px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; font-size: 14px; width: 180px; }
+        
         #dataModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; align-items:center; justify-content:center; }
         .modal-content { background:#222; padding:20px; border-radius:8px; width:380px; border:1px solid #444; max-height: 90vh; overflow-y: auto; }
         .field-row { margin-bottom: 12px; }
@@ -42,7 +44,10 @@
 
 <div id="main-view">
     <div id="controls">
-        <button class="btn" onclick="syncFromSheets()">Sync From Google Sheets</button>
+        <select id="routeSelector">
+            <option value="">Fetch Routes...</option>
+        </select>
+        <button class="btn" onclick="loadSelectedRoute()">Load Route</button>
         <div id="status" style="font-size: 13px; color: #aaa;">Status: Ready</div>
     </div>
     <div id="current-stop-bar">Current Stop: <span id="active-addr">None</span></div>
@@ -53,16 +58,11 @@
     <div class="modal-content">
         <h3 id="mCustName" style="color:#0078ff; margin-top:0;">Customer</h3>
         <p id="mCustAddr" style="color:#aaa; font-size:13px; margin-bottom:15px;"></p>
-        
-        <div id="dynamicFields"></div>
-
         <div class="field-row">
-            <label>Notes / Reason for Skip (Required if Not Delivered)</label>
+            <label>Notes / Reason for Skip</label>
             <textarea id="driverNotes" rows="2"></textarea>
         </div>
-
-        <button class="btn" style="width:100%; background:#0078ff; margin-bottom:10px;" onclick="openGoogleMaps()">I'm Lost (Google Maps)</button>
-        
+        <button class="btn" style="width:100%; background:#0078ff; margin-bottom:10px;" onclick="openGoogleMaps()">Google Maps</button>
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1;" onclick="processStop('Delivered')">DELIVERED</button>
             <button class="btn" style="flex:1; background:#dc3545;" onclick="processStop('Not Delivered')">SKIPPED</button>
@@ -72,42 +72,60 @@
 </div>
 
 <script>
-    // Your specific Google Apps Script URL
     const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbyECaDUnW3yvG5J8dWmT1a-5YTykHuwDxEiAgByH91A5zAwIzONqV64_r9olmyd07MSMA/exec";
 
-    let map, markerLayer, routeLine;
-    let stops = [];
-    let markers = []; 
-    let activeStop = null;
+    let map, markerLayer, routeLine, stops = [], markers = [], activeStop = null;
     const warehouse = { lat: 55.1707, lng: -118.7947 };
 
-window.onload = async () => {
-        // 1. Ask for the password
-        const password = prompt("Please enter the driver access code:");
+    // --- FUNCTIONS FIRST ---
 
-        // 2. Check if the password is correct
-        if (password !== "CBW2026!") {
-            alert("Incorrect code. Access denied.");
-            document.body.innerHTML = "<h1 style='color:white; text-align:center; margin-top:50px;'>Access Denied</h1>";
-            return;
+    async function fetchRouteList() {
+        try {
+            const res = await fetch(SHEETS_API_URL);
+            const tabs = await res.json();
+            const selector = document.getElementById('routeSelector');
+            selector.innerHTML = "";
+            
+            tabs.filter(t => t !== 'Deliveries').forEach(tabName => {
+                let opt = document.createElement('option');
+                opt.value = tabName;
+                opt.innerHTML = tabName;
+                selector.appendChild(opt);
+            });
+            document.getElementById('status').textContent = "Routes Loaded.";
+        } catch (e) {
+            document.getElementById('status').textContent = "Connection Error.";
         }
+    }
 
-        // 3. If correct, setup the map and layers
-        map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-        markerLayer = L.layerGroup().addTo(map);
-        routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map);
+    async function loadSelectedRoute() {
+        const selectedTab = document.getElementById('routeSelector').value;
+        if (!selectedTab) return;
 
-        // 4. Place the warehouse marker
-        L.marker([warehouse.lat, warehouse.lng], {
-            icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
-        }).addTo(map).bindPopup("<b>Warehouse</b>");
+        document.getElementById('status').textContent = `Loading ${selectedTab}...`;
+        try {
+            const dataRes = await fetch(`${SHEETS_API_URL}?sheet=${encodeURIComponent(selectedTab)}`);
+            const rows = await dataRes.json();
+            
+            const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
+            const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
 
-        // 5. Fetch the 25 route names for the dropdown menu
-        fetchRouteList();
-    };
-
-    function closeModal() { document.getElementById("dataModal").style.display = "none"; }
+            let tempStops = [];
+            for (let i = 0; i < rows.length; i++) {
+                document.getElementById('status').textContent = `Locating ${i + 1}/${rows.length}...`;
+                const geo = await geocodeAddress(rows[i][addrKey]);
+                if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], ...geo });
+                await new Promise(r => setTimeout(r, 1200));
+            }
+            
+            stops = optimizeRoute(tempStops);
+            renderRoute();
+            updateSidebar();
+            document.getElementById('status').textContent = `${selectedTab} Ready.`;
+        } catch (e) { 
+            document.getElementById('status').textContent = "Failed to load data.";
+        }
+    }
 
     async function geocodeAddress(address) {
         try {
@@ -116,14 +134,6 @@ window.onload = async () => {
             const data = await res.json();
             return data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
         } catch (e) { return null; }
-    }
-
-    function getDistance(p1, p2) {
-        const R = 6371;
-        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
-        const dLon = (p2.lng - p1.lng) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     function optimizeRoute(rawList) {
@@ -137,29 +147,12 @@ window.onload = async () => {
         return ordered;
     }
 
-    async function syncFromSheets() {
-        document.getElementById('status').textContent = "Fetching data...";
-        try {
-            const res = await fetch(SHEETS_API_URL);
-            const rows = await res.json();
-            
-            const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
-            const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
-
-            let tempStops = [];
-            for (let i = 0; i < rows.length; i++) {
-                document.getElementById('status').textContent = `Locating ${i + 1}/${rows.length}...`;
-                const geo = await geocodeAddress(rows[i][addrKey]);
-                if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], ...geo });
-                await new Promise(r => setTimeout(r, 1200)); 
-            }
-            stops = optimizeRoute(tempStops);
-            renderRoute();
-            updateSidebar();
-            document.getElementById('status').textContent = "Route Ready.";
-        } catch (e) { 
-            document.getElementById('status').textContent = "Error loading from Sheets.";
-        }
+    function getDistance(p1, p2) {
+        const R = 6371;
+        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+        const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     function renderRoute() {
@@ -205,36 +198,27 @@ window.onload = async () => {
         document.getElementById('dataModal').style.display = 'flex';
     }
 
+    function closeModal() { document.getElementById("dataModal").style.display = "none"; }
+
     async function processStop(status) {
         const notes = document.getElementById('driverNotes').value;
         if (status === 'Not Delivered' && !notes.trim()) {
-            alert("A reason is required to skip this delivery.");
+            alert("Please enter a reason for skip.");
             return;
         }
-
         const now = new Date();
-        const timestamp = now.toLocaleDateString() + " " + now.toLocaleTimeString();
-        
         let formData = {
             Customer: activeStop.company,
             Address: activeStop.address,
             Status: status,
-            Timestamp: timestamp,
+            Timestamp: now.toLocaleString(),
             Notes: notes
         };
-
-        // Sending data to Google Sheets via Web App
-        fetch(SHEETS_API_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', 
-            body: JSON.stringify(formData),
-            headers: { "Content-Type": "application/json" }
-        })
+        fetch(SHEETS_API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) })
         .then(() => {
             closeModal();
-            alert(`Stop recorded as ${status}.`);
-        })
-        .catch(() => alert("Error saving data."));
+            alert(`Stop recorded.`);
+        });
     }
 
     function openGoogleMaps() {
@@ -242,7 +226,29 @@ window.onload = async () => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeStop.address + ", Grande Prairie, AB")}`;
         window.open(url, '_blank');
     }
+
+    // --- STARTUP LOGIC LAST ---
+
+    window.onload = async () => {
+        const password = prompt("Please enter the driver access code:");
+
+        if (password !== "1234") {
+            alert("Incorrect code. Access denied.");
+            document.body.innerHTML = "<h1 style='color:white; text-align:center; margin-top:50px;'>Access Denied</h1>";
+            return;
+        }
+
+        map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+        routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map);
+
+        L.marker([warehouse.lat, warehouse.lng], {
+            icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
+        }).addTo(map).bindPopup("<b>Warehouse</b>");
+
+        fetchRouteList();
+    };
 </script>
 </body>
-
 </html>
