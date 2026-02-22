@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Culligan Delivery Manager</title>
+    <title>Culligan Route Manager</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -11,54 +11,69 @@
         #map { height: 350px; width: 100%; border-bottom: 2px solid #ccc; }
         .stop-list { padding: 15px; }
         .stop-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
-        #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 20px; }
-        #sig-canvas { background: white; border-radius: 5px; margin: 15px 0; touch-action: none; width: 100%; max-width: 400px; height: 150px; }
+        #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 20px; overflow-y: auto; }
+        #sig-canvas { background: white; border-radius: 5px; margin: 10px 0; touch-action: none; width: 100%; max-width: 400px; height: 120px; }
         #ticket-output { display: none; width: 500px; padding: 40px; background: white; color: black; }
-        input, textarea { width: 90%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 16px; }
-        .btn { padding: 15px 30px; border: none; border-radius: 5px; font-weight: bold; margin: 10px; width: 45%; font-size: 16px; }
+        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; max-width: 400px; }
+        input, textarea, select { padding: 10px; border-radius: 5px; border: none; font-size: 14px; width: 100%; box-sizing: border-box; }
+        .btn-row { display: flex; width: 90%; max-width: 400px; justify-content: space-between; margin-top: 15px; }
+        .btn { padding: 12px; border: none; border-radius: 5px; font-weight: bold; width: 48%; cursor: pointer; }
         .btn-save { background: #28a745; color: white; }
         .btn-cancel { background: #dc3545; color: white; }
     </style>
 </head>
 <body>
 
+<div style="background:#0078ff; color:white; padding:10px; text-align:center;">
+    <select id="routeSelector" style="width:auto; background:white; color:black;">
+        <option>City Route A</option>
+        <option>Rural Route B</option>
+    </select>
+    <span id="stop-count">0 Stops</span>
+</div>
 <div id="map"></div>
 <div class="stop-list" id="stop-list"></div>
 
 <div id="dataModal">
-    <h2 id="mCustName">Customer</h2>
-    <input type="number" id="inv18L" placeholder="18L Bottles Delivered">
-    <textarea id="driverNotes" rows="3" placeholder="Notes (optional)"></textarea>
-    <p>Customer Signature:</p>
+    <h3 id="mCustName" style="margin-top:0;">Customer</h3>
+    <div class="grid-inputs">
+        <input type="number" id="inv18L" placeholder="18L Del.">
+        <input type="number" id="ret18L" placeholder="18L Ret.">
+        <input type="number" id="invSm" placeholder="Sm Del.">
+        <input type="number" id="retSm" placeholder="Sm Ret.">
+        <input type="number" id="cases" placeholder="Cases">
+        <input type="text" id="recvBy" placeholder="Received By">
+    </div>
+    <textarea id="driverNotes" rows="2" placeholder="Driver Notes" style="margin-top:10px; width:90%; max-width:400px;"></textarea>
+    <p style="margin:5px 0;">Signature:</p>
     <canvas id="sig-canvas"></canvas>
-    <div style="width: 100%; text-align: center;">
+    <div class="btn-row">
         <button class="btn btn-save" onclick="processStop('Delivered')">SUBMIT</button>
         <button class="btn btn-cancel" onclick="closeModal()">CANCEL</button>
     </div>
 </div>
 
 <div id="ticket-output">
-    <div style="text-align: center; border-bottom: 2px solid #0078ff; padding-bottom: 10px;">
-        <h1 style="color: #0078ff; margin: 0;">CULLIGAN WATER</h1>
-        <p style="margin: 0;">Delivery Confirmation</p>
+    <div style="text-align:center; border-bottom:2px solid #0078ff;">
+        <h1 style="color:#0078ff; margin:0;">CULLIGAN WATER</h1>
+        <p>Delivery Receipt</p>
     </div>
-    <div style="margin-top: 20px;">
-        <p><b>Customer:</b> <span id="t-cust"></span></p>
-        <p><b>Date:</b> <span id="t-date"></span></p>
-        <p><b>Driver:</b> <span id="t-driver"></span></p>
-        <p><b>Quantity:</b> 18L Bottles: <span id="t-inv"></span></p>
-        <p><b>Notes:</b> <span id="t-notes"></span></p>
+    <p><b>Customer:</b> <span id="t-cust"></span></p>
+    <p><b>Address:</b> <span id="t-addr"></span></p>
+    <p><b>Date:</b> <span id="t-date"></span></p>
+    <div style="display:grid; grid-template-columns: 1fr 1fr;">
+        <p>18L Delivered: <span id="t-l18"></span></p>
+        <p>18L Returned: <span id="t-r18"></span></p>
+        <p>Small Delivered: <span id="t-lSm"></span></p>
+        <p>Small Returned: <span id="t-rSm"></span></p>
     </div>
-    <div style="margin-top: 30px;">
-        <p><b>Authorized Signature:</b></p>
-        <img id="t-sig" style="width: 100%; border: 1px solid #eee;">
-    </div>
+    <p><b>Notes:</b> <span id="t-notes"></span></p>
+    <p><b>Signature:</b></p>
+    <img id="t-sig" style="width:100%; border:1px solid #eee;">
 </div>
 
 <script>
-    // YOUR URL INTEGRATED BELOW
     const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
-
     let map, activeIndex, canvas, ctx, drawing = false;
     let driverName = "Driver_1";
     let stops = [
@@ -69,63 +84,64 @@
     async function processStop(status) {
         const now = new Date();
         const longDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        const bottles = document.getElementById('inv18L').value;
-        const notes = document.getElementById('driverNotes').value;
+        
+        // RESTORED: All inventory fields
+        const payload = {
+            Timestamp: now.toLocaleString(),
+            DriverID: driverName,
+            Customer: stops[activeIndex].company,
+            Address: stops[activeIndex].address,
+            Status: status,
+            l18: document.getElementById('inv18L').value,
+            r18: document.getElementById('ret18L').value,
+            lSm: document.getElementById('invSm').value,
+            rSm: document.getElementById('retSm').value,
+            cs: document.getElementById('cases').value,
+            recv: document.getElementById('recvBy').value,
+            Notes: document.getElementById('driverNotes').value,
+            RouteName: document.getElementById('routeSelector').value,
+            LongDate: longDate,
+            FileName: `${stops[activeIndex].company} - ${longDate}.pdf`
+        };
 
-        document.getElementById('t-cust').innerText = stops[activeIndex].company;
-        document.getElementById('t-driver').innerText = driverName;
+        // Update Ticket Template
+        document.getElementById('t-cust').innerText = payload.Customer;
+        document.getElementById('t-addr').innerText = payload.Address;
         document.getElementById('t-date').innerText = longDate;
-        document.getElementById('t-inv').innerText = bottles;
-        document.getElementById('t-notes').innerText = notes;
+        document.getElementById('t-l18').innerText = payload.l18;
+        document.getElementById('t-r18').innerText = payload.r18;
+        document.getElementById('t-lSm').innerText = payload.lSm;
+        document.getElementById('t-rSm').innerText = payload.rSm;
+        document.getElementById('t-notes').innerText = payload.Notes;
         document.getElementById('t-sig').src = canvas.toDataURL();
 
         const ticket = document.getElementById('ticket-output');
         ticket.style.display = "block";
 
-        const opt = { margin: 0.5, filename: 'delivery.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
-
-        html2pdf().set(opt).from(ticket).outputPdf('datauristring').then(pdfData => {
+        html2pdf().from(ticket).outputPdf('datauristring').then(pdfData => {
             ticket.style.display = "none";
-            
-            const payload = {
-                Customer: stops[activeIndex].company,
-                DriverID: driverName,
-                LongDate: longDate,
-                pdfData: pdfData,
-                FileName: `${stops[activeIndex].company} - ${longDate}.pdf`
-            };
+            payload.pdfData = pdfData;
 
-            fetch(SHEETS_API_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            })
-            .then(() => {
-                alert("Success! PDF Sent to Drive.");
-                closeModal();
-            })
-            .catch(err => alert("Error: " + err));
+            fetch(SHEETS_API_URL, { method: 'POST', body: JSON.stringify(payload) })
+            .then(() => { alert("Delivery Complete"); closeModal(); });
         });
     }
 
     function initCanvas() {
-        canvas = document.getElementById('sig-canvas');
-        ctx = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth; 
-        canvas.height = 150;
+        canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth; canvas.height = 120;
         ctx.strokeStyle = "#000"; ctx.lineWidth = 3;
-
-        const getXY = (e) => {
-            const r = canvas.getBoundingClientRect();
-            const clientX = e.clientX || e.touches[0].clientX;
-            const clientY = e.clientY || e.touches[0].clientY;
-            return { x: clientX - r.left, y: clientY - r.top };
+        const getXY = (e) => { 
+            const r = canvas.getBoundingClientRect(); 
+            const x = (e.clientX || e.touches[0].clientX) - r.left;
+            const y = (e.clientY || e.touches[0].clientY) - r.top;
+            return {x,y};
         };
-        const start = (e) => { drawing = true; const p = getXY(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-        const move = (e) => { if(!drawing) return; e.preventDefault(); const p = getXY(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
-        const stop = () => drawing = false;
-
-        canvas.onmousedown = start; canvas.onmousemove = move; window.onmouseup = stop;
-        canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = stop;
+        canvas.onmousedown = (e) => { drawing = true; const p = getXY(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+        canvas.onmousemove = (e) => { if(drawing) { const p = getXY(e); ctx.lineTo(p.x, p.y); ctx.stroke(); } };
+        window.onmouseup = () => drawing = false;
+        canvas.ontouchstart = (e) => { drawing = true; const p = getXY(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+        canvas.ontouchmove = (e) => { if(drawing) { e.preventDefault(); const p = getXY(e); ctx.lineTo(p.x, p.y); ctx.stroke(); } };
     }
 
     function closeModal() { document.getElementById('dataModal').style.display = 'none'; }
@@ -133,7 +149,6 @@
     window.onload = () => {
         map = L.map("map").setView([55.17, -118.79], 13);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-        
         const list = document.getElementById('stop-list');
         stops.forEach((s, i) => {
             const card = document.createElement('div');
@@ -148,6 +163,7 @@
             list.appendChild(card);
             L.marker([s.lat, s.lng]).addTo(map);
         });
+        document.getElementById('stop-count').innerText = stops.length + " Stops";
     };
 </script>
 </body>
