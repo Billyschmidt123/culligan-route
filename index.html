@@ -117,7 +117,7 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE"; // PASTE YOUR WEB APP URL HERE
+const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE"; 
 let map, markerLayer, routeLine, canvas, ctx, drawing = false;
 let stops = [];
 let currentStopIndex = null;
@@ -181,12 +181,11 @@ async function submitLog(status) {
         if (!reason) return;
     }
 
-    document.getElementById('status').innerText = "Generating PDF & Saving...";
+    document.getElementById('status').innerText = "Processing PDF...";
     
-    // Create PDF
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.setFontSize(20);
+    doc.setFontSize(22);
     doc.text("Culligan Delivery Receipt", 20, 20);
     doc.setFontSize(12);
     doc.text(`Customer: ${stops[currentStopIndex].company}`, 20, 40);
@@ -196,36 +195,33 @@ async function submitLog(status) {
     doc.text(`Small Bottles: ${document.getElementById('p-small').value}`, 20, 80);
     doc.text(`18L Returns: ${document.getElementById('p-18l-ret').value}`, 20, 90);
     doc.text(`Cases: ${document.getElementById('p-cases').value}`, 20, 100);
-    doc.text(`Signature:`, 20, 120);
+    doc.text(`Small Returns: ${document.getElementById('p-small-ret').value}`, 20, 110);
+    doc.text(`Received By: ${document.getElementById('p-rec-by').value}`, 20, 120);
+    if(reason) doc.text(`Reason: ${reason}`, 20, 130);
+    doc.text(`Signature:`, 20, 140);
     
     const sigData = canvas.toDataURL("image/png");
-    doc.addImage(sigData, 'PNG', 20, 130, 50, 25);
+    doc.addImage(sigData, 'PNG', 20, 145, 60, 30);
 
-    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    // FIXED BASE64 CONVERSION
+    const pdfOutput = doc.output('arraybuffer');
+    const base64PDF = btoa(new Uint8Array(pdfOutput).reduce((data, byte) => data + String.fromCharCode(byte), ''));
 
     const payload = {
-        filename: `${stops[currentStopIndex].company}_${new Date().getTime()}.pdf`,
-        pdfData: pdfBase64,
+        filename: `Culligan_${stops[currentStopIndex].company}_${new Date().getTime()}.pdf`,
+        pdfData: base64PDF,
         customer: stops[currentStopIndex].company,
-        status: status,
-        details: {
-            b18l: document.getElementById('p-18l').value,
-            bSmall: document.getElementById('p-small').value,
-            r18l: document.getElementById('p-18l-ret').value,
-            cases: document.getElementById('p-cases').value,
-            reason: reason
-        }
+        status: status
     };
 
     try {
-        await fetch(SCRIPT_URL, {
+        const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
             body: JSON.stringify(payload)
         });
-        alert("SUCCESS: PDF Saved to Google Drive.");
+        alert("PDF SENT TO GOOGLE DRIVE");
     } catch (e) {
-        alert("Error sending to Drive. Check SCRIPT_URL.");
+        alert("PDF GENERATED - Sending Failed. Check SCRIPT_URL connection.");
     }
 
     document.getElementById('status').innerText = "Ready";
