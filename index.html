@@ -23,7 +23,12 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 .profile-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
 .section-divider { border-top: 1px solid #444; margin: 15px 0; padding-top: 10px; }
 #sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:150px; touch-action: none; display: block; }
-.back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; }
+
+/* Buttons */
+.form-btns { display:flex; gap:10px; margin-top:20px; margin-bottom: 30px;}
+.btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; }
+.btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; }
+.back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold;}
 
 #main-view { flex:1; display:flex; flex-direction:column;}
 #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
@@ -48,11 +53,11 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
     </div>
 
     <div id="customer-profile">
-        <button class="back-btn" onclick="closeProfile()">← Back to List</button>
+        <button class="back-btn" onclick="closeProfile()">← BACK TO LIST</button>
         <h3 id="prof-name" style="margin:0 0 5px 0">Customer Name</h3>
         <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:15px;">Address</p>
         
-        <div class="profile-group"><label>18l BOTTLES</label><input type="number" id="p-18l"></div>
+        <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l"></div>
         <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small"></div>
         
         <div class="section-divider"></div>
@@ -68,6 +73,11 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
         <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
         <button onclick="clearSig()" style="font-size:10px; background:none; border:none; color:#dc3545; cursor:pointer; margin-top:5px; font-weight:bold;">CLEAR SIGNATURE</button>
+
+        <div class="form-btns">
+            <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
+            <button class="btn-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button>
+        </div>
     </div>
 </div>
 
@@ -176,6 +186,36 @@ function initSignaturePad() {
 
 function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
 
+async function submitLog(status) {
+    let reason = "";
+    if (status === 'NOT DELIVERED') {
+        reason = prompt("PLEASE SUPPLY A REASON FOR NOT DELIVERED:");
+        if (!reason) return;
+    }
+
+    const now = new Date();
+    const timestamp = now.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'medium' });
+    const logName = `TRIP LOG ${document.getElementById("route-select").selectedOptions[0].text} - ${now.toLocaleDateString('en-US', { dateStyle: 'long' })}`;
+
+    const data = {
+        Route: logName,
+        Customer: stops[currentStopIndex].company,
+        Status: status,
+        Time: timestamp,
+        B_18L: document.getElementById('p-18l').value,
+        B_Small: document.getElementById('p-small').value,
+        R_18L: document.getElementById('p-18l-ret').value,
+        Cases: document.getElementById('p-cases').value,
+        R_Small: document.getElementById('p-small-ret').value,
+        RecBy: document.getElementById('p-rec-by').value,
+        Reason: reason
+    };
+
+    console.log("Saving Data...", data);
+    alert(`SAVED TO ${logName}\nSTATUS: ${status} @ ${timestamp}`);
+    closeProfile();
+}
+
 async function loadRoute() {
     const selectedGid = document.getElementById("route-select").value;
     document.getElementById("status").innerText = "Loading Google Sheet...";
@@ -201,7 +241,9 @@ async function loadRoute() {
     } catch (e) { document.getElementById("status").innerText = "Error loading data."; }
 }
 
+let currentStopIndex = null;
 function openProfile(index) {
+    currentStopIndex = index;
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
     document.getElementById('prof-name').innerText = stops[index].company;
