@@ -19,8 +19,8 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display:flex; align-items:center; gap:10px;}
 #map { flex:1; }
 .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-#status { font-size:13px; color:#aaa; margin-top:8px;}
-#route-selector { padding:10px; background:#333; color:white; border:1px solid #0078ff; border-radius:4px; cursor:pointer;}
+#status { font-size:13px; color:#aaa; margin-left: 10px;}
+select { padding:10px; background:#333; color:white; border:1px solid #0078ff; border-radius:4px; cursor:pointer;}
 .custom-div-icon { background:transparent; border:none;}
 .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
 </style>
@@ -39,8 +39,31 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 <div id="main-view">
 <div id="controls">
 <select id="route-selector">
-    <option value="917509026">Main Route</option>
-    <option value="ENTER_NEXT_GID_HERE">Secondary Route</option>
+    <option value="917509026">Route 1 (Main)</option>
+    <option value="INSERT_GID_2">Route 2</option>
+    <option value="INSERT_GID_3">Route 3</option>
+    <option value="INSERT_GID_4">Route 4</option>
+    <option value="INSERT_GID_5">Route 5</option>
+    <option value="INSERT_GID_6">Route 6</option>
+    <option value="INSERT_GID_7">Route 7</option>
+    <option value="INSERT_GID_8">Route 8</option>
+    <option value="INSERT_GID_9">Route 9</option>
+    <option value="INSERT_GID_10">Route 10</option>
+    <option value="INSERT_GID_11">Route 11</option>
+    <option value="INSERT_GID_12">Route 12</option>
+    <option value="INSERT_GID_13">Route 13</option>
+    <option value="INSERT_GID_14">Route 14</option>
+    <option value="INSERT_GID_15">Route 15</option>
+    <option value="INSERT_GID_16">Route 16</option>
+    <option value="INSERT_GID_17">Route 17</option>
+    <option value="INSERT_GID_18">Route 18</option>
+    <option value="INSERT_GID_19">Route 19</option>
+    <option value="INSERT_GID_20">Route 20</option>
+    <option value="INSERT_GID_21">Route 21</option>
+    <option value="INSERT_GID_22">Route 22</option>
+    <option value="INSERT_GID_23">Route 23</option>
+    <option value="INSERT_GID_24">Route 24</option>
+    <option value="INSERT_GID_25">Route 25</option>
 </select>
 <button class="btn" onclick="loadRoute()">Load Route</button>
 <div id="status">Status: Ready</div>
@@ -49,33 +72,33 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 </div>
 
 <script>
-const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
+const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio"; [cite: 7]
 
 let map, markerLayer, routeLine;
 let stops = [];
-const warehouse = { lat: 55.1707, lng: -118.7947 };
+const warehouse = { lat: 55.1707, lng: -118.7947 }; [cite: 8]
 
 window.onload = () => {
-    map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-    markerLayer = L.layerGroup().addTo(map);
-    routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map);
+    map = L.map("map").setView([warehouse.lat, warehouse.lng], 11); [cite: 9]
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map); [cite: 9]
+    markerLayer = L.layerGroup().addTo(map); [cite: 9]
+    routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map); [cite: 9]
     L.marker([warehouse.lat, warehouse.lng], {
         icon: L.divIcon({
             className:'custom-div-icon',
             html:`<div class="number-pin">W</div>`
         })
-    }).addTo(map).bindPopup("<b>Warehouse</b>");
+    }).addTo(map).bindPopup("<b>Warehouse</b>"); [cite: 10]
 };
 
 async function loadRoute() {
-    const selectedGid = document.getElementById("route-selector").value;
-    document.getElementById("status").innerText = "Loading Google Sheet...";
+    const selectedGid = document.getElementById("route-selector").value; [cite: 11]
+    document.getElementById("status").innerText = "Loading Google Sheet..."; [cite: 11]
 
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
-    const res = await fetch(url);
-    const text = await res.text();
-    const json = JSON.parse(text.substring(47).slice(0, -2));
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`; [cite: 11]
+    const res = await fetch(url); [cite: 12]
+    const text = await res.text(); [cite: 12]
+    const json = JSON.parse(text.substring(47).slice(0, -2)); [cite: 12]
     const rows = json.table.rows.map(r =>
         Object.fromEntries(
             r.c.map((c,i)=>[
@@ -83,41 +106,41 @@ async function loadRoute() {
                 c ? c.v : ""
             ])
         )
-    );
-    const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
+    ); [cite: 13]
+    const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr")); [cite: 14]
     const nameKey = Object.keys(rows[0]).find(k =>
         k.toLowerCase().includes("comp") ||
         k.toLowerCase().includes("cust")
-    );
-    let tempStops = [];
+    ); [cite: 14]
+    let tempStops = []; [cite: 15]
 
     for (let i = 0; i < rows.length; i++) {
-        document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
-        const geo = await geocode(rows[i][addrKey]);
+        document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`; [cite: 15]
+        const geo = await geocode(rows[i][addrKey]); [cite: 16]
         if (geo) {
             tempStops.push({
                 company: rows[i][nameKey] || "Stop",
                 address: rows[i][addrKey],
                 ...geo
-            });
+            }); [cite: 16]
         }
 
-        await new Promise(r => setTimeout(r, 1100));
+        await new Promise(r => setTimeout(r, 1100)); [cite: 17]
     }
 
-    stops = optimize(tempStops);
-    renderRoute();
-    renderSidebar();
+    stops = optimize(tempStops); [cite: 18]
+    renderRoute(); [cite: 18]
+    renderSidebar(); [cite: 18]
 
-    document.getElementById("status").innerText = "Route Ready";
+    document.getElementById("status").innerText = "Route Ready"; [cite: 18]
 }
 
 async function geocode(address) {
-    const query = encodeURIComponent(address + ", Grande Prairie, AB");
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
-    const data = await res.json();
-    if (data.length === 0) return null;
-    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    const query = encodeURIComponent(address + ", Grande Prairie, AB"); [cite: 19]
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`); [cite: 20]
+    const data = await res.json(); [cite: 20]
+    if (data.length === 0) return null; [cite: 20]
+    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }; [cite: 21]
 }
 
 function distance(a,b){
@@ -126,50 +149,50 @@ function distance(a,b){
     const dLon=(b.lng-a.lng)*Math.PI/180;
     const x=Math.sin(dLat/2)**2+
         Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
-    return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+    return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); [cite: 22]
 }
 
 function optimize(list){
-    let unvisited=[...list], ordered=[], current=warehouse;
+    let unvisited=[...list], ordered=[], current=warehouse; [cite: 23]
     while(unvisited.length){
-        unvisited.sort((a,b)=>distance(current,a)-distance(current,b));
-        const next=unvisited.shift();
-        ordered.push(next);
-        current=next;
+        unvisited.sort((a,b)=>distance(current,a)-distance(current,b)); [cite: 23]
+        const next=unvisited.shift(); [cite: 23]
+        ordered.push(next); [cite: 24]
+        current=next; [cite: 24]
     }
     return ordered;
 }
 
 function renderRoute(){
-    markerLayer.clearLayers();
-    let coords=[[warehouse.lat,warehouse.lng]];
+    markerLayer.clearLayers(); [cite: 24]
+    let coords=[[warehouse.lat,warehouse.lng]]; [cite: 24]
     stops.forEach((s,i)=>{
-        coords.push([s.lat,s.lng]);
+        coords.push([s.lat,s.lng]); [cite: 25]
         L.marker([s.lat,s.lng],{
             icon:L.divIcon({
                 className:'custom-div-icon',
                 html:`<div class="number-pin">${i+1}</div>`
             })
         }).addTo(markerLayer)
-        .bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`);
+        .bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`); [cite: 25]
     });
-    coords.push([warehouse.lat,warehouse.lng]);
-    routeLine.setLatLngs(coords);
-    map.fitBounds(coords,{padding:[50,50]});
+    coords.push([warehouse.lat,warehouse.lng]); [cite: 26]
+    routeLine.setLatLngs(coords); [cite: 26]
+    map.fitBounds(coords,{padding:[50,50]}); [cite: 26]
 }
 
 function renderSidebar(){
-    const list=document.getElementById("stop-list");
-    list.innerHTML="";
-    document.getElementById("stop-count").innerText=`${stops.length} Stops Found`;
+    const list=document.getElementById("stop-list"); [cite: 26]
+    list.innerHTML=""; [cite: 26]
+    document.getElementById("stop-count").innerText=`${stops.length} Stops Found`; [cite: 26]
     stops.forEach((s,i)=>{
-        const card=document.createElement("div");
-        card.className="stop-card";
-        card.innerHTML=`<b>${i+1}.</b> ${s.company}<br><small>${s.address}</small>`;
+        const card=document.createElement("div"); [cite: 27]
+        card.className="stop-card"; [cite: 27]
+        card.innerHTML=`<b>${i+1}.</b> ${s.company}<br><small>${s.address}</small>`; [cite: 27]
         card.onclick=()=>{
-            map.setView([s.lat,s.lng],16);
+            map.setView([s.lat,s.lng],16); [cite: 27]
         };
-        list.appendChild(card);
+        list.appendChild(card); [cite: 27]
     });
 }
 </script>
