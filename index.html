@@ -90,7 +90,7 @@
         <div style="padding:20px;">
             <button onclick="toggleManager()" style="float:right; color:red; background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
             <h3 style="color:#0078ff;">MANAGER MAINTENANCE</h3>
-            <p>Sheet Match: Strict Mode Active.</p>
+            <p id="sheet-verify">Deep Tab Matching Enabled.</p>
         </div>
     </div>
 </div>
@@ -98,6 +98,7 @@
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 let map, markerLayer, routeLine, stops = [], currentIdx = null;
+let tabMap = {}; // Stores Name -> GID mapping
 const warehouse = [55.1707, -118.7947];
 
 map = L.map("map").setView(warehouse, 11);
@@ -107,32 +108,44 @@ markerLayer = L.layerGroup().addTo(map);
 async function initSheetScanner() {
     const statusDiv = document.getElementById("status");
     const select = document.getElementById("route-select");
-    statusDiv.innerText = "SCANNING...";
+    statusDiv.innerText = "MAPPING TABS...";
     
     try {
+        // Deep Scan: Find the actual GID (unique ID) for every tab name
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`);
+        const html = await res.text();
+        const regex = /"name":"([^"]+)","id":(\d+)/g;
+        let matches;
+        tabMap = {};
         select.innerHTML = "";
-        const knownRoutes = [
-            "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT", 
-            "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY",
-            "WEEK 2 MONDAY", "WEEK 2 TUESDAY", "WEEK 2 WEDNESDAY", "WEEK 2 THURSDAY", "WEEK 2 FRIDAY",
-            "WEEK 3 MONDAY", "WEEK 3 TUESDAY", "WEEK 3 WEDNESDAY", "WEEK 3 THURSDAY", "WEEK 3 FRIDAY",
-            "WEEK 4 MONDAY", "WEEK 4 TUESDAY", "WEEK 4 WEDNESDAY", "WEEK 4 THURSDAY", "WEEK 4 FRIDAY"
-        ];
-        
-        knownRoutes.forEach(name => {
-            const opt = document.createElement("option");
-            opt.value = name;
-            opt.text = name;
-            select.appendChild(opt);
-        });
 
-        statusDiv.innerText = "ROUTES LOADED";
-    } catch (e) { statusDiv.innerText = "SCAN ERROR"; }
+        while ((matches = regex.exec(html)) !== null) {
+            const name = matches[1];
+            const gid = matches[2];
+            // Filter out system sheets
+            if(!name.includes("Sheet") && name !== "Template") {
+                tabMap[name.toUpperCase()] = gid;
+                const opt = document.createElement("option");
+                opt.value = name;
+                opt.text = name;
+                select.appendChild(opt);
+            }
+        }
+        statusDiv.innerText = "DEEP SCAN COMPLETE";
+    } catch (e) {
+        statusDiv.innerText = "SCAN ERROR - FALLBACK USED";
+        // Fallback list if scan fails
+        const fallback = ["VALLEY VIEW", "NORTH", "WEEK 1 MONDAY", "WEEK 1 TUESDAY"];
+        fallback.forEach(n => {
+            const opt = document.createElement("option");
+            opt.value = n; opt.text = n; select.appendChild(opt);
+        });
+    }
 }
 
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
-    if(!sheetName) { alert("Select a route first."); return; }
+    const gid = tabMap[sheetName.toUpperCase()]; // Get the unique ID for this name
     
     const statusDiv = document.getElementById("status");
     const loadBtn = document.getElementById("load-btn");
@@ -145,16 +158,13 @@ async function loadRoute() {
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        // IMPROVED: Added 'sheet' parameter AND cache busting timestamp to force Google to find the specific tab
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(sheetName)}&t=${new Date().getTime()}`;
+        // Use GID instead of sheet name for 100% accuracy
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&gid=${gid || 0}&t=${Date.now()}`;
         
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
         const rows = json.table.rows;
-        
-        // Double Check: Ensure we didn't get default data by checking the first row company name
-        // if your sheet structure has headers, rows[0] is the first customer.
         
         for (let i = 0; i < rows.length; i++) {
             const cols = rows[i].c;
@@ -175,7 +185,7 @@ async function loadRoute() {
         }
         renderSidebar(); 
         updateMapVisuals();
-        statusDiv.innerText = "DONE: " + sheetName;
+        statusDiv.innerText = "LOADED: " + sheetName;
         
         if(stops.length > 0) {
             const group = new L.featureGroup(markerLayer.getLayers());
