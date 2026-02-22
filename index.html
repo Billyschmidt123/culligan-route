@@ -6,75 +6,70 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <style>
-        :root { --culligan-blue: #0078ff; --dark-bg: #1a1a1a; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f0f2f5; }
+        :root { --culligan-blue: #0078ff; }
+        body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f4f7f6; }
         
-        /* Header Styling */
-        header { background: var(--culligan-blue); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000; }
+        /* Correct Header Format */
+        header { background: var(--culligan-blue); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000; }
         
-        /* Map and List Container */
-        #main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        #map { flex: 2; width: 100%; border-bottom: 3px solid var(--culligan-blue); }
+        /* Map & Sidebar Layout */
+        #map { height: 350px; width: 100%; border-bottom: 3px solid var(--culligan-blue); }
+        .stop-list { flex: 1; overflow-y: auto; padding: 15px; }
         
-        /* Stop List Styling */
-        .stop-list { flex: 1; overflow-y: auto; padding: 15px; background: white; }
-        .stop-card { background: #fff; border-left: 5px solid var(--culligan-blue); padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; }
-        .stop-card:active { transform: scale(0.98); background: #f9f9f9; }
-        .stop-card b { font-size: 1.1em; color: #333; }
+        /* Correct Card Format */
+        .stop-card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 8px; border-left: 6px solid var(--culligan-blue); box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; }
+        .stop-card b { display: block; font-size: 1.1em; color: #333; margin-bottom: 4px; }
+        .stop-card span { color: #666; font-size: 0.9em; }
+
+        /* Correct Modal Design */
+        #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-box { background: #1a1a1a; width: 90%; max-width: 420px; padding: 25px; border-radius: 12px; color: white; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         
-        /* Modal Overlay */
-        #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: flex-start; color: white; padding-top: 40px; backdrop-filter: blur(5px); }
-        .modal-content { background: var(--dark-bg); width: 90%; max-width: 450px; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+        input, textarea, select { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #333; background: #2a2a2a; color: white; box-sizing: border-box; }
         
-        /* Grid Input Styling */
-        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
-        input, textarea, select { padding: 12px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: white; font-size: 16px; width: 100%; box-sizing: border-box; }
-        input::placeholder { color: #888; }
+        /* Signature Area */
+        #sig-canvas { background: white; border-radius: 6px; margin: 10px 0; touch-action: none; width: 100%; height: 140px; }
         
-        /* Signature Canvas */
-        #sig-canvas { background: white; border-radius: 8px; margin: 15px 0; touch-action: none; width: 100%; height: 150px; }
+        /* Pin Design */
+        .number-pin { background: var(--culligan-blue); color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         
-        /* Buttons */
-        .btn-row { display: flex; gap: 10px; margin-top: 20px; }
-        .btn { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; text-transform: uppercase; }
+        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
+        .btn { flex: 1; padding: 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
         .btn-save { background: #28a745; color: white; }
         .btn-cancel { background: #dc3545; color: white; }
         
-        /* PDF Template (Hidden) */
         #ticket-output { display: none; width: 600px; padding: 40px; background: white; color: black; }
-        .number-pin { background: var(--culligan-blue); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="font-weight: bold; font-size: 1.2em;">CULLIGAN ROUTE</div>
-    <select id="routeSelector" style="width: auto; padding: 5px; background: white; color: black; border: none;">
+    <div style="font-weight: bold; font-size: 1.1em;">CULLIGAN DELIVERY</div>
+    <select id="routeSelector" style="width: auto; padding: 4px; background: white; color: black; border: none; font-size: 0.9em;">
         <option>City Route A</option>
         <option>Rural Route B</option>
     </select>
     <div id="stop-count">0 Stops</div>
 </header>
 
-<div id="main-container">
-    <div id="map"></div>
-    <div class="stop-list" id="stop-list"></div>
-</div>
+<div id="map"></div>
+<div class="stop-list" id="stop-list"></div>
 
 <div id="dataModal">
-    <div class="modal-content">
-        <h2 id="mCustName" style="margin-top: 0; color: var(--culligan-blue);">Customer Name</h2>
-        <div class="grid-inputs">
-            <div><label>18L Del.</label><input type="number" id="inv18L" value="0"></div>
-            <div><label>18L Ret.</label><input type="number" id="ret18L" value="0"></div>
-            <div><label>Sm Del.</label><input type="number" id="invSm" value="0"></div>
-            <div><label>Sm Ret.</label><input type="number" id="retSm" value="0"></div>
-            <div style="grid-column: span 2;"><input type="text" id="recvBy" placeholder="Received By"></div>
+    <div class="modal-box">
+        <h2 id="mCustName" style="margin: 0 0 15px 0; color: var(--culligan-blue);">Customer</h2>
+        <div class="input-grid">
+            <input type="number" id="inv18L" placeholder="18L Del">
+            <input type="number" id="ret18L" placeholder="18L Ret">
+            <input type="number" id="invSm" placeholder="Sm Del">
+            <input type="number" id="retSm" placeholder="Sm Ret">
+            <input type="number" id="cases" placeholder="Cases">
+            <input type="text" id="recvBy" placeholder="Received By">
         </div>
-        <textarea id="driverNotes" rows="2" placeholder="Add notes here..."></textarea>
-        <p style="margin: 10px 0 5px 0; font-size: 0.9em; color: #aaa;">Authorized Signature:</p>
+        <textarea id="driverNotes" rows="2" placeholder="Notes..."></textarea>
+        <p style="margin: 10px 0 5px 0; font-size: 0.8em; color: #888;">SIGN BELOW:</p>
         <canvas id="sig-canvas"></canvas>
         <div class="btn-row">
             <button class="btn btn-save" onclick="processStop('Delivered')">Submit</button>
@@ -84,25 +79,21 @@
 </div>
 
 <div id="ticket-output">
-    <div style="text-align: center; border-bottom: 2px solid #0078ff; padding-bottom: 10px;">
+    <div style="text-align: center; border-bottom: 2px solid #0078ff; padding-bottom: 15px;">
         <h1 style="color: #0078ff; margin: 0;">CULLIGAN WATER</h1>
-        <p style="margin: 0;">Official Delivery Confirmation</p>
+        <p style="margin: 0;">Delivery Confirmation</p>
     </div>
-    <div style="margin-top: 20px; font-size: 1.2em;">
+    <div style="padding: 20px 0;">
         <p><b>Customer:</b> <span id="t-cust"></span></p>
         <p><b>Address:</b> <span id="t-addr"></span></p>
         <p><b>Date:</b> <span id="t-date"></span></p>
         <hr>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <p>18L Delivered: <span id="t-l18"></span></p>
-            <p>18L Returned: <span id="t-r18"></span></p>
-            <p>Small Delivered: <span id="t-lSm"></span></p>
-            <p>Small Returned: <span id="t-rSm"></span></p>
-        </div>
-        <p><b>Notes:</b> <span id="t-notes"></span></p>
+        <p>18L Delivered: <span id="t-l18"></span> | 18L Returned: <span id="t-r18"></span></p>
+        <p>Small Delivered: <span id="t-lSm"></span> | Small Returned: <span id="t-rSm"></span></p>
         <p><b>Received By:</b> <span id="t-recv"></span></p>
+        <p><b>Notes:</b> <span id="t-notes"></span></p>
     </div>
-    <div style="margin-top: 40px; border-top: 1px solid #ccc; padding-top: 10px;">
+    <div style="margin-top: 20px;">
         <p><b>Signature:</b></p>
         <img id="t-sig" style="width: 100%; max-height: 150px; object-fit: contain;">
     </div>
@@ -112,8 +103,8 @@
     const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
     let map, markerLayer, activeIndex, canvas, ctx, drawing = false;
     let stops = [
-        { company: "TEST_UFA_FARM", address: "123 Farm Road", lat: 55.1700, lng: -118.7900 },
-        { company: "Culligan Main", address: "Warehouse", lat: 55.1800, lng: -118.8000 }
+        { company: "TEST_UFA_FARM", address: "123 Farm Road", lat: 55.17, lng: -118.79 },
+        { company: "Culligan Main", address: "Warehouse", lat: 55.18, lng: -118.80 }
     ];
 
     async function processStop(status) {
@@ -126,18 +117,18 @@
             Customer: stops[activeIndex].company,
             Address: stops[activeIndex].address,
             Status: status,
-            l18: document.getElementById('inv18L').value,
-            r18: document.getElementById('ret18L').value,
-            lSm: document.getElementById('invSm').value,
-            rSm: document.getElementById('retSm').value,
-            recv: document.getElementById('recvBy').value,
+            l18: document.getElementById('inv18L').value || 0,
+            r18: document.getElementById('ret18L').value || 0,
+            lSm: document.getElementById('invSm').value || 0,
+            rSm: document.getElementById('retSm').value || 0,
+            cs: document.getElementById('cases').value || 0,
+            recv: document.getElementById('recvBy').value || "",
             Notes: document.getElementById('driverNotes').value,
             RouteName: document.getElementById('routeSelector').value,
             LongDate: longDate,
             FileName: `${stops[activeIndex].company} - ${longDate}.pdf`
         };
 
-        // Fill PDF
         document.getElementById('t-cust').innerText = payload.Customer;
         document.getElementById('t-addr').innerText = payload.Address;
         document.getElementById('t-date').innerText = longDate;
@@ -145,8 +136,8 @@
         document.getElementById('t-r18').innerText = payload.r18;
         document.getElementById('t-lSm').innerText = payload.lSm;
         document.getElementById('t-rSm').innerText = payload.rSm;
-        document.getElementById('t-notes').innerText = payload.Notes;
         document.getElementById('t-recv').innerText = payload.recv;
+        document.getElementById('t-notes').innerText = payload.Notes;
         document.getElementById('t-sig').src = canvas.toDataURL();
 
         const ticket = document.getElementById('ticket-output');
@@ -155,18 +146,14 @@
         html2pdf().from(ticket).outputPdf('datauristring').then(pdfData => {
             ticket.style.display = "none";
             payload.pdfData = pdfData;
-
             fetch(SHEETS_API_URL, { method: 'POST', body: JSON.stringify(payload) })
-            .then(() => { 
-                alert("SUCCESS: Delivery Recorded & PDF Sent.");
-                closeModal();
-            });
+            .then(() => { alert("Saved!"); closeModal(); });
         });
     }
 
     function initCanvas() {
         canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth; canvas.height = 150;
+        canvas.width = canvas.offsetWidth; canvas.height = 140;
         ctx.strokeStyle = "#000"; ctx.lineWidth = 3;
         const getXY = (e) => { 
             const r = canvas.getBoundingClientRect(); 
@@ -192,7 +179,7 @@
         stops.forEach((s, i) => {
             const card = document.createElement('div');
             card.className = "stop-card";
-            card.innerHTML = `<b>#${i+1} ${s.company}</b><br><small>${s.address}</small>`;
+            card.innerHTML = `<b>#${i+1} ${s.company}</b><span>${s.address}</span>`;
             card.onclick = () => {
                 activeIndex = i;
                 document.getElementById('mCustName').innerText = s.company;
