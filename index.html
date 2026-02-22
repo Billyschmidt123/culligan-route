@@ -144,7 +144,7 @@
             <div id="summary-data"></div>
         </div>
         <div id="live-report" class="mgr-content">
-            <table id="live-table" style="width:100%; border-collapse:collapse; font-size:11px;">
+            <table id="live-table" style="width:100%; border-collapse:collapse; font-size:11px; color: white;">
                 <thead>
                     <tr><th>Customer</th><th>Status</th><th>18L</th><th>Sm</th><th>Cs</th><th>R18</th><th>Rsm</th><th>Notes</th><th>Time</th></tr>
                 </thead>
@@ -152,7 +152,7 @@
             </table>
         </div>
         <div class="mgr-footer" style="padding:20px;">
-            <button class="btn-eod" style="background:#ffc107; width:100%; padding:15px; font-weight:bold; border:none;" onclick="executeEOD()">END OF DAY</button>
+            <button class="btn-eod" style="background:#ffc107; color: black; width:100%; padding:15px; font-weight:bold; border:none; border-radius: 4px;" onclick="executeEOD()">END OF DAY</button>
         </div>
     </div>
 </div>
@@ -171,8 +171,13 @@ window.onload = () => {
     initSignaturePad();
 };
 
-// Security prompts removed, functions toggle directly
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
+function switchTab(tabId) {
+    document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
 
 function startRoute() {
     driverName = prompt("Enter your name to start:");
@@ -205,6 +210,7 @@ async function loadRoute() {
             await new Promise(r => setTimeout(r, 600));
         }
 
+        // --- CIRCULAR OPTIMIZATION ---
         stops = [];
         let currentPos = { lat: warehouse[0], lng: warehouse[1] };
         while (raw.length > 0) {
@@ -217,6 +223,7 @@ async function loadRoute() {
             stops.push(next);
             currentPos = { lat: next.lat, lng: next.lng };
         }
+        // Add Warehouse Return
         stops.push({ company: "WAREHOUSE (END ROUTE)", address: "8805 111 St, Grande Prairie, AB", lat: warehouse[0], lng: warehouse[1], phone: "OFFICE" });
         
         currentStopIndex = 0; renderRoute(); renderSidebar(); updateHeader();
@@ -260,9 +267,13 @@ function navStep(dir) {
     if (n >= 0 && n < stops.length) { currentStopIndex = n; updateHeader(); updateRouteLines(); map.setView([stops[n].lat, stops[n].lng], 16); }
 }
 
+// FIXED LOST BUTTON FUNCTION - Universal Google Maps Protocol
 function openGoogleMaps() {
     const s = stops[currentStopIndex];
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address + ", Grande Prairie, AB")}&travelmode=driving`, '_blank');
+    if (!s) return alert("Please load a route first.");
+    const destination = encodeURIComponent(`${s.address}, Grande Prairie, AB`);
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+    window.open(url, '_blank');
 }
 
 function openProfile(i) {
@@ -284,8 +295,10 @@ async function submitLog(status) {
     const now = new Date(), s = stops[currentStopIndex];
     const entry = { driver: driverName, customer: s.company, status: status, time: now.toLocaleTimeString(), date: now.toLocaleDateString(), v18l: document.getElementById('p-18l').value, vSmall: document.getElementById('p-small').value, vCases: document.getElementById('p-cases').value, r18l: document.getElementById('p-18l-ret').value, rSmall: document.getElementById('p-small-ret').value, notes: document.getElementById('p-notes').value };
     if (status === 'NOT DELIVERED') entry.reason = prompt("Reason:");
+    
     deliveryLog.push(entry);
     updateReports();
+    
     if (currentStopIndex === stops.length - 1) {
         updateRouteLines(); closeProfile();
         if(confirm("Route Complete. Run EOD?")) executeEOD();
@@ -300,7 +313,7 @@ function updateReports() {
     body.innerHTML = ""; sum.innerHTML = "";
     deliveryLog.forEach(l => {
         body.innerHTML += `<tr><td>${l.customer}</td><td>${l.status}</td><td>${l.v18l}</td><td>${l.vSmall}</td><td>${l.vCases}</td><td>${l.r18l}</td><td>${l.rSmall}</td><td>${l.notes}</td><td>${l.time}</td></tr>`;
-        sum.innerHTML += `<div><b>${l.customer}</b>: ${l.status} (${l.time})</div>`;
+        sum.innerHTML += `<div style="padding:5px; border-bottom:1px solid #444;"><b>${l.customer}</b>: ${l.status} (${l.time})</div>`;
     });
 }
 
@@ -316,17 +329,26 @@ function renderSidebar() {
 
 async function executeEOD() {
     try {
-        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "EOD", driver: driverName, log: deliveryLog }) });
-        alert("EOD Successful");
-    } catch(e) { alert("Error"); }
+        const payload = { action: "EOD", driver: driverName, log: deliveryLog };
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+        alert("EOD Successful - Data Sent to Manager Sheet");
+    } catch(e) { alert("Error sending EOD data"); }
 }
 
 function initSignaturePad() {
     canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
-    const getPos = e => { const r = canvas.getBoundingClientRect(); return { x: (e.touches?e.touches[0].clientX:e.clientX) - r.left, y: (e.touches?e.touches[0].clientY:e.clientY) - r.top }; };
+    const getPos = e => { 
+        const r = canvas.getBoundingClientRect(); 
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - r.left, y: clientY - r.top }; 
+    };
     canvas.addEventListener('mousedown', e => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
     canvas.addEventListener('mousemove', e => { if(drawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); } });
+    canvas.addEventListener('touchstart', e => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); }, {passive: false});
+    canvas.addEventListener('touchmove', e => { if(drawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); if(e.cancelable) e.preventDefault(); } }, {passive: false});
     window.addEventListener('mouseup', () => drawing = false);
+    window.addEventListener('touchend', () => drawing = false);
 }
 </script>
 </body>
