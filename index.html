@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan Route Management</title>
+<title>Culligan Route Pro</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -40,7 +40,6 @@
     #status { font-size:13px; color:#0078ff; font-weight: bold;}
     .route-drop { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; width: 100%; margin-bottom: 10px;}
 
-    /* Manager Panel Styling */
     #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
     #manager-panel.open { bottom: 0; }
     .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; overflow-x: auto;}
@@ -180,7 +179,7 @@
 <script>
 /** CONFIGURATION **/
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-const SCRIPT_URL = "REPLACE_WITH_YOUR_DEPLOYED_WEB_APP_URL"; // Update this!
+const SCRIPT_URL = "PASTE_YOUR_DEPLOYED_URL_HERE"; 
 
 let map, markerLayer, routeLine, canvas, ctx, drawing = false, stops = [], deliveryLog = [], currentStopIndex = 0, driverName = "";
 let globalSearchResults = [];
@@ -194,7 +193,6 @@ window.onload = () => {
     initSignaturePad();
 };
 
-/** MANAGER PANEL LOGIC **/
 function toggleManager() { 
     document.getElementById('manager-panel').classList.toggle('open'); 
 }
@@ -206,24 +204,30 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-/** GLOBAL SEARCH & MAINT **/
+/** GLOBAL SEARCH **/
 async function runGlobalSearch() {
     const term = document.getElementById('global-search-input').value;
     if (term.length < 3) return alert("Search term too short.");
     
     document.getElementById('status').innerText = "Searching database...";
-    const res = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`);
-    globalSearchResults = await res.json();
     
-    const drop = document.getElementById('global-results-drop');
-    drop.innerHTML = '<option value="">-- Select Result --</option>';
-    
-    if (globalSearchResults.length === 0) {
-        alert("No matches found.");
-    } else {
-        globalSearchResults.forEach((r, i) => {
-            drop.innerHTML += `<option value="${i}">${r.company} (${r.route})</option>`;
-        });
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`);
+        globalSearchResults = await res.json();
+        
+        const drop = document.getElementById('global-results-drop');
+        drop.innerHTML = '<option value="">-- Select Result --</option>';
+        
+        if (globalSearchResults.length === 0) {
+            alert("No matches found.");
+        } else {
+            globalSearchResults.forEach((r, i) => {
+                drop.innerHTML += `<option value="${i}">${r.company} (${r.route})</option>`;
+            });
+            alert(`Found ${globalSearchResults.length} matches across all routes.`);
+        }
+    } catch(e) {
+        alert("Search failed. Ensure your Script URL is deployed correctly.");
     }
     document.getElementById('status').innerText = "Search Ready.";
 }
@@ -235,7 +239,7 @@ function populateGlobalFields() {
         document.getElementById('edit-name').value = s.company;
         document.getElementById('edit-addr').value = s.address;
         document.getElementById('edit-phone').value = s.phone;
-        document.getElementById('found-on-route').innerText = "Database Location: " + s.route;
+        document.getElementById('found-on-route').innerText = "Original Route: " + s.route;
     }
 }
 
@@ -257,7 +261,7 @@ async function saveCustomerEdits() {
     stops[currentStopIndex].phone = document.getElementById('edit-phone').value;
     
     renderSidebar(); renderRoute(); updateHeader();
-    alert("Active stop details updated.");
+    alert("Active stop updated with global data.");
 }
 
 /** RUSH ORDERS **/
@@ -281,7 +285,7 @@ async function addRushOrder() {
     alert("Rush Order added as the next stop!");
 }
 
-/** ROUTE ENGINE **/
+/** LOAD ROUTE ENGINE **/
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
     document.getElementById("status").innerText = "Loading " + sheetName + "...";
@@ -309,7 +313,7 @@ async function loadRoute() {
                 lng: geo?.lng || warehouse[1], 
                 flagged: !geo 
             });
-            await new Promise(r => setTimeout(r, 600)); // Delay for API
+            await new Promise(r => setTimeout(r, 600)); 
         }
 
         stops = [];
@@ -340,7 +344,6 @@ async function geocodeArcGIS(addr) {
     } catch (e) { return null; }
 }
 
-/** CORE FUNCTIONS **/
 function renderRoute() {
     markerLayer.clearLayers();
     const latlngs = stops.map((s, i) => {
@@ -370,7 +373,7 @@ function navStep(dir) {
 
 function openGoogleMaps() {
     const s = stops[currentStopIndex];
-    if (!s) return alert("Load route first.");
+    if (!s) return alert("Load route.");
     const destination = encodeURIComponent(`${s.address}, Grande Prairie, AB`);
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
 }
@@ -398,9 +401,7 @@ async function submitLog(status) {
         r18l: document.getElementById('p-18l-ret').value, rSmall: document.getElementById('p-small-ret').value, notes: document.getElementById('p-notes').value 
     };
     deliveryLog.push(entry);
-    
-    // Update Daily Summary UI
-    document.getElementById('summary-data').innerHTML += `<div><b>${s.company}</b>: ${status} (${entry.time})</div>`;
+    document.getElementById('summary-data').innerHTML += `<div><b>${s.company}</b>: ${status}</div>`;
     
     if (currentStopIndex === stops.length - 1) {
         if(confirm("Route Complete. Run EOD?")) executeEOD();
@@ -414,8 +415,8 @@ async function executeEOD() {
     try {
         document.getElementById('status').innerText = "Uploading Report...";
         await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "EOD", driver: driverName, log: deliveryLog }) });
-        alert("EOD TRIP REPORT SAVED TO GOOGLE DRIVE.");
-    } catch(e) { alert("Error saving to Drive."); }
+        alert("Trip Report Saved to Drive.");
+    } catch(e) { alert("Error."); }
 }
 
 function startRoute() {
