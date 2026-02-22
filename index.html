@@ -7,6 +7,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
@@ -16,7 +17,6 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
 .stop-card:hover { background:#444;}
 
-/* Driver Profile Styles */
 #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
 .profile-group { margin-bottom:12px; }
 .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
@@ -24,7 +24,6 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 .section-divider { border-top: 1px solid #444; margin: 15px 0; padding-top: 10px; }
 #sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:150px; touch-action: none; display: block; border: 2px solid #555;}
 
-/* Buttons */
 .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
 .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; text-transform: uppercase;}
 .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; text-transform: uppercase;}
@@ -76,8 +75,8 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
         <button onclick="clearSig()" style="font-size:10px; background:none; border:none; color:#dc3545; cursor:pointer; margin-top:5px; font-weight:bold;">CLEAR SIGNATURE</button>
 
         <div class="form-btns">
-            <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
-            <button class="btn-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button>
+            <button class="btn-del" id="btn-submit-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
+            <button class="btn-not" id="btn-submit-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button>
         </div>
     </div>
 </div>
@@ -118,6 +117,7 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
+const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE"; // PASTE YOUR WEB APP URL HERE
 let map, markerLayer, routeLine, canvas, ctx, drawing = false;
 let stops = [];
 let currentStopIndex = null;
@@ -131,7 +131,6 @@ window.onload = () => {
     L.marker([warehouse.lat, warehouse.lng], {
         icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">W</div>` })
     }).addTo(map).bindPopup("<b>Warehouse</b>");
-
     initSignaturePad();
 };
 
@@ -139,20 +138,14 @@ function initSignaturePad() {
     canvas = document.getElementById('sig-canvas');
     if(!canvas) return;
     ctx = canvas.getContext('2d');
-
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        // Use scaling to fix offset issues
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        return { 
-            x: (clientX - rect.left) * scaleX, 
-            y: (clientY - rect.top) * scaleY 
-        };
+        return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
     };
-
     const start = (e) => {
         drawing = true;
         const pos = getPos(e);
@@ -160,7 +153,6 @@ function initSignaturePad() {
         ctx.moveTo(pos.x, pos.y);
         if (e.cancelable) e.preventDefault();
     };
-
     const move = (e) => {
         if (!drawing) return;
         const pos = getPos(e);
@@ -171,49 +163,87 @@ function initSignaturePad() {
         ctx.stroke();
         if (e.cancelable) e.preventDefault();
     };
-
     const stop = () => { drawing = false; };
-
     canvas.addEventListener('mousedown', start);
     canvas.addEventListener('mousemove', move);
     window.addEventListener('mouseup', stop);
-
     canvas.addEventListener('touchstart', start, {passive: false});
     canvas.addEventListener('touchmove', move, {passive: false});
     canvas.addEventListener('touchend', stop);
 }
 
-function clearSig() { 
-    ctx.clearRect(0, 0, canvas.width, canvas.height); 
-    ctx.beginPath(); 
-}
+function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
 
 async function submitLog(status) {
     let reason = "";
     if (status === 'NOT DELIVERED') {
-        reason = prompt("PLEASE SUPPLY A REASON FOR NOT DELIVERED:");
+        reason = prompt("REASON FOR NOT DELIVERED:");
         if (!reason) return;
     }
-    const now = new Date();
-    const timestamp = now.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'medium' });
-    alert(`SAVED STATUS: ${status} @ ${timestamp}`);
+
+    document.getElementById('status').innerText = "Generating PDF & Saving...";
+    
+    // Create PDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text("Culligan Delivery Receipt", 20, 20);
+    doc.setFontSize(12);
+    doc.text(`Customer: ${stops[currentStopIndex].company}`, 20, 40);
+    doc.text(`Address: ${stops[currentStopIndex].address}`, 20, 50);
+    doc.text(`Status: ${status}`, 20, 60);
+    doc.text(`18L Bottles: ${document.getElementById('p-18l').value}`, 20, 70);
+    doc.text(`Small Bottles: ${document.getElementById('p-small').value}`, 20, 80);
+    doc.text(`18L Returns: ${document.getElementById('p-18l-ret').value}`, 20, 90);
+    doc.text(`Cases: ${document.getElementById('p-cases').value}`, 20, 100);
+    doc.text(`Signature:`, 20, 120);
+    
+    const sigData = canvas.toDataURL("image/png");
+    doc.addImage(sigData, 'PNG', 20, 130, 50, 25);
+
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+    const payload = {
+        filename: `${stops[currentStopIndex].company}_${new Date().getTime()}.pdf`,
+        pdfData: pdfBase64,
+        customer: stops[currentStopIndex].company,
+        status: status,
+        details: {
+            b18l: document.getElementById('p-18l').value,
+            bSmall: document.getElementById('p-small').value,
+            r18l: document.getElementById('p-18l-ret').value,
+            cases: document.getElementById('p-cases').value,
+            reason: reason
+        }
+    };
+
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(payload)
+        });
+        alert("SUCCESS: PDF Saved to Google Drive.");
+    } catch (e) {
+        alert("Error sending to Drive. Check SCRIPT_URL.");
+    }
+
+    document.getElementById('status').innerText = "Ready";
     closeProfile();
 }
 
 async function loadRoute() {
     const selectedGid = document.getElementById("route-select").value;
-    document.getElementById("status").innerText = "Loading Google Sheet...";
+    document.getElementById("status").innerText = "Loading...";
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
         const rows = json.table.rows.map(r => Object.fromEntries(r.c.map((c,i)=>[json.table.cols[i].label, c ? c.v : ""])));
-        
         const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
         const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
         const phoneKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("phone") || k.toLowerCase().includes("tel"));
-        
         let tempStops = [];
         for (let i = 0; i < rows.length; i++) {
             const geo = await geocode(rows[i][addrKey]);
@@ -230,7 +260,7 @@ async function loadRoute() {
         renderRoute();
         renderSidebar();
         document.getElementById("status").innerText = "Route Ready";
-    } catch (e) { document.getElementById("status").innerText = "Error loading."; }
+    } catch (e) { document.getElementById("status").innerText = "Error."; }
 }
 
 function openProfile(index) {
@@ -240,8 +270,6 @@ function openProfile(index) {
     document.getElementById('prof-name').innerText = stops[index].company;
     document.getElementById('prof-addr').innerText = stops[index].address;
     document.getElementById('prof-phone').innerText = stops[index].phone;
-    
-    // Crucial: Refresh canvas size when opening
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
