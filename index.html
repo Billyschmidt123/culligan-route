@@ -70,23 +70,11 @@
 <div id="main-view">
     <div id="controls">
         <select id="route-select" style="padding:10px; background:#333; color:white; border-radius:4px;">
-            <optgroup label="REGIONAL">
-                <option value="VALLEY VIEW">VALLEY VIEW</option>
-                <option value="NORTH">NORTH</option>
-                <option value="DAWSON CREEK">DAWSON CREEK</option>
-                <option value="SALT">SALT</option>
-            </optgroup>
-            <optgroup label="WEEKLY ROUTES">
-                <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
-                <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
-                <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
-                <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
-                <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
-            </optgroup>
+            <option>Scanning spreadsheet tabs...</option>
         </select>
         <button class="btn" id="load-btn" onclick="loadRoute()">LOAD ROUTE</button>
         <button class="btn-mgr" onclick="toggleManager()">MANAGER PANEL</button>
-        <div id="status">STATUS: READY</div>
+        <div id="status">STATUS: INITIALIZING</div>
     </div>
     
     <div id="map-info-header">
@@ -100,7 +88,7 @@
         <div style="padding:20px;">
             <button onclick="toggleManager()" style="float:right; color:red; background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
             <h3 style="color:#0078ff;">MANAGER MAINTENANCE</h3>
-            <p>Sheet selection bypass activated.</p>
+            <p>Database synchronization active.</p>
         </div>
     </div>
 </div>
@@ -113,6 +101,42 @@ const warehouse = [55.1707, -118.7947];
 map = L.map("map").setView(warehouse, 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 markerLayer = L.layerGroup().addTo(map);
+
+// NEW: Auto-Scan Spreadsheet Tabs on Startup
+async function initSheetScanner() {
+    const statusDiv = document.getElementById("status");
+    try {
+        // We use a basic fetch to the spreadsheet's metadata to find tab names
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`;
+        const res = await fetch(url);
+        const html = await res.text();
+        
+        // This parses the sheet names hidden in the Google Sheets HTML data
+        const regex = /"name":"([^"]+)"/g;
+        let matches, names = [];
+        while ((matches = regex.exec(html)) !== null) {
+            if (!names.includes(matches[1]) && !matches[1].includes("Sheet")) {
+                names.push(matches[1]);
+            }
+        }
+
+        const select = document.getElementById("route-select");
+        select.innerHTML = ""; // Clear loader
+        
+        // Sort and build the dropdown from the actual tabs found
+        names.sort().forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.text = name;
+            select.appendChild(opt);
+        });
+        statusDiv.innerText = "STATUS: READY";
+    } catch (e) {
+        // Fallback if metadata scan is blocked
+        document.getElementById("route-select").innerHTML = '<option value="VALLEY VIEW">VALLEY VIEW</option><option value="NORTH">NORTH</option>';
+        statusDiv.innerText = "STATUS: SCAN ERROR (USING FALLBACK)";
+    }
+}
 
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
@@ -127,23 +151,19 @@ async function loadRoute() {
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        // STRICT FETCH: Uses GID search if necessary or encoded sheet name with headers
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
-        
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
         const rows = json.table.rows;
         
-        if (!rows || rows.length === 0) throw new Error("Sheet data empty or not found");
+        if (!rows || rows.length === 0) throw new Error("No data");
 
         for (let i = 0; i < rows.length; i++) {
             const cols = rows[i].c;
-            // Target Column C (Company) and D (Address)
             if (cols && cols[3] && cols[3].v) {
                 const name = cols[2] ? cols[2].v : "Unknown";
-                statusDiv.innerText = `FETCHING: ${name}...`;
-                
+                statusDiv.innerText = `LOADING: ${name}`;
                 const geo = await geocodeArcGIS(cols[3].v);
                 stops.push({
                     company: name, 
@@ -161,7 +181,6 @@ async function loadRoute() {
         statusDiv.innerText = "STATUS: COMPLETE";
     } catch (e) { 
         statusDiv.innerText = "STATUS: LOAD ERROR"; 
-        alert("Error loading " + sheetName + ". Please verify the tab name in your spreadsheet.");
     } finally { 
         loadBtn.disabled = false; 
     }
@@ -205,13 +224,11 @@ function renderSidebar() {
 }
 
 function openProfile(i, isScrollingBack = false) {
-    // FUNCTION TO CLEAR DATA OR ASK IF SCROLLING BACK
     if (isScrollingBack) {
-        if (!confirm("Keep current notes/data for this stop? (Cancel to Clear)")) {
+        if (!confirm("Keep current notes for this stop? (Cancel to Clear)")) {
             document.getElementById('p-notes').value = "";
         }
     } else {
-        // Starting fresh for new customer
         document.getElementById('p-notes').value = "";
     }
 
@@ -232,10 +249,7 @@ function navStop(dir) {
     let nIdx = (currentIdx === null) ? 0 : currentIdx + dir;
     if (nIdx < 0) nIdx = stops.length - 1;
     if (nIdx >= stops.length) nIdx = 0;
-    
-    // Determine if we are moving backward (scrolling back)
-    const isBack = dir < 0;
-    openProfile(nIdx, isBack);
+    openProfile(nIdx, dir < 0);
 }
 
 function closeProfile() {
@@ -251,6 +265,9 @@ function markStop(status) {
 }
 
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
+
+// Run the tab scanner when the page opens
+initSheetScanner();
 </script>
 </body>
 </html>
