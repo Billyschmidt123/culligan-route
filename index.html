@@ -76,30 +76,40 @@
 <div id="main-view">
     <div id="controls">
         <select id="route-select">
-            <option value="0">WEEK 1 MONDAY</option>
-            <option value="1285038317">WEEK 1 TUESDAY</option>
-            <option value="1547432021">WEEK 1 WEDNESDAY</option>
-            <option value="1211029272">WEEK 1 THURSDAY</option>
-            <option value="1144026362">WEEK 1 FRIDAY</option>
-            <option value="1259160527">WEEK 2 MONDAY</option>
-            <option value="101138865">WEEK 2 TUESDAY</option>
-            <option value="1476935272">WEEK 2 WEDNESDAY</option>
-            <option value="1750275522">WEEK 2 THURSDAY</option>
-            <option value="365612140">WEEK 2 FRIDAY</option>
-            <option value="1574586321">WEEK 3 MONDAY</option>
-            <option value="200456123">WEEK 3 TUESDAY</option>
-            <option value="889456123">WEEK 3 WEDNESDAY</option>
-            <option value="776456123">WEEK 3 THURSDAY</option>
-            <option value="665456123">WEEK 3 FRIDAY</option>
-            <option value="554456123">WEEK 4 MONDAY</option>
-            <option value="443456123">WEEK 4 TUESDAY</option>
-            <option value="332456123">WEEK 4 WEDNESDAY</option>
-            <option value="221456123">WEEK 4 THURSDAY</option>
-            <option value="110456123">WEEK 4 FRIDAY</option>
-            <option value="600570743">VALLEY VIEW</option>
-            <option value="423376712">NORTH</option>
-            <option value="567832101">DAWSON CREEK</option>
-            <option value="199456123">SALT</option>
+            <optgroup label="Week 1">
+                <option value="917509026">WEEK 1 MONDAY</option>
+                <option value="405991289">WEEK 1 TUESDAY</option>
+                <option value="405991289">WEEK 1 WEDNESDAY</option>
+                <option value="850217841">WEEK 1 THURSDAY</option>
+                <option value="524003696">WEEK 1 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 2">
+                <option value="1669161107">WEEK 2 MONDAY</option>
+                <option value="158782334">WEEK 2 TUESDAY</option>
+                <option value="534069449">WEEK 2 WEDNESDAY</option>
+                <option value="1664558192">WEEK 2 THURSDAY</option>
+                <option value="1943566050">WEEK 2 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 3">
+                <option value="922640253">WEEK 3 MONDAY</option>
+                <option value="1892780278">WEEK 3 TUESDAY</option>
+                <option value="1329388834">WEEK 3 WEDNESDAY</option>
+                <option value="692623993">WEEK 3 THURSDAY</option>
+                <option value="598312956">WEEK 3 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 4">
+                <option value="1528227290">WEEK 4 MONDAY</option>
+                <option value="774741269">WEEK 4 TUESDAY</option>
+                <option value="1776511227">WEEK 4 WEDNESDAY</option>
+                <option value="730189704">WEEK 4 THURSDAY</option>
+                <option value="1062369681">WEEK 4 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Special Routes">
+                <option value="458612538">VALLEYVIEW</option>
+                <option value="364553460">NORTH</option>
+                <option value="1909249906">DAWSON CREEK</option>
+                <option value="1773492755">SALT</option>
+            </optgroup>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
         <div id="status">Status: Ready</div>
@@ -138,19 +148,11 @@
 <div id="global-modal" class="edit-modal">
     <h3 id="modal-title" style="color:#0078ff; margin-top:0;">Customer Details</h3>
     <div class="profile-group">
-        <label>ASSIGN TO ROUTE / DAY</label>
-        <select id="m-cust-route">
-            <option value="0">WEEK 1 MONDAY</option>
-            <option value="600570743">VALLEY VIEW</option>
-            <option value="423376712">NORTH</option>
-            <option value="567832101">DAWSON CREEK</option>
-        </select>
+        <label>NAME</label><input type="text" id="m-cust-name">
     </div>
-    <div class="profile-group"><label>NAME</label><input type="text" id="m-cust-name"></div>
-    <div class="profile-group"><label>ADDRESS</label><input type="text" id="m-cust-addr"><small style="color:#ffc107; font-size:10px; margin-top:4px; display:block;">* MUST include City and Postal Code</small></div>
-    <div class="profile-group"><label>PHONE NUMBER</label><input type="tel" id="m-cust-phone"></div>
-    <div class="profile-group"><label>EMAIL</label><input type="email" id="m-cust-email"></div>
-    <div class="profile-group"><label>NOTES</label><textarea id="m-cust-notes" rows="3"></textarea></div>
+    <div class="profile-group">
+        <label>ADDRESS</label><input type="text" id="m-cust-addr"><small style="color:#ffc107; font-size:10px; margin-top:4px; display:block;">* MUST include City and Postal Code</small>
+    </div>
     <div style="display:flex; gap:10px; margin-top:20px;">
         <button id="modal-primary-btn" class="btn" style="flex:1;" onclick="handleModalSubmit()">SAVE</button>
         <button class="btn-not" style="flex:1;" onclick="closeGlobalModal()">CANCEL</button>
@@ -159,7 +161,7 @@
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-let map, markerLayer, stops = [], deliveryLog = [], pendingAlert = null, currentStopIndex = null, currentModalMode = 'add';
+let map, markerLayer, stops = [], currentStopIndex = null, currentModalMode = 'add';
 
 window.onload = () => {
     map = L.map("map").setView([55.1707, -118.7947], 11);
@@ -171,22 +173,23 @@ window.onload = () => {
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
     const statusDiv = document.getElementById('status');
-    statusDiv.innerText = "Status: Downloading...";
+    statusDiv.innerText = "Status: Connecting...";
     
     stops = [];
     markerLayer.clearLayers();
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        // Fetch direct CSV to prevent caching/tab confusion
+        // Fetch via CSV to bypass all caching and ensure the correct tab ID is used
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}&t=${Date.now()}`;
         const res = await fetch(url);
         const data = await res.text();
         
         const lines = data.split('\n');
-        statusDiv.innerText = "Status: Geocoding Stops...";
+        statusDiv.innerText = "Status: Geocoding...";
 
         for (let i = 1; i < lines.length; i++) {
+            // Regex handles commas within quotes in addresses
             const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols.length > 3) {
                 const company = cols[2]?.replace(/"/g, '').trim();
@@ -214,10 +217,10 @@ async function loadRoute() {
             statusDiv.innerText = `Status: Success (${stops.length})`;
             document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
         } else {
-            statusDiv.innerText = "Status: No data found on tab";
+            statusDiv.innerText = "Status: Empty Sheet";
         }
     } catch (e) {
-        statusDiv.innerText = "Status: Import Failed";
+        statusDiv.innerText = "Status: Load Failed";
     }
 }
 
@@ -250,19 +253,30 @@ function switchTab(tabId) {
     document.getElementById(tabId).classList.add('active');
 }
 
-function openAddCustomerModal(name = "") {
-    currentModalMode = 'add';
-    document.getElementById('modal-title').innerText = "ADD NEW CUSTOMER";
-    document.getElementById('m-cust-name').value = name;
-    document.getElementById('global-modal-overlay').style.display = 'block';
-    document.getElementById('global-modal').style.display = 'block';
+function renderRoute() {
+    markerLayer.clearLayers();
+    stops.forEach((s, i) => {
+        L.marker([s.lat, s.lng], { 
+            icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) 
+        }).addTo(markerLayer);
+    });
 }
 
-function openRushModal(data) {
-    currentModalMode = 'rush';
-    document.getElementById('modal-title').innerText = "BUILD RUSH ORDER";
-    document.getElementById('m-cust-name').value = data.company || "";
-    document.getElementById('m-cust-addr').value = data.address || "";
+function renderSidebar() {
+    const list = document.getElementById("stop-list");
+    list.innerHTML = "";
+    stops.forEach((s, i) => {
+        const div = document.createElement("div");
+        div.className = "stop-card";
+        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
+        div.onclick = () => openProfile(i);
+        list.appendChild(div);
+    });
+}
+
+function openAddCustomerModal(name = "") {
+    currentModalMode = 'add';
+    document.getElementById('m-cust-name').value = name;
     document.getElementById('global-modal-overlay').style.display = 'block';
     document.getElementById('global-modal').style.display = 'block';
 }
@@ -272,11 +286,7 @@ function closeGlobalModal() {
     document.getElementById('global-modal').style.display = 'none';
 }
 
-async function performGlobalSearch(isRush = false) {
-    const term = document.getElementById('global-search-input').value.trim();
-    if (!term) return;
-    const list = document.getElementById('search-results-area');
-    list.innerHTML = "Searching...";
-    
-    // Using GIDs for the search logic as well to remain consistent
-    const search
+function triggerRushWorkflow() { alert("Search for a customer to build a rush order."); }
+</script>
+</body>
+</html>
