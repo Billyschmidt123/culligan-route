@@ -46,7 +46,25 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
     <option value="INSERT_GID_HERE">WEEK 1 FRIDAY</option>
     <option value="INSERT_GID_HERE">WEEK 2 MONDAY</option>
     <option value="INSERT_GID_HERE">WEEK 2 TUESDAY</option>
-    </select>
+    <option value="INSERT_GID_HERE">WEEK 2 WEDNESDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 2 THURSDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 2 FRIDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 3 MONDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 3 TUESDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 3 WEDNESDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 3 THURSDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 3 FRIDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 4 MONDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 4 TUESDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 4 WEDNESDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 4 THURSDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 4 FRIDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 5 MONDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 5 TUESDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 5 WEDNESDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 5 THURSDAY</option>
+    <option value="INSERT_GID_HERE">WEEK 5 FRIDAY</option>
+</select>
 <button class="btn" onclick="loadRoute()">Load Route</button>
 <div id="status">Status: Ready</div>
 </div>
@@ -74,11 +92,9 @@ window.onload = () => {
 };
 
 async function loadRoute() {
-    [cite_start]// Get the GID from the selected option in the dropdown [cite: 1]
     const selectedGid = document.getElementById("route-select").value;
     document.getElementById("status").innerText = "Loading Google Sheet...";
 
-    [cite_start]// Updated URL to use the selectedGid instead of a constant [cite: 1]
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
     const res = await fetch(url);
     const text = await res.text();
