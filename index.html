@@ -14,11 +14,9 @@
         #sidebar-header { padding: 15px; border-bottom: 1px solid #444; }
         #stop-list { flex: 1; overflow-y: auto; padding: 10px; }
         
-        /* Progress Bar Styles */
-        #progress-container { width: 100%; background: #444; height: 4px; display: none; overflow: hidden; margin-top: 10px; border-radius: 2px; }
+        #progress-container { width: 100%; background: #444; height: 4px; display: none; overflow: hidden; margin-top: 10px; }
         #progress-bar { width: 0%; height: 100%; background: #0078ff; transition: width 0.3s; }
 
-        /* Stop Card Styles [cite: 8] */
         .stop-card { background: #333; padding: 12px; margin-bottom: 10px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 14px; cursor: pointer; transition: 0.2s; }
         .stop-card:hover { background: #444; }
         .stop-card.active-card { background: #0078ff; border-left-color: white; }
@@ -30,7 +28,6 @@
         select { padding: 10px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 220px; font-size: 14px; }
         .btn-blue { padding: 10px 15px; background: #0078ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         
-        /* Numbered Pin Styles [cite: 25] */
         .number-pin { background: #0078ff; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); font-size: 13px; }
         .warehouse-pin { background: #222 !important; border-color: #f39c12 !important; color: #f39c12 !important; }
     </style>
@@ -41,7 +38,7 @@
     <div id="sidebar-header">
         <h3 style="margin:0">CULLIGAN ROUTES</h3>
         <div id="progress-container"><div id="progress-bar"></div></div>
-        <p id="stop-count" style="font-size: 12px; color: #aaa;">Syncing with Bottle-water...</p>
+        <p id="stop-count" style="font-size: 12px; color: #aaa;">Syncing...</p>
     </div>
     <div id="stop-list"></div>
 </div>
@@ -70,9 +67,8 @@
         markerLayer = L.layerGroup().addTo(map);
         routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map); 
 
-        // Add Warehouse Pin 
         L.marker([warehouse.lat, warehouse.lng], {
-            icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>` })
+            icon: L.divIcon({ className: '', html: `<div class="number-pin warehouse-pin">W</div>` })
         }).addTo(map).bindPopup("<b>Warehouse</b>");
 
         fetchRouteTabs();
@@ -87,33 +83,29 @@
                 tabs.map(t => `<option value="${t}">${t}</option>`).join('');
             document.getElementById('stop-count').innerText = "Select a route to begin";
         } catch (e) { 
-            document.getElementById('status').innerText = "Sync Error"; 
+            document.getElementById('status').innerText = "Sync Error: Check API URL"; 
         }
     }
 
     async function loadRouteData(name) {
         if (!name) return;
-        
         const pBar = document.getElementById('progress-bar');
         const pCont = document.getElementById('progress-container');
-        pCont.style.display = 'block'; pBar.style.width = '20%';
+        pCont.style.display = 'block'; pBar.style.width = '30%';
         
-        document.getElementById('status').innerText = "Loading " + name + "...";
         try {
             const res = await fetch(`${API_URL}?sheet=${encodeURIComponent(name)}`);
             stops = await res.json();
-            pBar.style.width = '60%';
+            pBar.style.width = '70%';
             optimizeRoute();
             pBar.style.width = '100%';
             setTimeout(() => { pCont.style.display = 'none'; }, 500);
-            document.getElementById('status').innerText = name + " Ready";
         } catch (e) { 
             document.getElementById('status').innerText = "Data Error";
             pCont.style.display = 'none';
         }
     }
 
-    // --- RESTORED: Optimization Logic  ---
     function getDistance(p1, p2) {
         const R = 6371;
         const dLat = (p2.lat - p1.lat) * Math.PI / 180;
@@ -125,7 +117,6 @@
     function optimizeRoute() {
         if (stops.length < 1) return;
         let unvisited = [...stops], ordered = [], currentPos = warehouse;
-
         while (unvisited.length > 0) {
             unvisited.sort((a, b) => getDistance(currentPos, a) - getDistance(currentPos, b)); 
             let closest = unvisited.shift(); 
@@ -136,7 +127,6 @@
         renderUI();
     }
 
-    // --- RESTORED: Pins, Tooltips, and Sidebar Info [cite: 62, 63, 66] ---
     function renderUI() {
         markerLayer.clearLayers();
         markers = []; 
@@ -145,12 +135,10 @@
         let path = [[warehouse.lat, warehouse.lng]];
 
         stops.forEach((s, i) => {
-            const lat = parseFloat(s.lat);
-            const lng = parseFloat(s.lng);
+            const lat = parseFloat(s.lat), lng = parseFloat(s.lng);
             if (isNaN(lat)) return;
             path.push([lat, lng]);
 
-            // Map Pins with Tooltips 
             const marker = L.marker([lat, lng], { 
                 icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>`, className: '' }) 
             })
@@ -158,13 +146,9 @@
             .addTo(markerLayer);
             markers.push(marker);
 
-            // Side Panel Cards 
             const card = document.createElement('div');
             card.className = "stop-card";
-            card.innerHTML = `
-                <div style="font-weight:bold; color:#0078ff;">${i+1}. ${s.Customer || s.Company}</div>
-                <div style="margin-top:4px; color:#ccc; font-size:12px;">${s.Address}</div>
-            `;
+            card.innerHTML = `<div style="font-weight:bold; color:#0078ff;">${i+1}. ${s.Customer || s.Company}</div><div style="margin-top:4px; color:#ccc; font-size:12px;">${s.Address}</div>`;
             
             card.onclick = () => {
                 document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('active-card'));
@@ -175,9 +159,7 @@
             list.appendChild(card);
         });
 
-        // Closing the loop back to warehouse 
         if (stops.length > 0) path.push([warehouse.lat, warehouse.lng]);
-        
         routeLine.setLatLngs(path); 
         if (path.length > 1) map.fitBounds(L.polyline(path).getBounds(), { padding: [50, 50] });
         document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
