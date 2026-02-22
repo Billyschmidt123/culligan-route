@@ -13,7 +13,6 @@
     #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column; z-index: 20;}
     #sidebar-header { padding:15px; border-bottom:1px solid #444;}
     
-    /* Nav Buttons */
     .nav-ctrls { display: flex; gap: 5px; padding: 10px; background: #333; border-bottom: 1px solid #444; }
     .nav-btn { flex: 1; padding: 8px; background: #444; border: 1px solid #555; color: white; cursor: pointer; font-weight: bold; border-radius: 4px; }
     .nav-btn:hover { background: #555; }
@@ -26,7 +25,6 @@
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
     #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 100;}
     
-    /* Map Header Info */
     #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
     #map-info-header h4 { margin: 0; font-size: 16px; }
     #map-info-header p { margin: 2px 0 0 0; font-size: 12px; opacity: 0.9; }
@@ -75,11 +73,40 @@
 <div id="main-view">
     <div id="controls">
         <select id="route-select" style="padding:10px; background:#333; color:white; border-radius:4px;">
-            <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
-            <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
-            <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
-            <option value="NORTH">NORTH</option>
-            <option value="VALLEY VIEW">VALLEY VIEW</option>
+            <optgroup label="WEEK 1">
+                <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
+                <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
+                <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
+                <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
+                <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
+            </optgroup>
+            <optgroup label="WEEK 2">
+                <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
+                <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
+                <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
+                <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
+                <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
+            </optgroup>
+            <optgroup label="WEEK 3">
+                <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
+                <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
+                <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
+                <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
+                <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
+            </optgroup>
+            <optgroup label="WEEK 4">
+                <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
+                <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
+                <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
+                <option value="WEEK 4 THURSDAY">WEEK 4 THURSDAY</option>
+                <option value="WEEK 4 FRIDAY">WEEK 4 FRIDAY</option>
+            </optgroup>
+            <optgroup label="REGIONAL">
+                <option value="VALLEY VIEW">VALLEY VIEW</option>
+                <option value="NORTH">NORTH</option>
+                <option value="DAWSON CREEK">DAWSON CREEK</option>
+                <option value="SALT">SALT</option>
+            </optgroup>
         </select>
         <button class="btn" id="load-btn" onclick="loadRoute()">LOAD ROUTE</button>
         <div id="status">STATUS: READY</div>
@@ -110,8 +137,10 @@ async function loadRoute() {
     
     loadBtn.disabled = true;
     stops = [];
+    currentIdx = null;
     markerLayer.clearLayers();
     if (routeLine) map.removeLayer(routeLine);
+    document.getElementById('map-info-header').style.display = 'none';
     
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
@@ -204,7 +233,6 @@ function openProfile(i) {
     document.getElementById('prof-name').innerText = s.company;
     document.getElementById('prof-addr').innerText = s.address;
     
-    // Update Map Header
     document.getElementById('map-info-header').style.display = 'block';
     document.getElementById('head-name').innerText = s.company;
     document.getElementById('head-addr').innerText = s.address;
@@ -240,4 +268,3 @@ function markStop(status) {
 </script>
 </body>
 </html>
-
