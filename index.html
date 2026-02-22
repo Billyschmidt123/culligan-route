@@ -20,7 +20,7 @@
     #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
     .profile-group { margin-bottom:12px; }
     .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
-    .profile-group input, .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+    .profile-group input, .profile-group textarea, .profile-group select { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
     #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555;}
     .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
@@ -90,6 +90,28 @@
     <div id="controls">
         <select id="route-select">
             <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
+            <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
+            <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
+            <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
+            <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
+            <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
+            <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
+            <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
+            <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
+            <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
+            <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
+            <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
+            <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
+            <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
+            <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
+            <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
+            <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
+            <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
+            <option value="WEEK 4 THURSDAY">WEEK 4 THURSDAY</option>
+            <option value="WEEK 4 FRIDAY">WEEK 4 FRIDAY</option>
+            <option value="VALLEY VIEW">VALLEY VIEW</option>
+            <option value="NORTH">NORTH</option>
+            <option value="DAWSON CREEK">DAWSON CREEK</option>
             <option value="SALT">SALT</option>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
@@ -133,6 +155,37 @@
 <div class="modal-overlay" id="global-modal-overlay" onclick="closeGlobalModal()"></div>
 <div id="global-modal" class="edit-modal">
     <h3 id="modal-title" style="color:#0078ff; margin-top:0;">Customer Details</h3>
+    
+    <div class="profile-group">
+        <label>ASSIGN TO ROUTE / DAY</label>
+        <select id="m-cust-route">
+            <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
+            <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
+            <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
+            <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
+            <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
+            <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
+            <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
+            <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
+            <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
+            <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
+            <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
+            <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
+            <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
+            <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
+            <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
+            <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
+            <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
+            <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
+            <option value="WEEK 4 THURSDAY">WEEK 4 THURSDAY</option>
+            <option value="WEEK 4 FRIDAY">WEEK 4 FRIDAY</option>
+            <option value="VALLEY VIEW">VALLEY VIEW</option>
+            <option value="NORTH">NORTH</option>
+            <option value="DAWSON CREEK">DAWSON CREEK</option>
+            <option value="SALT">SALT</option>
+        </select>
+    </div>
+
     <div class="profile-group"><label>NAME</label><input type="text" id="m-cust-name"></div>
     <div class="profile-group">
         <label>ADDRESS</label>
@@ -151,7 +204,13 @@
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-const TABS = ["Week 1 Monday", "Week 1 Tuesday", "Salt"];
+const TABS = [
+    "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY",
+    "WEEK 2 MONDAY", "WEEK 2 TUESDAY", "WEEK 2 WEDNESDAY", "WEEK 2 THURSDAY", "WEEK 2 FRIDAY",
+    "WEEK 3 MONDAY", "WEEK 3 TUESDAY", "WEEK 3 WEDNESDAY", "WEEK 3 THURSDAY", "WEEK 3 FRIDAY",
+    "WEEK 4 MONDAY", "WEEK 4 TUESDAY", "WEEK 4 WEDNESDAY", "WEEK 4 THURSDAY", "WEEK 4 FRIDAY",
+    "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT"
+];
 let map, markerLayer, stops = [], deliveryLog = [], pendingAlert = null, currentStopIndex = null, currentModalMode = 'add';
 
 window.onload = () => {
@@ -184,6 +243,7 @@ function openRushModal(data) {
     document.getElementById('modal-primary-btn').innerText = "ALERT DRIVER & ADD";
     document.getElementById('m-cust-name').value = data.company || "";
     document.getElementById('m-cust-addr').value = data.address || "";
+    document.getElementById('m-cust-route').value = data.tab || "WEEK 1 MONDAY";
     document.getElementById('global-modal-overlay').style.display = 'block';
     document.getElementById('global-modal').style.display = 'block';
 }
@@ -208,7 +268,7 @@ async function performGlobalSearch(isRush = false) {
             json.table.rows.forEach(row => {
                 const r = row.c.map(c => c ? String(c.v) : "");
                 if (r.join(" ").toLowerCase().includes(term.toLowerCase())) 
-                    items.push({ company: r[2] || r[1], address: r[3] });
+                    items.push({ company: r[2] || r[1], address: r[3], tab: tab });
             });
         } catch(e) {}
     }
@@ -230,18 +290,19 @@ async function performGlobalSearch(isRush = false) {
 async function handleModalSubmit() {
     const data = {
         company: document.getElementById('m-cust-name').value,
-        address: document.getElementById('m-cust-addr').value
+        address: document.getElementById('m-cust-addr').value,
+        assignedRoute: document.getElementById('m-cust-route').value
     };
 
     if (currentModalMode === 'rush') {
         const geo = await geocodeArcGIS(data.address);
         const newStop = { ...data, lat: geo?geo.lat:55.1707, lng: geo?geo.lng:-118.7947, isRush: true };
         stops.splice(currentStopIndex === null ? 0 : currentStopIndex + 1, 0, newStop);
-        pendingAlert = `RUSH ORDER: ${data.company} at ${data.address}.`;
+        pendingAlert = `RUSH ORDER: ${data.company} at ${data.address} assigned to ${data.assignedRoute}.`;
         renderSidebar(); renderRoute();
         alert("Alert Sent to Driver.");
     } else {
-        alert("Customer Saved.");
+        alert("Customer Saved to " + data.assignedRoute);
     }
     closeGlobalModal();
 }
