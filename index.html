@@ -1,0 +1,232 @@
+<!DOCTYPE html google sheets with apps script>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Culligan Optimized Route</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body { margin: 0; height: 100vh; display: flex; flex-direction: row; font-family: 'Segoe UI', sans-serif; background: #111; color: white; overflow: hidden; }
+        #sidebar { width: 300px; background: #222; border-right: 2px solid #0078ff; display: flex; flex-direction: column; flex-shrink: 0; }
+        #sidebar-header { padding: 15px; border-bottom: 1px solid #444; }
+        #stop-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .stop-card { background: #333; padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 14px; cursor: pointer; }
+        .stop-card:hover { background: #444; }
+        #main-view { flex: 1; display: flex; flex-direction: column; }
+        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 20px; align-items: center; }
+        #current-stop-bar { background: #0078ff; color: white; padding: 10px; font-weight: bold; text-align: center; font-size: 16px; display: none; }
+        #map { flex: 1; width: 100%; }
+        .btn { padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        #dataModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; align-items:center; justify-content:center; }
+        .modal-content { background:#222; padding:20px; border-radius:8px; width:380px; border:1px solid #444; max-height: 90vh; overflow-y: auto; }
+        .field-row { margin-bottom: 12px; }
+        .field-row label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
+        .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; border-radius: 4px; }
+        .custom-div-icon { background: transparent; border: none; }
+        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5); font-size: 13px; }
+        .warehouse-pin { background: #222 !important; border-color: #f39c12 !important; color: #f39c12 !important; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div id="sidebar-header">
+        <h3 style="margin:0">Route Stops</h3>
+        <p id="stop-count" style="font-size: 12px; color: #aaa; margin: 5px 0 0 0;">No route loaded</p>
+    </div>
+    <div id="stop-list"></div>
+</div>
+
+<div id="main-view">
+    <div id="controls">
+        <button class="btn" onclick="syncFromSheets()">Sync From Google Sheets</button>
+        <div id="status" style="font-size: 13px; color: #aaa;">Status: Ready</div>
+    </div>
+    <div id="current-stop-bar">Current Stop: <span id="active-addr">None</span></div>
+    <div id="map"></div>
+</div>
+
+<div id="dataModal">
+    <div class="modal-content">
+        <h3 id="mCustName" style="color:#0078ff; margin-top:0;">Customer</h3>
+        <p id="mCustAddr" style="color:#aaa; font-size:13px; margin-bottom:15px;"></p>
+        
+        <div id="dynamicFields"></div>
+
+        <div class="field-row">
+            <label>Notes / Reason for Skip (Required if Not Delivered)</label>
+            <textarea id="driverNotes" rows="2"></textarea>
+        </div>
+
+        <button class="btn" style="width:100%; background:#0078ff; margin-bottom:10px;" onclick="openGoogleMaps()">I'm Lost (Google Maps)</button>
+        
+        <div style="display:flex; gap:10px;">
+            <button class="btn" style="flex:1;" onclick="processStop('Delivered')">DELIVERED</button>
+            <button class="btn" style="flex:1; background:#dc3545;" onclick="processStop('Not Delivered')">SKIPPED</button>
+        </div>
+        <button class="btn" style="width:100%; background:#444; margin-top:10px;" onclick="closeModal()">Close</button>
+    </div>
+</div>
+
+<script>
+    // Your specific Google Apps Script URL
+    const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbyECaDUnW3yvG5J8dWmT1a-5YTykHuwDxEiAgByH91A5zAwIzONqV64_r9olmyd07MSMA/exec";
+
+    let map, markerLayer, routeLine;
+    let stops = [];
+    let markers = []; 
+    let activeStop = null;
+    const warehouse = { lat: 55.1707, lng: -118.7947 };
+
+    window.onload = async () => {
+        map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+        routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map);
+
+        L.marker([warehouse.lat, warehouse.lng], {
+            icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
+        }).addTo(map).bindPopup("<b>Warehouse</b>");
+    };
+
+    function closeModal() { document.getElementById("dataModal").style.display = "none"; }
+
+    async function geocodeAddress(address) {
+        try {
+            const query = encodeURIComponent(address + ", Grande Prairie, AB");
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+            const data = await res.json();
+            return data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+        } catch (e) { return null; }
+    }
+
+    function getDistance(p1, p2) {
+        const R = 6371;
+        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+        const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function optimizeRoute(rawList) {
+        let unvisited = [...rawList], ordered = [], currentPos = warehouse;
+        while (unvisited.length > 0) {
+            unvisited.sort((a, b) => getDistance(currentPos, a) - getDistance(currentPos, b));
+            let closest = unvisited.shift();
+            ordered.push(closest);
+            currentPos = closest;
+        }
+        return ordered;
+    }
+
+    async function syncFromSheets() {
+        document.getElementById('status').textContent = "Fetching data...";
+        try {
+            const res = await fetch(SHEETS_API_URL);
+            const rows = await res.json();
+            
+            const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
+            const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
+
+            let tempStops = [];
+            for (let i = 0; i < rows.length; i++) {
+                document.getElementById('status').textContent = `Locating ${i + 1}/${rows.length}...`;
+                const geo = await geocodeAddress(rows[i][addrKey]);
+                if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], ...geo });
+                await new Promise(r => setTimeout(r, 1200)); 
+            }
+            stops = optimizeRoute(tempStops);
+            renderRoute();
+            updateSidebar();
+            document.getElementById('status').textContent = "Route Ready.";
+        } catch (e) { 
+            document.getElementById('status').textContent = "Error loading from Sheets.";
+        }
+    }
+
+    function renderRoute() {
+        markerLayer.clearLayers();
+        markers = [];
+        let pathCoords = [[warehouse.lat, warehouse.lng]];
+        stops.forEach((s, i) => {
+            pathCoords.push([s.lat, s.lng]);
+            const m = L.marker([s.lat, s.lng], {
+                icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin">${i + 1}</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
+            }).addTo(markerLayer).bindPopup(`<b>${i+1}. ${s.company}</b>`);
+            markers.push(m);
+        });
+        if (stops.length > 0) pathCoords.push([warehouse.lat, warehouse.lng]);
+        routeLine.setLatLngs(pathCoords);
+        if (stops.length > 0) map.fitBounds(L.latLngBounds(pathCoords), { padding: [50, 50] });
+    }
+
+    function updateSidebar() {
+        const listDiv = document.getElementById('stop-list');
+        listDiv.innerHTML = '';
+        document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
+        stops.forEach((s, i) => {
+            const card = document.createElement('div');
+            card.className = 'stop-card';
+            card.innerHTML = `<b>${i + 1}.</b> ${s.company}<br><small style="color:#aaa">${s.address}</small>`;
+            card.onclick = () => {
+                activeStop = s;
+                document.getElementById('current-stop-bar').style.display = 'block';
+                document.getElementById('active-addr').innerText = s.address;
+                map.setView([s.lat, s.lng], 16);
+                markers[i].openPopup();
+                openEntryModal(s);
+            };
+            listDiv.appendChild(card);
+        });
+    }
+
+    function openEntryModal(s) {
+        document.getElementById('mCustName').innerText = s.company;
+        document.getElementById('mCustAddr').innerText = s.address;
+        document.getElementById('driverNotes').value = "";
+        document.getElementById('dataModal').style.display = 'flex';
+    }
+
+    async function processStop(status) {
+        const notes = document.getElementById('driverNotes').value;
+        if (status === 'Not Delivered' && !notes.trim()) {
+            alert("A reason is required to skip this delivery.");
+            return;
+        }
+
+        const now = new Date();
+        const timestamp = now.toLocaleDateString() + " " + now.toLocaleTimeString();
+        
+        let formData = {
+            Customer: activeStop.company,
+            Address: activeStop.address,
+            Status: status,
+            Timestamp: timestamp,
+            Notes: notes
+        };
+
+        // Sending data to Google Sheets via Web App
+        fetch(SHEETS_API_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            body: JSON.stringify(formData),
+            headers: { "Content-Type": "application/json" }
+        })
+        .then(() => {
+            closeModal();
+            alert(`Stop recorded as ${status}.`);
+        })
+        .catch(() => alert("Error saving data."));
+    }
+
+    function openGoogleMaps() {
+        if (!activeStop) return;
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeStop.address + ", Grande Prairie, AB")}`;
+        window.open(url, '_blank');
+    }
+</script>
+</body>
+</html>
