@@ -106,28 +106,19 @@ markerLayer = L.layerGroup().addTo(map);
 
 async function initSheetScanner() {
     const statusDiv = document.getElementById("status");
+    const select = document.getElementById("route-select");
     statusDiv.innerText = "SCANNING...";
+    
     try {
-        // More reliable way to get sheet names via GVIZ
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&t=${Date.now()}`;
-        const res = await fetch(url);
-        const text = await res.text();
-        const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
-        
-        // Use the Viz API's internal sheet list if available, or fetch metadata
-        const urlMeta = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&t=${Date.now()}`;
-        const resMeta = await fetch(urlMeta);
-        const textMeta = await resMeta.text();
-        
-        // This is a backup hardcoded list of common tab patterns if the HTML scan is blocked
-        // But first we try to parse the actual response for tab labels
-        const select = document.getElementById("route-select");
-        select.innerHTML = "";
+        select.innerHTML = ""; // Clear existing options
 
-        // Attempting to pull names from the document title or specific sheet patterns
-        // Since we can't reliably get all tab names without an API key or HTML scan, 
-        // I've added your specific routes as the primary list plus a manual scan.
-        const knownRoutes = ["VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT", "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY", "WEEK 2 MONDAY", "WEEK 2 TUESDAY", "WEEK 2 WEDNESDAY", "WEEK 2 THURSDAY", "WEEK 2 FRIDAY"];
+        const knownRoutes = [
+            "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT", 
+            "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY",
+            "WEEK 2 MONDAY", "WEEK 2 TUESDAY", "WEEK 2 WEDNESDAY", "WEEK 2 THURSDAY", "WEEK 2 FRIDAY",
+            "WEEK 3 MONDAY", "WEEK 3 TUESDAY", "WEEK 3 WEDNESDAY", "WEEK 3 THURSDAY", "WEEK 3 FRIDAY",
+            "WEEK 4 MONDAY", "WEEK 4 TUESDAY", "WEEK 4 WEDNESDAY", "WEEK 4 THURSDAY", "WEEK 4 FRIDAY"
+        ];
         
         knownRoutes.forEach(name => {
             const opt = document.createElement("option");
