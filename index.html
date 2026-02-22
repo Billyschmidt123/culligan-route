@@ -133,6 +133,7 @@
     </div>
     <div id="map"></div>
     <button id="lost-btn" onclick="openGoogleMaps()">📍 I'M LOST</button>
+
     <div id="manager-panel">
         <button class="close-mgr" onclick="toggleManager()">×</button>
         <div class="mgr-tabs">
@@ -142,6 +143,8 @@
         <div id="reports" class="mgr-content active">
             <h2 style="color:#0078ff; text-align:center;">DAILY SUMMARY CULLIGAN</h2>
             <div id="summary-data"></div>
+            <hr style="border:0; border-top:1px solid #444; margin:20px 0;">
+            <button class="btn" style="background:#dc3545; width:100%;" onclick="adminResetCounter()">RESET CURRENT SLIP COUNTER</button>
         </div>
         <div id="live-report" class="mgr-content">
             <table id="live-table" style="width:100%; border-collapse:collapse; font-size:11px; color: white;">
@@ -176,7 +179,23 @@ function switchTab(tabId) {
     document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
+}
+
+function adminResetCounter() {
+    const pin = prompt("Enter Admin Password to Reset Counter:");
+    if (pin === "5645") {
+        document.getElementById('p-18l').value = 0;
+        document.getElementById('p-small').value = 0;
+        document.getElementById('p-18l-ret').value = 0;
+        document.getElementById('p-cases').value = 0;
+        document.getElementById('p-small-ret').value = 0;
+        document.getElementById('p-rec-by').value = "";
+        document.getElementById('p-notes').value = "";
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        alert("Slip counters and signature have been reset.");
+    } else {
+        alert("Incorrect Password.");
+    }
 }
 
 function startRoute() {
@@ -210,7 +229,6 @@ async function loadRoute() {
             await new Promise(r => setTimeout(r, 600));
         }
 
-        // --- CIRCULAR OPTIMIZATION ---
         stops = [];
         let currentPos = { lat: warehouse[0], lng: warehouse[1] };
         while (raw.length > 0) {
@@ -223,7 +241,6 @@ async function loadRoute() {
             stops.push(next);
             currentPos = { lat: next.lat, lng: next.lng };
         }
-        // Add Warehouse Return
         stops.push({ company: "WAREHOUSE (END ROUTE)", address: "8805 111 St, Grande Prairie, AB", lat: warehouse[0], lng: warehouse[1], phone: "OFFICE" });
         
         currentStopIndex = 0; renderRoute(); renderSidebar(); updateHeader();
@@ -267,12 +284,11 @@ function navStep(dir) {
     if (n >= 0 && n < stops.length) { currentStopIndex = n; updateHeader(); updateRouteLines(); map.setView([stops[n].lat, stops[n].lng], 16); }
 }
 
-// FIXED LOST BUTTON FUNCTION - Universal Google Maps Protocol
 function openGoogleMaps() {
     const s = stops[currentStopIndex];
-    if (!s) return alert("Please load a route first.");
+    if (!s) return alert("Load a route first.");
     const destination = encodeURIComponent(`${s.address}, Grande Prairie, AB`);
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+    const url = `http://maps.google.com/maps?q=${destination}&travelmode=driving`;
     window.open(url, '_blank');
 }
 
@@ -295,10 +311,8 @@ async function submitLog(status) {
     const now = new Date(), s = stops[currentStopIndex];
     const entry = { driver: driverName, customer: s.company, status: status, time: now.toLocaleTimeString(), date: now.toLocaleDateString(), v18l: document.getElementById('p-18l').value, vSmall: document.getElementById('p-small').value, vCases: document.getElementById('p-cases').value, r18l: document.getElementById('p-18l-ret').value, rSmall: document.getElementById('p-small-ret').value, notes: document.getElementById('p-notes').value };
     if (status === 'NOT DELIVERED') entry.reason = prompt("Reason:");
-    
     deliveryLog.push(entry);
     updateReports();
-    
     if (currentStopIndex === stops.length - 1) {
         updateRouteLines(); closeProfile();
         if(confirm("Route Complete. Run EOD?")) executeEOD();
@@ -329,20 +343,14 @@ function renderSidebar() {
 
 async function executeEOD() {
     try {
-        const payload = { action: "EOD", driver: driverName, log: deliveryLog };
-        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-        alert("EOD Successful - Data Sent to Manager Sheet");
-    } catch(e) { alert("Error sending EOD data"); }
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "EOD", driver: driverName, log: deliveryLog }) });
+        alert("EOD Successful");
+    } catch(e) { alert("Error sending data."); }
 }
 
 function initSignaturePad() {
     canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
-    const getPos = e => { 
-        const r = canvas.getBoundingClientRect(); 
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { x: clientX - r.left, y: clientY - r.top }; 
-    };
+    const getPos = e => { const r = canvas.getBoundingClientRect(); return { x: (e.touches?e.touches[0].clientX:e.clientX) - r.left, y: (e.touches?e.touches[0].clientY:e.clientY) - r.top }; };
     canvas.addEventListener('mousedown', e => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
     canvas.addEventListener('mousemove', e => { if(drawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); } });
     canvas.addEventListener('touchstart', e => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); }, {passive: false});
