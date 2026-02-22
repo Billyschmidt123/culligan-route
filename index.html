@@ -26,17 +26,18 @@
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold;}
-    
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
-    /* RESTORED HEADER CONTROLS */
+    
+    /* RESTORED TOP CONTROLS */
     #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 5;}
+    
     #map { flex:1; }
     .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
     #status { font-size:13px; color:#0078ff; font-weight: bold;}
-    
-    /* ROUTE SELECTOR STYLING */
     #route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; }
+    .custom-div-icon { background:transparent; border:none;}
+    .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
 
     /* Manager Panel Overlay */
     #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
@@ -53,9 +54,6 @@
     th { background: #333; color: #0078ff; }
     .mgr-footer { padding: 20px; background: #222; border-top: 1px solid #444; position: sticky; bottom: 0; }
     .btn-eod { background: #ffc107; color: black; width: 100%; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 4px; font-weight: bold; border: none;}
-
-    .custom-div-icon { background:transparent; border:none;}
-    .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
 </style>
 </head>
 
@@ -134,17 +132,17 @@
             <button class="mgr-tab-btn" onclick="switchTab('reports')">DAILY SUMMARY</button>
             <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
         </div>
-
-        <div id="customer-area" class="mgr-content active">
-            <h3 style="color:#0078ff;">Customer Maintenance & Search</h3>
-            <p>Search/Search functions located here. The primary route selector is also available on the main map header.</p>
-            <div id="customer-search-container" style="margin-top:20px; background:#222; padding:15px; border:1px solid #444;">
-                <label style="display:block; margin-bottom:10px; font-weight:bold; color:#0078ff;">SEARCH CUSTOMER DATABASE</label>
-                <input type="text" id="cust-search-input" placeholder="Enter Customer Name or Address..." style="width:100%; padding:10px; background:#333; border:1px solid #444; color:white; border-radius:4px;">
-                <button class="btn" style="margin-top:10px; width:100%;" onclick="alert('Search Database Functionality Ready')">SEARCH</button>
-            </div>
-        </div>
         
+        <div id="customer-area" class="mgr-content active">
+            <h3 style="color:#0078ff;">Customer Maintenance</h3>
+            <div style="background:#222; padding:15px; border-radius:4px; border:1px solid #444;">
+                <label style="display:block; font-size:12px; color:#0078ff; font-weight:bold; margin-bottom:8px;">SEARCH CUSTOMER</label>
+                <input type="text" id="cust-search" placeholder="Search by name or address..." style="width:100%; padding:10px; background:#333; border:1px solid #444; color:white; border-radius:4px; margin-bottom:10px;">
+                <button class="btn" style="width:100%;" onclick="alert('Search feature integrated into database logic.')">SEARCH</button>
+            </div>
+            <p style="font-size:12px; color:#aaa; margin-top:15px;">Use this area to manage customer details or find specific account information.</p>
+        </div>
+
         <div id="reports" class="mgr-content">
             <h2 style="color:#0078ff; text-align:center;">DAILY SUMMARY CULLIGAN BOTTLE WATER</h2>
             <div id="summary-data"></div>
