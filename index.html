@@ -1,77 +1,91 @@
 <div id="global-search-tab" class="mgr-content">
     <h3>SEARCH ALL ROUTES</h3>
-    <input type="text" id="global-search-input" placeholder="Enter Company Name..." style="width:100%; padding:12px; margin-bottom:10px;">
+    <input type="text" id="global-search-input" placeholder="Enter Company Name..." style="width:100%; padding:12px; margin-bottom:10px; background:#333; color:white; border:1px solid #0078ff;">
     <button class="btn" onclick="runGlobalSearch()" style="width:100%;">Execute Global Search</button>
     
-    <div id="search-progress" style="margin-top:10px; font-size:12px; color:#0078ff; font-weight:bold; min-height:15px;"></div>
+    <div id="search-progress-container" style="margin-top:15px; display:none;">
+        <div style="font-size:11px; color:#0078ff; margin-bottom:5px;">SCANNING DATABASE...</div>
+        <div style="width:100%; background:#333; height:10px; border-radius:5px; overflow:hidden;">
+            <div id="search-bar-fill" style="width:0%; height:100%; background:#0078ff; transition: width 0.3s;"></div>
+        </div>
+        <div id="current-sheet-name" style="font-size:10px; color:#aaa; margin-top:5px;">Preparing...</div>
+    </div>
     
     <div id="search-results-list" style="margin-top:20px;"></div>
 </div>
 
 <script>
-/** RESTORED & IMPROVED GLOBAL SEARCH LOGIC **/
 async function runGlobalSearch() {
-    const term = document.getElementById('global-search-input').value;
-    const progressDiv = document.getElementById('search-progress');
+    const term = document.getElementById('global-search-input').value.trim();
+    const progressContainer = document.getElementById('search-progress-container');
+    const barFill = document.getElementById('search-bar-fill');
+    const sheetText = document.getElementById('current-sheet-name');
     const resultsDiv = document.getElementById('search-results-list');
     
-    if(!term) return alert("Enter a name");
+    if(!term) return alert("Please enter a name to search.");
     
+    // Reset UI
     resultsDiv.innerHTML = "";
-    // Reset Progress Bar
-    progressDiv.innerHTML = "Initializing Deep Scan...";
+    progressContainer.style.display = "block";
+    barFill.style.width = "0%";
+    
+    const routes = [
+        "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY",
+        "WEEK 2 MONDAY", "WEEK 2 TUESDAY", "WEEK 2 WEDNESDAY", "WEEK 2 THURSDAY", "WEEK 2 FRIDAY",
+        "WEEK 3 MONDAY", "WEEK 3 TUESDAY", "WEEK 3 WEDNESDAY", "WEEK 3 THURSDAY", "WEEK 3 FRIDAY",
+        "WEEK 4 MONDAY", "WEEK 4 TUESDAY", "WEEK 4 WEDNESDAY", "WEEK 4 THURSDAY", "WEEK 4 FRIDAY",
+        "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT"
+    ];
 
-    try {
-        // We use a list of your specific routes to show progress as it "looks" through them
-        const routesToSearch = [
-            "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY",
-            "WEEK 2 MONDAY", "WEEK 2 TUESDAY", "WEEK 2 WEDNESDAY", "WEEK 2 THURSDAY", "WEEK 2 FRIDAY",
-            "WEEK 3 MONDAY", "WEEK 3 TUESDAY", "WEEK 3 WEDNESDAY", "WEEK 3 THURSDAY", "WEEK 3 FRIDAY",
-            "WEEK 4 MONDAY", "WEEK 4 TUESDAY", "WEEK 4 WEDNESDAY", "WEEK 4 THURSDAY", "WEEK 4 FRIDAY",
-            "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT"
-        ];
+    let allFound = [];
 
-        let allFound = [];
+    for (let i = 0; i < routes.length; i++) {
+        const route = routes[i];
         
-        for (let route of routesToSearch) {
-            // Update the Progress Bar below the search box
-            progressDiv.innerHTML = `Searching in: <span style="color:white">${route}</span>...`;
-            
-            // Call the Script for this specific sheet
-            const res = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}&targetSheet=${encodeURIComponent(route)}`, {
-                method: 'GET',
-                redirect: 'follow'
-            });
-            const data = await res.json();
-            
-            if (data && data.length > 0) {
-                allFound = [...allFound, ...data];
-            }
-        }
+        // Update Progress Bar
+        const percent = Math.round(((i + 1) / routes.length) * 100);
+        barFill.style.width = percent + "%";
+        sheetText.innerText = `Searching: ${route}`;
 
-        // Final UI Update
-        progressDiv.innerHTML = "SEARCH COMPLETE";
-        resultsDiv.innerHTML = "";
-        
-        if(allFound.length === 0) {
-            resultsDiv.innerHTML = `<div style="color:#dc3545">No matches found for "${term}" in any route file.</div>`;
-        } else {
-            allFound.forEach(item => {
-                const card = document.createElement('div');
-                card.style = "background:#333; padding:10px; margin-bottom:5px; border-left:4px solid #0078ff; border-radius:4px;";
-                card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between;">
-                        <b>${item.company}</b>
-                        <span style="color:#0078ff; font-size:10px;">${item.route}</span>
-                    </div>
-                    <small style="color:#aaa;">${item.address}</small>
-                `;
-                resultsDiv.appendChild(card);
+        try {
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(route)}`;
+            const res = await fetch(url);
+            const text = await res.text();
+            const json = JSON.parse(text.substring(47).slice(0, -2));
+            
+            const rows = json.table.rows;
+            rows.forEach(row => {
+                // Check first column (Company) and second column (Address)
+                const company = row.c[0] ? row.c[0].v.toString() : "";
+                const address = row.c[1] ? row.c[1].v.toString() : "";
+                
+                if (company.toLowerCase().includes(term.toLowerCase())) {
+                    allFound.push({ company, address, route });
+                }
             });
+        } catch (e) {
+            console.log("Error scanning " + route);
         }
-    } catch (e) { 
-        progressDiv.innerHTML = `<span style="color:red">ERROR: Check Script Permissions</span>`;
-        resultsDiv.innerHTML = "Search failed to connect to database."; 
+    }
+
+    // Wrap Up
+    sheetText.innerText = "SCAN COMPLETE";
+    if (allFound.length === 0) {
+        resultsDiv.innerHTML = `<div style="padding:15px; background:#442222; border-radius:4px; color:#ff8888;">No customers found matching "${term}" in any route.</div>`;
+    } else {
+        resultsDiv.innerHTML = `<div style="margin-bottom:10px; color:#0078ff; font-weight:bold;">Found ${allFound.length} Results:</div>`;
+        allFound.forEach(item => {
+            const card = document.createElement('div');
+            card.style = "background:#2a2a2a; padding:12px; margin-bottom:8px; border-left:4px solid #0078ff; border-radius:4px;";
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <b style="color:white;">${item.company}</b>
+                    <span style="color:#0078ff; font-size:10px; font-weight:bold;">${item.route}</span>
+                </div>
+                <div style="color:#aaa; font-size:11px; margin-top:4px;">${item.address}</div>
+            `;
+            resultsDiv.appendChild(card);
+        });
     }
 }
 </script>
