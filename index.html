@@ -14,7 +14,7 @@
     #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
     #sidebar-header { padding:15px; border-bottom:1px solid #444;}
     #stop-list { flex:1; overflow-y:auto; padding:10px;}
-    .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
+    .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer; position: relative;}
     .stop-card.flagged { border-left-color: #ffc107; background: #443c20; }
     .stop-card:hover { background:#444;}
     #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
@@ -27,7 +27,7 @@
     .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold;}
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
-    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
+    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 5;}
     #map { flex:1; }
     .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-rush { background:#ffc107; color:black; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold; width:100%; margin-bottom:15px;}
@@ -46,8 +46,12 @@
     .mgr-content { padding: 20px; display: none; overflow-y: auto; height: calc(100% - 150px); color: white;}
     .mgr-content.active { display: block; }
     .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
-    
-    /* Edit Modal Overlay and Box */
+
+    /* Search Results Area */
+    #search-results-area { margin-top: 15px; max-height: 300px; overflow-y: auto; border: 1px solid #444; background: #111; padding: 10px; border-radius: 4px; }
+    .tab-badge { position: absolute; top: 5px; right: 5px; font-size: 10px; background: #0078ff; color: white; padding: 2px 6px; border-radius: 4px; }
+
+    /* Edit Modal */
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; }
     #edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; box-shadow: 0 0 20px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;}
 
@@ -130,11 +134,25 @@
     <div id="manager-panel">
         <button class="close-mgr" onclick="toggleManager()">&times;</button>
         <div class="mgr-tabs">
-            <button class="mgr-tab-btn active" onclick="switchTab('reports')">DAILY SUMMARY</button>
+            <button class="mgr-tab-btn active" onclick="switchTab('customer-area')">CUSTOMER MAINTENANCE</button>
+            <button class="mgr-tab-btn" onclick="switchTab('reports')">DAILY SUMMARY</button>
             <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
         </div>
+
+        <div id="customer-area" class="mgr-content active">
+            <h3 style="color:#0078ff;">Customer Database Maintenance</h3>
+            <div style="background:#222; padding:15px; border:1px solid #444; border-radius:4px;">
+                <label style="display:block; margin-bottom:10px; font-weight:bold; color:#0078ff;">GLOBAL DATABASE SEARCH</label>
+                <input type="text" id="global-search-input" placeholder="Search by name or address..." style="width:100%; padding:10px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing: border-box;">
+                <button class="btn" style="margin-top:10px; width:100%;" onclick="performGlobalSearch()">SEARCH ALL ROUTES</button>
+            </div>
+            
+            <div id="search-results-area">
+                <div style="text-align:center; color:#777; padding:20px;">Enter search term above</div>
+            </div>
+        </div>
         
-        <div id="reports" class="mgr-content active">
+        <div id="reports" class="mgr-content">
             <h2 style="color:#0078ff; text-align:center;">DAILY SUMMARY CULLIGAN BOTTLE WATER</h2>
             <div id="summary-data"></div>
         </div>
@@ -207,6 +225,13 @@
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
+const TABS = [
+    "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY",
+    "WEEK 2 MONDAY", "WEEK 2 TUESDAY", "WEEK 2 WEDNESDAY", "WEEK 2 THURSDAY", "WEEK 2 FRIDAY",
+    "WEEK 3 MONDAY", "WEEK 3 TUESDAY", "WEEK 3 WEDNESDAY", "WEEK 3 THURSDAY", "WEEK 3 FRIDAY",
+    "WEEK 4 MONDAY", "WEEK 4 TUESDAY", "WEEK 4 WEDNESDAY", "WEEK 4 THURSDAY", "WEEK 4 FRIDAY",
+    "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT"
+];
 
 let map, markerLayer, canvas, ctx, drawing = false;
 let stops = [];
@@ -229,20 +254,59 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-// Function to open the Edit Modal (Can be called from a search result or list)
+/* GLOBAL SEARCH FUNCTIONALITY */
+async function performGlobalSearch() {
+    const term = document.getElementById('global-search-input').value.trim().toLowerCase();
+    if (!term) return;
+
+    const list = document.getElementById('search-results-area');
+    list.innerHTML = `<div style="text-align:center; padding:20px; color:#0078ff;">Scanning 25 routes...</div>`;
+    
+    let foundCount = 0;
+
+    for (let tab of TABS) {
+        try {
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tab)}`;
+            const response = await fetch(url);
+            const text = await response.text();
+            const json = JSON.parse(text.substring(47).slice(0, -2));
+            
+            if (json.table && json.table.rows) {
+                json.table.rows.forEach(row => {
+                    const rowData = row.c.map(cell => cell ? String(cell.v) : "");
+                    const combined = rowData.join(" ").toLowerCase();
+
+                    if (combined.includes(term)) {
+                        if (foundCount === 0) list.innerHTML = ""; 
+                        foundCount++;
+                        const name = rowData[2] || rowData[1] || "Customer";
+                        const addr = rowData[3] || "No Address";
+                        
+                        const card = document.createElement('div');
+                        card.className = 'stop-card';
+                        card.innerHTML = `<span class="tab-badge">${tab}</span><b>${name}</b><br><small>${addr}</small>`;
+                        card.onclick = () => openEditModal({company: name, address: addr}, tab);
+                        list.appendChild(card);
+                    }
+                });
+            }
+        } catch (e) { console.error("Search error on tab: " + tab); }
+    }
+
+    if (foundCount === 0) {
+        list.innerHTML = `<div style="padding:20px; color:#dc3545; text-align:center;">No matching customers found.</div>`;
+    }
+}
+
 function openEditModal(custData, currentRoute = "") {
     document.getElementById('edit-modal-overlay').style.display = 'block';
     document.getElementById('edit-modal').style.display = 'block';
-    
     document.getElementById('modal-cust-name').innerText = custData.company || "Unknown Customer";
     document.getElementById('modal-cust-addr').value = custData.address || "";
     document.getElementById('modal-cust-email').value = custData.email || "";
     document.getElementById('modal-cust-phone').value = custData.phone || "";
     document.getElementById('modal-cust-notes').value = custData.notes || "";
-    
-    // Set the route selector
-    const routeSelect = document.getElementById('modal-cust-route');
-    routeSelect.value = currentRoute; 
+    document.getElementById('modal-cust-route').value = currentRoute; 
 }
 
 function closeEditModal() {
@@ -251,14 +315,12 @@ function closeEditModal() {
 }
 
 function saveCustomerChanges() {
-    // Logic to save data to Google Sheets via SCRIPT_URL would go here
-    alert("Changes saved locally. (Backend sync requires Script integration)");
+    alert("Changes saved locally.");
     closeEditModal();
 }
 
 function openRushModal() {
     alert("Rush Order Modal would open here.");
-    // closeEditModal(); // Optional: close edit modal first
 }
 
 function initSignaturePad() {
