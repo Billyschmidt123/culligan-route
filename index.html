@@ -1,193 +1,123 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Culligan Route Pro</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        body { margin:0; height:100vh; display:flex; font-family: sans-serif; background:#111; color:white; overflow:hidden;}
-        #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
-        #map { flex:1; background: #000; }
-        #stop-list { flex:1; overflow-y:auto; padding:10px; }
-        .stop-card { background:#333; padding:12px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
-        #customer-profile { display:none; padding:20px; background:#222; height:100%; overflow-y:auto; }
-        .mgr-panel { position:fixed; bottom:-100%; left:0; width:100%; height:85%; background:#1a1a1a; transition:0.4s; z-index:2000; padding:20px; box-sizing:border-box; border-top:4px solid #0078ff;}
-        .mgr-panel.open { bottom:0; }
-        .btn { padding:12px; background:#0078ff; color:white; border:none; cursor:pointer; border-radius:4px; font-weight:bold; width:100%; margin-bottom:10px;}
-        input, select, textarea { padding:10px; width:100%; margin-bottom:15px; background:#333; color:white; border:1px solid #444; border-radius:4px; box-sizing:border-box;}
-        #sig-canvas { background:white; width:100%; height:150px; border-radius:4px; border:2px solid #555; touch-action:none; }
-        #status-bar { background:#001a33; padding:8px; font-size:12px; color:#0078ff; border-bottom:1px solid #0078ff;}
-    </style>
-</head>
-<body>
-
-<div id="sidebar">
-    <div id="status-bar">System: Ready</div>
-    <div id="list-view">
-        <div style="padding:15px; border-bottom:1px solid #444;">
-            <h2 style="margin:0 0 10px 0;">Routes</h2>
-            <select id="route-select">
-                <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
-                <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
-                <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
-                <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
-                <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
-            </select>
-            <button class="btn" onclick="loadRoute()">LOAD ROUTE</button>
-            <button class="btn" style="background:#666;" onclick="toggleManager()">MANAGER PANEL</button>
-        </div>
-        <div id="stop-list"></div>
-    </div>
-
-    <div id="customer-profile">
-        <button class="btn" style="background:#444;" onclick="closeProfile()">← BACK</button>
-        <h3 id="prof-name">Customer</h3>
-        <p id="prof-addr" style="color:#aaa; font-size:13px;"></p>
-        <label>NOTES</label>
-        <textarea id="p-notes" rows="3"></textarea>
-        <canvas id="sig-canvas"></canvas>
-        <button class="btn" style="background:#28a745; margin-top:15px;" onclick="submitLog('DELIVERED')">DONE</button>
-    </div>
+<div class="mgr-tabs">
+    <button class="mgr-tab-btn active" onclick="switchTab('reports')">DAILY SUMMARY</button>
+    <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
+    <button class="mgr-tab-btn" onclick="switchTab('cust-mgr')">CUSTOMER MGR</button>
 </div>
 
-<div id="map"></div>
-
-<div id="manager-panel" class="mgr-panel">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="margin:0; color:#0078ff;">MANAGER TOOLS</h2>
-        <button class="btn" style="background:red; width:auto; padding:5px 20px;" onclick="toggleManager()">X</button>
+<div id="cust-mgr" class="mgr-content">
+    <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <input type="text" id="cust-search-input" placeholder="Enter Customer Name..." style="flex:1; padding:10px; border-radius:4px; border:1px solid #0078ff; background:#333; color:white;">
+        <button class="btn" onclick="searchCustomer()">SEARCH</button>
     </div>
-    <div style="background:#222; padding:15px; border-radius:8px;">
-        <h3>Global Customer Search</h3>
-        <input type="text" id="global-search-input" placeholder="Type Company Name...">
-        <button class="btn" onclick="runGlobalSearch()">SEARCH ENTIRE DATABASE</button>
-        <label>Search Results:</label>
-        <select id="global-results-drop"></select>
+    
+    <div id="edit-modal" style="display:none; background:#222; padding:15px; border:1px solid #444; border-radius:4px;">
+        <h3 id="modal-title">Edit Customer</h3>
+        <div class="profile-group"><label>NAME</label><input type="text" id="m-name"></div>
+        <div class="profile-group"><label>ADDRESS</label><input type="text" id="m-addr"></div>
+        <div class="profile-group"><label>PHONE</label><input type="text" id="m-phone"></div>
+        <div class="profile-group"><label>EMAIL</label><input type="text" id="m-email"></div>
+        <div class="profile-group"><label>NOTES</label><textarea id="m-notes"></textarea></div>
+        <div class="profile-group">
+            <label>ROUTE & DAY</label>
+            <select id="m-route" style="width:100%; padding:8px; background:#333; color:white; border:1px solid #444;">
+                <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
+                </select>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn" style="flex:1" onclick="saveCustomer()">SAVE TO ROUTE</button>
+            <button class="btn-mgr" style="flex:1; background:#dc3545" onclick="triggerRush()">CREATE RUSH ORDER</button>
+        </div>
     </div>
 </div>
 
 <script>
-    /** * IMPORTANT: PASTE YOUR DEPLOYED URL INSIDE THE QUOTES BELOW 
-     * Example: const SCRIPT_URL = "https://script.google.com/macros/s/ABC_123/exec";
-     */
-    const SCRIPT_URL = "PASTE_YOUR_DEPLOYED_URL_HERE"; 
-    const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
+let pendingRushOrder = null;
 
-    let map, markerLayer, stops = [], currentStopIndex = 0, deliveryLog = [], canvas, ctx, drawing = false;
-    const warehouse = [55.1707, -118.7947];
-
-    window.onload = () => {
-        map = L.map('map').setView(warehouse, 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        markerLayer = L.layerGroup().addTo(map);
-        initSig();
-    };
-
-    function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
-
-    async function runGlobalSearch() {
-        const term = document.getElementById('global-search-input').value;
-        if(term.length < 3) return alert("Enter 3+ letters");
+async function searchCustomer() {
+    const name = document.getElementById('cust-search-input').value.toLowerCase();
+    document.getElementById('status').innerText = "Searching all sheets...";
+    
+    // Logic to search via the Google Script across all sheets
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=search&name=${encodeURIComponent(name)}`);
+        const data = await res.json();
         
-        document.getElementById('status-bar').innerText = "Searching...";
-        try {
-            // Ensure we use 'redirect: follow' for Google URLs
-            const response = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`, {
-                method: 'GET',
-                redirect: 'follow'
-            });
-            const data = await response.json();
-            const drop = document.getElementById('global-results-drop');
-            drop.innerHTML = '';
-
-            if(!data || data.length === 0) {
-                alert("Customer not found.");
-            } else {
-                data.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.text = `${item.company} (${item.route})`;
-                    drop.add(opt);
-                });
-                alert(`Found ${data.length} matches!`);
+        if (data.found) {
+            fillModal(data.customer);
+        } else {
+            if (confirm("Customer not found. Add new customer?")) {
+                fillModal({name: document.getElementById('cust-search-input').value, address:'', phone:'', email:'', notes:'', route:''});
             }
-        } catch (err) {
-            console.error(err);
-            alert("Search failed. Make sure you replaced PASTE_YOUR_DEPLOYED_URL_HERE with your real link.");
         }
-        document.getElementById('status-bar').innerText = "Ready";
-    }
+    } catch (e) { alert("Search failed. Check Google Script connection."); }
+    document.getElementById('status').innerText = "Ready";
+}
 
-    async function loadRoute() {
-        const sheetName = document.getElementById('route-select').value;
-        document.getElementById('status-bar').innerText = `Loading ${sheetName}...`;
-        try {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
-            const res = await fetch(url);
-            const text = await res.text();
-            const json = JSON.parse(text.substring(47).slice(0, -2));
-            const rows = json.table.rows;
+function fillModal(c) {
+    document.getElementById('edit-modal').style.display = 'block';
+    document.getElementById('m-name').value = c.name || "";
+    document.getElementById('m-addr').value = c.address || "";
+    document.getElementById('m-phone').value = c.phone || "";
+    document.getElementById('m-email').value = c.email || "";
+    document.getElementById('m-notes').value = c.notes || "";
+    document.getElementById('m-route').value = c.route || "WEEK 1 MONDAY";
+}
+
+async function saveCustomer() {
+    const payload = {
+        action: "saveCustomer",
+        name: document.getElementById('m-name').value,
+        address: document.getElementById('m-addr').value,
+        phone: document.getElementById('m-phone').value,
+        email: document.getElementById('m-email').value,
+        notes: document.getElementById('m-notes').value,
+        route: document.getElementById('m-route').value
+    };
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+    alert("Saved to " + payload.route);
+}
+
+function triggerRush() {
+    const instr = prompt("ENTER RUSH INSTRUCTIONS:");
+    if (!instr) return;
+    
+    const rushPayload = {
+        action: "RUSH",
+        route: document.getElementById('m-route').value,
+        instructions: instr,
+        customer: document.getElementById('m-name').value,
+        address: document.getElementById('m-addr').value
+    };
+    
+    // This sends the rush order to the backend to be picked up by the specific route
+    fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(rushPayload) });
+    alert("Rush Order Sent to " + rushPayload.route);
+}
+
+// DRIVER SIDE LOGIC: In your existing submitLog function, add this at the very end:
+async function checkSpecialOrders() {
+    const currentRoute = document.getElementById('route-select').value;
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=checkRush&route=${currentRoute}`);
+        const data = await res.json();
+        if (data.hasRush) {
+            // This is the blocking popup the driver must accept
+            alert("⚠️ SPECIAL ORDER ENTERED!\n\nCustomer: " + data.customer + "\nInstructions: " + data.instructions);
             
-            stops = rows.map(r => ({
-                company: r.c[0]?.v || "Unknown",
-                address: r.c[1]?.v || "No Address"
-            })).filter(s => s.address !== "No Address");
-
+            // Add the rush stop to the current map/list and optimize
+            let geo = await geocodeArcGIS(data.address);
+            stops.splice(currentStopIndex + 1, 0, {
+                company: "🚨 RUSH: " + data.customer,
+                address: data.address,
+                ...geo
+            });
+            renderRoute();
             renderSidebar();
-            document.getElementById('status-bar').innerText = `Loaded ${stops.length} Stops.`;
-        } catch (e) { alert("Sheet load failed."); }
-    }
+        }
+    } catch (e) { console.log("Rush check failed"); }
+}
 
-    function renderSidebar() {
-        const list = document.getElementById('stop-list');
-        list.innerHTML = "";
-        stops.forEach((s, i) => {
-            const d = document.createElement('div');
-            d.className = 'stop-card';
-            d.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
-            d.onclick = () => openProfile(i);
-            list.appendChild(d);
-        });
-    }
-
-    function openProfile(i) {
-        currentStopIndex = i;
-        document.getElementById('list-view').style.display = 'none';
-        document.getElementById('customer-profile').style.display = 'block';
-        document.getElementById('prof-name').innerText = stops[i].company;
-        document.getElementById('prof-addr').innerText = stops[i].address;
-    }
-
-    function closeProfile() {
-        document.getElementById('list-view').style.display = 'block';
-        document.getElementById('customer-profile').style.display = 'none';
-    }
-
-    function submitLog(status) {
-        deliveryLog.push({
-            customer: stops[currentStopIndex].company,
-            status: status,
-            time: new Date().toLocaleTimeString()
-        });
-        closeProfile();
-    }
-
-    function initSig() {
-        canvas = document.getElementById('sig-canvas');
-        ctx = canvas.getContext('2d');
-        const getPos = e => {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
-        };
-        const start = e => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); };
-        const move = e => { if(drawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); } };
-        const end = () => drawing = false;
-        canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
-        canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); window.addEventListener('touchend', end);
-    }
+// Modify your submitLog at the end:
+// ... after alert(status...)
+checkSpecialOrders(); 
 </script>
-</body>
-</html>
