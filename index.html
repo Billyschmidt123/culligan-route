@@ -216,12 +216,21 @@
         
         // Touch support
         canvas.ontouchstart = (e) => { 
-            e.preventDefault(); 
+            e.preventDefault();
             const t = e.touches[0]; 
             drawing = true; 
             ctx.beginPath(); 
             ctx.moveTo(t.pageX - canvas.offsetLeft, t.pageY - canvas.offsetTop); 
         };
+        canvas.ontouchmove = (e) => {
+            if (drawing) {
+                const t = e.touches[0];
+                ctx.lineTo(t.pageX - canvas.offsetLeft, t.pageY - canvas.offsetTop);
+                ctx.stroke();
+            }
+            e.preventDefault();
+        };
+        canvas.ontouchend = () => drawing = false;
     }
 
     window.onload = () => {
