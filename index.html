@@ -51,12 +51,6 @@
     th { background: #333; color: #0078ff; }
     .mgr-footer { padding: 20px; background: #222; border-top: 1px solid #444; position: sticky; bottom: 0; }
     .btn-eod { background: #ffc107; color: black; width: 100%; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 4px; font-weight: bold; border: none;}
-
-    /* Progress Tracker Styles */
-    #search-progress-area { margin-top: 15px; display: none; background: #222; padding: 10px; border-radius: 4px; border: 1px solid #444; }
-    #progress-label { font-size: 11px; color: #0078ff; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
-    #progress-bar-bg { width: 100%; background: #111; height: 12px; border-radius: 6px; overflow: hidden; }
-    #progress-bar-fill { width: 0%; height: 100%; background: #0078ff; transition: width 0.2s ease; }
 </style>
 </head>
 
@@ -133,7 +127,7 @@
         <div class="mgr-tabs">
             <button class="mgr-tab-btn active" onclick="switchTab('reports')">DAILY SUMMARY</button>
             <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
-            <button class="mgr-tab-btn" onclick="switchTab('cust-maint')">CUSTOMER SEARCH</button>
+            <button class="mgr-tab-btn" onclick="switchTab('cust-maint')">CUSTOMER MAINT.</button>
         </div>
         
         <div id="reports" class="mgr-content active">
@@ -153,22 +147,25 @@
         </div>
 
         <div id="cust-maint" class="mgr-content">
-            <h2 style="color:#0078ff;">GLOBAL CUSTOMER SEARCH</h2>
-            <div class="profile-group">
-                <label>Customer or Company Name</label>
-                <input type="text" id="global-search-input" placeholder="Enter name to search 25 files...">
-            </div>
+            <h2 style="color:#0078ff;">CUSTOMER MAINTENANCE</h2>
             
-            <div id="search-progress-area">
-                <div id="progress-label">Initializing Scan...</div>
-                <div id="progress-bar-bg">
-                    <div id="progress-bar-fill"></div>
+            <div style="background: #222; padding: 20px; border-radius: 8px; border: 1px solid #444;">
+                <div class="profile-group">
+                    <label>Find Customer String</label>
+                    <input type="text" id="global-search-input" placeholder="Enter name to search 25 files...">
                 </div>
+
+                <div id="search-progress-area" style="margin-top: 10px; margin-bottom: 15px; display: none;">
+                    <div id="progress-label" style="font-size: 11px; color: #0078ff; font-weight: bold; margin-bottom: 5px;">INITIALIZING SCAN...</div>
+                    <div style="width: 100%; background: #111; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #444;">
+                        <div id="progress-bar-fill" style="width: 0%; height: 100%; background: #0078ff; transition: width 0.2s ease;"></div>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="runGlobalDeepSearch()" style="width:100%; height: 50px; font-size: 16px; background: #0078ff;">SEARCH</button>
             </div>
 
-            <button class="btn" onclick="runGlobalSearch()" style="width:100%; height: 50px; font-size: 16px; margin-top: 15px;">START DEEP SCAN</button>
-
-            <div id="search-results-area" style="margin-top: 20px;"></div>
+            <div id="global-search-results" style="margin-top: 20px;"></div>
         </div>
 
         <div class="mgr-footer">
@@ -202,15 +199,14 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-// GLOBAL SEARCH LOGIC
-async function runGlobalSearch() {
+async function runGlobalDeepSearch() {
     const term = document.getElementById('global-search-input').value.trim();
     const progArea = document.getElementById('search-progress-area');
-    const progLabel = document.getElementById('progress-label');
     const progFill = document.getElementById('progress-bar-fill');
-    const resultsDiv = document.getElementById('search-results-area');
+    const progLabel = document.getElementById('progress-label');
+    const resultsDiv = document.getElementById('global-search-results');
     
-    if(!term) return alert("Please enter a customer name.");
+    if(!term) return alert("Please enter a name to search.");
     
     resultsDiv.innerHTML = "";
     progArea.style.display = "block";
@@ -223,8 +219,6 @@ async function runGlobalSearch() {
         "WEEK 4 MONDAY", "WEEK 4 TUESDAY", "WEEK 4 WEDNESDAY", "WEEK 4 THURSDAY", "WEEK 4 FRIDAY",
         "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT"
     ];
-
-    let found = [];
 
     for (let i = 0; i < allRoutes.length; i++) {
         const routeName = allRoutes[i];
@@ -243,38 +237,26 @@ async function runGlobalSearch() {
                 const address = row.c[1] ? row.c[1].v.toString() : "";
                 
                 if (company.toLowerCase().includes(term.toLowerCase())) {
-                    found.push({ company, address, routeName });
+                    const card = document.createElement('div');
+                    card.className = "stop-card";
+                    card.innerHTML = `<b>${company}</b><br><small>${address}</small><br><span style="color:#0078ff; font-size:10px;">ROUTE: ${routeName}</span>`;
+                    
+                    card.onclick = async () => {
+                        toggleManager(); 
+                        document.getElementById('route-select').value = routeName;
+                        await loadRoute(); 
+                        
+                        const stopIdx = stops.findIndex(s => s.company === company);
+                        if(stopIdx !== -1) {
+                            openProfile(stopIdx); 
+                        }
+                    };
+                    resultsDiv.appendChild(card);
                 }
             });
         } catch (e) { console.error("Error at " + routeName); }
     }
-
-    progLabel.innerText = "SEARCH COMPLETE";
-    
-    if (found.length === 0) {
-        resultsDiv.innerHTML = `<div style="color:#ffc107; padding:10px;">No matches found for "${term}".</div>`;
-    } else {
-        found.forEach(item => {
-            const card = document.createElement('div');
-            card.className = "stop-card";
-            card.innerHTML = `
-                <b>${item.company}</b><br>
-                <small>${item.address}</small><br>
-                <span style="color:#0078ff; font-size:10px; font-weight:bold;">ROUTE: ${item.routeName}</span>
-            `;
-            card.onclick = async () => {
-                toggleManager();
-                document.getElementById('route-select').value = item.routeName;
-                await loadRoute();
-                const stopIdx = stops.findIndex(s => s.company === item.company);
-                if(stopIdx !== -1) {
-                    map.setView([stops[stopIdx].lat, stops[stopIdx].lng], 16);
-                    openProfile(stopIdx);
-                }
-            };
-            resultsDiv.appendChild(card);
-        });
-    }
+    progLabel.innerText = "SCAN COMPLETE";
 }
 
 function initSignaturePad() {
