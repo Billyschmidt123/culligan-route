@@ -64,6 +64,10 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
     <option value="GID_HERE">WEEK 5 WEDNESDAY</option>
     <option value="GID_HERE">WEEK 5 THURSDAY</option>
     <option value="GID_HERE">WEEK 5 FRIDAY</option>
+    <option value="GID_HERE">NORTH</option>
+    <option value="GID_HERE">VALLEYVIEW</option>
+    <option value="GID_HERE">SALT</option>
+    <option value="GID_HERE">DAWSON CREEK</option>
 </select>
 <button class="btn" onclick="loadRoute()">Load Route</button>
 <div id="status">Status: Ready</div>
@@ -76,29 +80,29 @@ const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 
 let map, markerLayer, routeLine;
 let stops = [];
-const warehouse = { lat: 55.1707, lng: -118.7947 }; [cite: 8]
+const warehouse = { lat: 55.1707, lng: -118.7947 };
 
 window.onload = () => {
-    map = L.map("map").setView([warehouse.lat, warehouse.lng], 11); [cite: 9]
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map); [cite: 9]
-    markerLayer = L.layerGroup().addTo(map); [cite: 9]
-    routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map); [cite: 9]
+    map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    markerLayer = L.layerGroup().addTo(map);
+    routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map);
     L.marker([warehouse.lat, warehouse.lng], {
         icon: L.divIcon({
             className:'custom-div-icon',
             html:`<div class="number-pin">W</div>`
         })
-    }).addTo(map).bindPopup("<b>Warehouse</b>"); [cite: 10]
+    }).addTo(map).bindPopup("<b>Warehouse</b>");
 };
 
 async function loadRoute() {
-    const selectedGid = document.getElementById("route-select").value; [cite: 11]
-    document.getElementById("status").innerText = "Loading Google Sheet..."; [cite: 11]
+    const selectedGid = document.getElementById("route-select").value;
+    document.getElementById("status").innerText = "Loading Google Sheet...";
 
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`; [cite: 11]
-    const res = await fetch(url); [cite: 12]
-    const text = await res.text(); [cite: 12]
-    const json = JSON.parse(text.substring(47).slice(0, -2)); [cite: 12]
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
+    const res = await fetch(url);
+    const text = await res.text();
+    const json = JSON.parse(text.substring(47).slice(0, -2));
     const rows = json.table.rows.map(r =>
         Object.fromEntries(
             r.c.map((c,i)=>[
@@ -106,99 +110,99 @@ async function loadRoute() {
                 c ? c.v : ""
             ])
         )
-    ); [cite: 13]
+    );
     
     if (rows.length === 0) {
         document.getElementById("status").innerText = "Error: No data in tab.";
         return;
     }
 
-    const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr")); [cite: 14]
+    const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
     const nameKey = Object.keys(rows[0]).find(k =>
         k.toLowerCase().includes("comp") ||
         k.toLowerCase().includes("cust")
-    ); [cite: 14]
-    let tempStops = []; [cite: 15]
+    );
+    let tempStops = [];
 
     for (let i = 0; i < rows.length; i++) {
-        document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`; [cite: 15]
-        const geo = await geocode(rows[i][addrKey]); [cite: 16]
+        document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
+        const geo = await geocode(rows[i][addrKey]);
         if (geo) {
             tempStops.push({
                 company: rows[i][nameKey] || "Stop",
                 address: rows[i][addrKey],
                 ...geo
-            }); [cite: 16]
+            });
         }
 
-        await new Promise(r => setTimeout(r, 1500)); [cite: 17]
+        await new Promise(r => setTimeout(r, 1500));
     }
 
-    stops = optimize(tempStops); [cite: 18]
-    renderRoute(); [cite: 18]
-    renderSidebar(); [cite: 18]
+    stops = optimize(tempStops);
+    renderRoute();
+    renderSidebar();
 
-    document.getElementById("status").innerText = "Route Ready"; [cite: 18]
+    document.getElementById("status").innerText = "Route Ready";
 }
 
 async function geocode(address) {
-    const query = encodeURIComponent(address + ", Grande Prairie, AB"); [cite: 19]
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`); [cite: 20]
-    const data = await res.json(); [cite: 20]
-    if (data.length === 0) return null; [cite: 20]
-    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }; [cite: 21]
+    const query = encodeURIComponent(address + ", Grande Prairie, AB");
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+    const data = await res.json();
+    if (data.length === 0) return null;
+    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
 }
 
 function distance(a,b){
     const R=6371;
     const dLat=(b.lat-a.lat)*Math.PI/180;
-    const dLon=(b.lng-a.lng)*Math.PI/180; [cite: 21]
+    const dLon=(b.lng-a.lng)*Math.PI/180;
     const x=Math.sin(dLat/2)**2+
-        Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2; [cite: 22]
-    return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); [cite: 22]
+        Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 
 function optimize(list){
-    let unvisited=[...list], ordered=[], current=warehouse; [cite: 23]
+    let unvisited=[...list], ordered=[], current=warehouse;
     while(unvisited.length){
-        unvisited.sort((a,b)=>distance(current,a)-distance(current,b)); [cite: 23]
-        const next=unvisited.shift(); [cite: 23]
-        ordered.push(next); [cite: 24]
-        current=next; [cite: 24]
+        unvisited.sort((a,b)=>distance(current,a)-distance(current,b));
+        const next=unvisited.shift();
+        ordered.push(next);
+        current=next;
     }
-    return ordered; [cite: 24]
+    return ordered;
 }
 
 function renderRoute(){
-    markerLayer.clearLayers(); [cite: 24]
-    let coords=[[warehouse.lat,warehouse.lng]]; [cite: 24]
+    markerLayer.clearLayers();
+    let coords=[[warehouse.lat,warehouse.lng]];
     stops.forEach((s,i)=>{
-        coords.push([s.lat,s.lng]); [cite: 25]
+        coords.push([s.lat,s.lng]);
         L.marker([s.lat,s.lng],{
             icon:L.divIcon({
                 className:'custom-div-icon',
                 html:`<div class="number-pin">${i+1}</div>`
             })
         }).addTo(markerLayer)
-        .bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`); [cite: 25]
+        .bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`);
     });
-    coords.push([warehouse.lat,warehouse.lng]); [cite: 26]
-    routeLine.setLatLngs(coords); [cite: 26]
-    map.fitBounds(coords,{padding:[50,50]}); [cite: 26]
+    coords.push([warehouse.lat,warehouse.lng]);
+    routeLine.setLatLngs(coords);
+    map.fitBounds(coords,{padding:[50,50]});
 }
 
 function renderSidebar(){
-    const list=document.getElementById("stop-list"); [cite: 26]
-    list.innerHTML=""; [cite: 26]
-    document.getElementById("stop-count").innerText=`${stops.length} Stops Found`; [cite: 26]
+    const list=document.getElementById("stop-list");
+    list.innerHTML="";
+    document.getElementById("stop-count").innerText=`${stops.length} Stops Found`;
     stops.forEach((s,i)=>{
-        const card=document.createElement("div"); [cite: 27]
-        card.className="stop-card"; [cite: 27]
-        card.innerHTML=`<b>${i+1}.</b> ${s.company}<br><small>${s.address}</small>`; [cite: 27]
+        const card=document.createElement("div");
+        card.className="stop-card";
+        card.innerHTML=`<b>${i+1}.</b> ${s.company}<br><small>${s.address}</small>`;
         card.onclick=()=>{
-            map.setView([s.lat,s.lng], 16); [cite: 27]
+            map.setView([s.lat,s.lng], 16);
         };
-        list.appendChild(card); [cite: 27]
+        list.appendChild(card);
     });
 }
 </script>
