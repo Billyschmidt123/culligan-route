@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan Route - Delivery Card</title>
+<title>Culligan Route - Stable Load</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -16,19 +16,16 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 #stop-list { flex:1; overflow-y:auto; padding:10px;}
 .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
 .stop-card:hover { background:#444;}
-
 #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
 .profile-group { margin-bottom:12px; }
 .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
 .profile-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
 .section-divider { border-top: 1px solid #444; margin: 15px 0; padding-top: 10px; }
 #sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:150px; touch-action: none; display: block; border: 2px solid #555;}
-
 .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
 .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; text-transform: uppercase;}
 .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; text-transform: uppercase;}
 .back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold; text-transform: uppercase;}
-
 #main-view { flex:1; display:flex; flex-direction:column;}
 #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
 #map { flex:1; }
@@ -41,7 +38,6 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 </head>
 
 <body>
-
 <div id="sidebar">
     <div id="list-view">
         <div id="sidebar-header">
@@ -50,30 +46,22 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
         </div>
         <div id="stop-list"></div>
     </div>
-
     <div id="customer-profile">
         <button class="back-btn" onclick="closeProfile()">← BACK TO LIST</button>
         <h3 id="prof-name" style="margin:0 0 5px 0">Customer Name</h3>
         <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:2px;">Address</p>
         <p id="prof-phone" style="font-size:13px; color:#0078ff; margin-bottom:15px; font-weight: bold;">Phone Loading...</p>
-        
         <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l" value="0"></div>
         <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div>
-        
         <div class="section-divider"></div>
-        
         <div class="profile-group"><label>18 L RETURNS</label><input type="number" id="p-18l-ret" value="0"></div>
         <div class="profile-group"><label>CASES</label><input type="number" id="p-cases" value="0"></div>
         <div class="profile-group"><label>SMALL BOTTLES RETURNED</label><input type="number" id="p-small-ret" value="0"></div>
-        
         <div class="section-divider"></div>
-
         <div class="profile-group"><label>RECEIVED BY</label><input type="text" id="p-rec-by" placeholder="Name"></div>
-        
         <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
         <button onclick="clearSig()" style="font-size:10px; background:none; border:none; color:#dc3545; cursor:pointer; margin-top:5px; font-weight:bold;">CLEAR SIGNATURE</button>
-
         <div class="form-btns">
             <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
             <button class="btn-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button>
@@ -87,28 +75,7 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
             <option value="917509026">WEEK 1 MONDAY</option>
             <option value="GID_HERE">WEEK 1 TUESDAY</option>
             <option value="GID_HERE">WEEK 1 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 1 THURSDAY</option>
-            <option value="GID_HERE">WEEK 1 FRIDAY</option>
-            <option value="GID_HERE">WEEK 2 MONDAY</option>
-            <option value="GID_HERE">WEEK 2 TUESDAY</option>
-            <option value="GID_HERE">WEEK 2 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 2 THURSDAY</option>
-            <option value="GID_HERE">WEEK 2 FRIDAY</option>
-            <option value="GID_HERE">WEEK 3 MONDAY</option>
-            <option value="GID_HERE">WEEK 3 TUESDAY</option>
-            <option value="GID_HERE">WEEK 3 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 3 THURSDAY</option>
-            <option value="GID_HERE">WEEK 3 FRIDAY</option>
-            <option value="GID_HERE">WEEK 4 MONDAY</option>
-            <option value="GID_HERE">WEEK 4 TUESDAY</option>
-            <option value="GID_HERE">WEEK 4 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 4 THURSDAY</option>
-            <option value="GID_HERE">WEEK 4 FRIDAY</option>
-            <option value="GID_HERE">VALLEY VIEW</option>
-            <option value="GID_HERE">NORTH</option>
-            <option value="GID_HERE">DAWSON CREEK</option>
-            <option value="GID_HERE">SALT</option>
-        </select>
+            </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
         <div id="status">Status: Ready</div>
     </div>
@@ -152,17 +119,13 @@ function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 async function submitLog(status) {
     let reason = "";
     if (status === 'NOT DELIVERED') {
-        reason = prompt("REASON FOR NOT DELIVERED:");
+        reason = prompt("REASON:");
         if (!reason) return;
     }
-    document.getElementById('status').innerText = "Uploading to DeliverySlip Folder...";
+    document.getElementById('status').innerText = "Sending PDF...";
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.text("Delivery Receipt", 20, 20);
     doc.text(`Customer: ${stops[currentStopIndex].company}`, 20, 40);
-    doc.text(`Address: ${stops[currentStopIndex].address}`, 20, 50);
-    doc.text(`Status: ${status}`, 20, 60);
-    doc.text(`18L Bottles: ${document.getElementById('p-18l').value}`, 20, 70);
     const sigData = canvas.toDataURL("image/png");
     doc.addImage(sigData, 'PNG', 20, 140, 60, 30);
     const pdfBase64 = doc.output('datauristring').split(',')[1];
@@ -177,48 +140,66 @@ async function submitLog(status) {
 
 async function loadRoute() {
     const gid = document.getElementById("route-select").value;
-    document.getElementById("status").innerText = "Loading Stops...";
+    document.getElementById("status").innerText = "Connecting to Sheet...";
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}`;
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
         
-        // Find column indexes automatically
         const cols = json.table.cols;
-        const addrIdx = cols.findIndex(c => c.label.toLowerCase().includes('addr'));
-        const compIdx = cols.findIndex(c => c.label.toLowerCase().includes('comp') || c.label.toLowerCase().includes('cust'));
-        const phoneIdx = cols.findIndex(c => c.label.toLowerCase().includes('phone'));
+        const addrIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('addr'));
+        const compIdx = cols.findIndex(c => c.label && (c.label.toLowerCase().includes('comp') || c.label.toLowerCase().includes('cust')));
+        const phoneIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('phone'));
+
+        if (addrIdx === -1) { alert("Error: Could not find 'Address' column in this sheet tab."); return; }
 
         stops = [];
-        for (let r of json.table.rows) {
-            const addr = r.c[addrIdx] ? r.c[addrIdx].v : null;
-            if (!addr) continue; // Skip blank rows
-            
-            const geo = await geocode(addr);
-            if(geo) {
-                stops.push({ 
-                    company: r.c[compIdx] ? r.c[compIdx].v : "Customer", 
-                    address: addr, 
-                    phone: r.c[phoneIdx] ? r.c[phoneIdx].v : "N/A", 
-                    ...geo 
-                });
+        const rows = json.table.rows;
+        
+        for (let i = 0; i < rows.length; i++) {
+            const rowData = rows[i].c;
+            const addrValue = rowData[addrIdx] ? rowData[addrIdx].v : null;
+
+            // Only proceed if address is not empty/undefined
+            if (addrValue && addrValue !== "undefined" && addrValue.toString().trim() !== "") {
+                document.getElementById("status").innerText = `Mapping stop ${i+1} of ${rows.length}...`;
+                
+                const geo = await geocode(addrValue);
+                if(geo) {
+                    stops.push({ 
+                        company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v : "Customer", 
+                        address: addrValue, 
+                        phone: (rowData[phoneIdx] && rowData[phoneIdx].v) ? rowData[phoneIdx].v : "N/A", 
+                        ...geo 
+                    });
+                }
+                // ESSENTIAL: Wait 1.5 seconds per stop to avoid "Too Many Requests" error
+                await new Promise(resolve => setTimeout(resolve, 1500)); 
             }
-            // Small delay to prevent OSM CORS blocking
-            await new Promise(r => setTimeout(r, 200)); 
         }
+        
         renderRoute();
         renderSidebar();
-        document.getElementById("status").innerText = "Route Ready";
+        document.getElementById("status").innerText = "Route Loaded Successfully";
+        document.getElementById("stop-count").innerText = `${stops.length} Stops Found`;
     } catch (e) { 
         console.error(e);
-        document.getElementById("status").innerText = "Error Loading Route."; 
+        document.getElementById("status").innerText = "Error: Check Console or GID."; 
     }
 }
 
 async function geocode(addr) {
     try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Grande Prairie, AB")}`);
+        const query = encodeURIComponent(addr + ", Grande Prairie, AB");
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`, {
+            headers: { 'User-Agent': 'CulliganRouteApp/1.0' }
+        });
+        if (res.status === 429) {
+            console.warn("Rate limited! Waiting extra time...");
+            await new Promise(r => setTimeout(r, 3000));
+            return null;
+        }
         const data = await res.json();
         return data.length ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
     } catch (e) { return null; }
@@ -226,9 +207,11 @@ async function geocode(addr) {
 
 function renderRoute() {
     markerLayer.clearLayers();
+    const coords = stops.map(s => [s.lat, s.lng]);
     stops.forEach((s, i) => {
         L.marker([s.lat, s.lng], { icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) }).addTo(markerLayer);
     });
+    if (coords.length > 0) map.fitBounds(coords, {padding: [50,50]});
 }
 
 function renderSidebar() {
@@ -238,7 +221,7 @@ function renderSidebar() {
         const div = document.createElement("div");
         div.className = "stop-card";
         div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
-        div.onclick = () => { map.setView([s.lat, s.lng], 15); openProfile(i); };
+        div.onclick = () => { map.setView([s.lat, s.lng], 16); openProfile(i); };
         list.appendChild(div);
     });
 }
