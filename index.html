@@ -10,26 +10,26 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
-        body { margin: 0; height: 100vh; display: flex; flex-direction: row; font-family: 'Segoe UI', sans-serif; background: #111; color: white; overflow: hidden; } [cite: 85]
-        #sidebar { width: 300px; background: #222; border-right: 2px solid #0078ff; display: flex; flex-direction: column; flex-shrink: 0; } [cite: 87]
-        #sidebar-header { padding: 15px; border-bottom: 1px solid #444; } [cite: 88]
-        #stop-list { flex: 1; overflow-y: auto; padding: 10px; } [cite: 89]
-        .stop-card { background: #333; padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 14px; cursor: pointer; } [cite: 90, 91]
-        .stop-card:hover { background: #444; } [cite: 91]
-        #main-view { flex: 1; display: flex; flex-direction: column; } [cite: 92]
-        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 20px; align-items: center; } [cite: 93, 94]
-        #current-stop-bar { background: #0078ff; color: white; padding: 10px; font-weight: bold; text-align: center; font-size: 16px; display: none; } [cite: 95]
-        #map { flex: 1; width: 100%; } [cite: 96]
-        .btn { padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; } [cite: 98]
-        #dataModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; align-items:center; justify-content:center; } [cite: 99, 100]
-        .modal-content { background:#222; padding:20px; border-radius:8px; width:380px; border:1px solid #444; max-height: 90vh; overflow-y: auto; } [cite: 101]
-        .field-row { margin-bottom: 12px; } [cite: 102]
-        .field-row label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; } [cite: 103, 104]
-        .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; border-radius: 4px; } [cite: 105]
-        .custom-div-icon { background: transparent; border: none; } [cite: 106]
-        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5); font-size: 13px; } [cite: 107, 108]
-        .warehouse-pin { background: #222 !important; border-color: #f39c12 !important; color: #f39c12 !important; } [cite: 109, 110]
-        #syncModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:4000; align-items:center; justify-content:center; } [cite: 111]
+        body { margin: 0; height: 100vh; display: flex; flex-direction: row; font-family: 'Segoe UI', sans-serif; background: #111; color: white; overflow: hidden; }
+        #sidebar { width: 300px; background: #222; border-right: 2px solid #0078ff; display: flex; flex-direction: column; flex-shrink: 0; }
+        #sidebar-header { padding: 15px; border-bottom: 1px solid #444; }
+        #stop-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .stop-card { background: #333; padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 14px; cursor: pointer; }
+        .stop-card:hover { background: #444; }
+        #main-view { flex: 1; display: flex; flex-direction: column; }
+        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 20px; align-items: center; }
+        #current-stop-bar { background: #0078ff; color: white; padding: 10px; font-weight: bold; text-align: center; font-size: 16px; display: none; }
+        #map { flex: 1; width: 100%; }
+        .btn { padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        #dataModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; align-items:center; justify-content:center; }
+        .modal-content { background:#222; padding:20px; border-radius:8px; width:380px; border:1px solid #444; max-height: 90vh; overflow-y: auto; }
+        .field-row { margin-bottom: 12px; }
+        .field-row label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
+        .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; border-radius: 4px; }
+        .custom-div-icon { background: transparent; border: none; }
+        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5); font-size: 13px; }
+        .warehouse-pin { background: #222 !important; border-color: #f39c12 !important; color: #f39c12 !important; }
+        #syncModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:4000; align-items:center; justify-content:center; }
     </style>
 </head>
 <body>
@@ -60,21 +60,21 @@
             <label>Notes / Reason for Skip (Required if Not Delivered)</label>
             <textarea id="driverNotes" rows="2"></textarea>
         </div>
-        <button class="btn" style="width:100%; background:#0078ff; margin-bottom:10px;" onclick="openGoogleMaps()">I'm Lost (Google Maps)</button> [cite: 113]
+        <button class="btn" style="width:100%; background:#0078ff; margin-bottom:10px;" onclick="openGoogleMaps()">I'm Lost (Google Maps)</button>
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1;" onclick="processStop('Delivered')">DELIVERED</button>
-            <button class="btn" style="flex:1; background:#dc3545;" onclick="processStop('Not Delivered')">SKIPPED</button> [cite: 115]
+            <button class="btn" style="flex:1; background:#dc3545;" onclick="processStop('Not Delivered')">SKIPPED</button>
         </div>
-        <button class="btn" style="width:100%; background:#444; margin-top:10px;" onclick="closeModal()">Close</button> [cite: 116]
+        <button class="btn" style="width:100%; background:#444; margin-top:10px;" onclick="closeModal()">Close</button>
     </div>
 </div>
 
 <div id="syncModal">
-  <div style="background:#222; padding:20px; border-radius:8px; width:300px; border:1px solid #444;"> [cite: 117]
+  <div style="background:#222; padding:20px; border-radius:8px; width:300px; border:1px solid #444;">
     <h3>Open Route</h3>
-    <select id="serverFileSelect" style="width:100%; padding:8px; margin-bottom:10px;"></select> [cite: 118]
+    <select id="serverFileSelect" style="width:100%; padding:8px; margin-bottom:10px;"></select>
     <button class="btn" style="width:100%;" onclick="confirmSyncUpdate()">Start Process</button>
-    <button class="btn" style="width:100%; background:#444; margin-top:5px;" onclick="document.getElementById('syncModal').style.display='none'">Cancel</button> [cite: 119]
+    <button class="btn" style="width:100%; background:#444; margin-top:5px;" onclick="document.getElementById('syncModal').style.display='none'">Cancel</button>
   </div>
 </div>
 
@@ -90,7 +90,7 @@
         map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
         markerLayer = L.layerGroup().addTo(map);
-        routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map); [cite: 120]
+        routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map);
 
         L.marker([warehouse.lat, warehouse.lng], {
             icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
@@ -98,43 +98,44 @@
 
         try {
             const mRes = await fetch('./Routes/Masterfields.xlsx');
-            const mBuf = await mRes.arrayBuffer(); [cite: 121]
+            const mBuf = await mRes.arrayBuffer();
             const mWB = XLSX.read(new Uint8Array(mBuf), {type:'array'});
             masterFields = XLSX.utils.sheet_to_json(mWB.Sheets[mWB.SheetNames[0]]);
         } catch(e) { console.warn("Masterfields not found."); }
 
         try {
             const res = await fetch('./list_files.php');
-            const files = await res.json(); [cite: 123]
-            document.getElementById('serverFileSelect').innerHTML = files.map(f => `<option value="${f}">${f}</option>`).join('');
-        } catch (e) { document.getElementById('status').textContent = "Status: Server list not found"; } [cite: 124]
+            const files = await res.json();
+            const select = document.getElementById('serverFileSelect');
+            select.innerHTML = files.map(f => `<option value="${f}">${f}</option>`).join('');
+        } catch (e) { document.getElementById('status').textContent = "Status: Server list not found"; }
     };
 
-    function openSyncModal() { document.getElementById("syncModal").style.display = "flex"; } [cite: 125]
-    function closeModal() { document.getElementById("dataModal").style.display = "none"; } [cite: 125]
+    function openSyncModal() { document.getElementById("syncModal").style.display = "flex"; }
+    function closeModal() { document.getElementById("dataModal").style.display = "none"; }
 
     async function geocodeAddress(address) {
         try {
             const query = encodeURIComponent(address + ", Grande Prairie, AB");
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`); [cite: 127]
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
             const data = await res.json();
-            return data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null; [cite: 128]
+            return data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
         } catch (e) { return null; }
     }
 
     function getDistance(p1, p2) {
-        const R = 6371;
-        const dLat = (p2.lat - p1.lat) * Math.PI / 180; [cite: 130]
+        const R = 6371; 
+        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
         const dLon = (p2.lng - p1.lng) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2); [cite: 131]
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); [cite: 132]
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     function optimizeRoute(rawList) {
         let unvisited = [...rawList], ordered = [], currentPos = warehouse;
-        while (unvisited.length > 0) { [cite: 133]
+        while (unvisited.length > 0) {
             unvisited.sort((a, b) => getDistance(currentPos, a) - getDistance(currentPos, b));
-            let closest = unvisited.shift(); [cite: 134]
+            let closest = unvisited.shift();
             ordered.push(closest);
             currentPos = closest;
         }
@@ -143,48 +144,48 @@
 
     async function confirmSyncUpdate() {
         const file = document.getElementById('serverFileSelect').value;
-        document.getElementById('syncModal').style.display = 'none'; [cite: 136]
+        document.getElementById('syncModal').style.display = 'none';
         try {
             const res = await fetch(`./Routes/${file}`);
-            const buffer = await res.arrayBuffer(); [cite: 137]
+            const buffer = await res.arrayBuffer();
             const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
             const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-            const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr")); [cite: 138]
+            const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
             const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
 
             let tempStops = [];
-            for (let i = 0; i < rows.length; i++) { [cite: 139]
+            for (let i = 0; i < rows.length; i++) {
                 document.getElementById('status').textContent = `Geocoding ${i + 1}/${rows.length}...`;
-                const geo = await geocodeAddress(rows[i][addrKey]); [cite: 140]
+                const geo = await geocodeAddress(rows[i][addrKey]);
                 if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], ...geo });
-                await new Promise(r => setTimeout(r, 1200)); [cite: 141]
+                await new Promise(r => setTimeout(r, 1200));
             }
             stops = optimizeRoute(tempStops);
-            renderRoute(); [cite: 142]
+            renderRoute();
             updateSidebar();
             document.getElementById('status').textContent = "Route Ready.";
         } catch (e) { alert("Error loading file."); }
     }
 
     function renderRoute() {
-        markerLayer.clearLayers(); [cite: 143]
-        markers = []; [cite: 144]
+        markerLayer.clearLayers();
+        markers = [];
         let pathCoords = [[warehouse.lat, warehouse.lng]];
         stops.forEach((s, i) => {
             pathCoords.push([s.lat, s.lng]);
             const m = L.marker([s.lat, s.lng], {
                 icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin">${i + 1}</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
-            }).addTo(markerLayer).bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`); [cite: 144]
+            }).addTo(markerLayer).bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`);
             markers.push(m);
         });
         if (stops.length > 0) pathCoords.push([warehouse.lat, warehouse.lng]);
-        routeLine.setLatLngs(pathCoords); [cite: 145]
-        if (stops.length > 0) map.fitBounds(L.latLngBounds(pathCoords), { padding: [50, 50] }); [cite: 146]
+        routeLine.setLatLngs(pathCoords);
+        if (stops.length > 0) map.fitBounds(L.latLngBounds(pathCoords), { padding: [50, 50] });
     }
 
     function updateSidebar() {
-        const listDiv = document.getElementById('stop-list'); [cite: 147]
-        listDiv.innerHTML = ''; [cite: 148]
+        const listDiv = document.getElementById('stop-list');
+        listDiv.innerHTML = '';
         document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
         stops.forEach((s, i) => {
             const card = document.createElement('div');
@@ -192,64 +193,64 @@
             card.innerHTML = `<b>${i + 1}.</b> ${s.company}<br><small style="color:#aaa">${s.address}</small>`;
             card.onclick = () => {
                 activeStop = s;
-                document.getElementById('current-stop-bar').style.display = 'block'; [cite: 149]
+                document.getElementById('current-stop-bar').style.display = 'block';
                 document.getElementById('active-addr').innerText = s.address;
                 map.setView([s.lat, s.lng], 16);
                 markers[i].openPopup();
                 openEntryModal(s);
             };
-            listDiv.appendChild(card); [cite: 150]
+            listDiv.appendChild(card);
         });
     }
 
     function openEntryModal(s) {
         document.getElementById('mCustName').innerText = s.company;
-        document.getElementById('mCustAddr').innerText = s.address; [cite: 151]
-        document.getElementById('driverNotes').value = ""; [cite: 152]
+        document.getElementById('mCustAddr').innerText = s.address;
+        document.getElementById('driverNotes').value = "";
         const container = document.getElementById('dynamicFields');
         container.innerHTML = masterFields.map(f => `
             <div class="field-row">
                 <label>${f.FieldName || f.Label}</label>
                 <input type="text" class="driver-input" data-label="${f.FieldName || f.Label}">
             </div>
-        `).join(''); [cite: 153]
-        document.getElementById('dataModal').style.display = 'flex'; [cite: 154]
+        `).join('');
+        document.getElementById('dataModal').style.display = 'flex';
     }
 
     async function processStop(status) {
         const notes = document.getElementById('driverNotes').value;
-        if (status === 'Not Delivered' && !notes.trim()) { [cite: 155]
+        if (status === 'Not Delivered' && !notes.trim()) {
             alert("A reason is required to skip this delivery.");
-            return; [cite: 156]
+            return;
         }
         const now = new Date();
         const timestamp = now.toLocaleDateString() + " " + now.toLocaleTimeString();
-        let formData = { Customer: activeStop.company, Address: activeStop.address, Status: status, Timestamp: timestamp, Notes: notes }; [cite: 157]
+        let formData = { Customer: activeStop.company, Address: activeStop.address, Status: status, Timestamp: timestamp, Notes: notes };
         document.querySelectorAll('.driver-input').forEach(input => {
             formData[input.getAttribute('data-label')] = input.value;
-        }); [cite: 158]
+        });
 
-        const slipPayload = { customer: activeStop.company, address: activeStop.address, status: status, timestamp: timestamp, notes: notes, fields: {} }; [cite: 159]
+        const slipPayload = { customer: activeStop.company, address: activeStop.address, status: status, timestamp: timestamp, notes: notes, fields: {} };
         document.querySelectorAll('.driver-input').forEach(input => {
             slipPayload.fields[input.getAttribute('data-label')] = input.value;
-        }); [cite: 160]
+        });
 
         try {
-            const slipRes = await fetch('save_slip.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slipPayload) }); [cite: 161]
-            const slipJson = await slipRes.json(); [cite: 162]
+            const slipRes = await fetch('save_slip.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slipPayload) });
+            const slipJson = await slipRes.json();
             console.log("Slip saved:", slipJson);
-        } catch (e) { console.error("Error saving slip:", e); } [cite: 163]
+        } catch (e) { console.error("Error saving slip:", e); }
 
-        const csvLine = Object.values(formData).map(v => `"${v}"`).join(",") + "\n"; [cite: 163]
+        const csvLine = Object.values(formData).map(v => `"${v}"`).join(",") + "\n";
         const body = new FormData();
-        body.append('csvData', csvLine); [cite: 164]
+        body.append('csvData', csvLine);
         body.append('csvName', `Deliveries_${now.toLocaleDateString().replace(/\//g, '-')}.csv`);
-        fetch('save_delivery.php', { method: 'POST', body: body }).then(() => { closeModal(); alert(`Stop recorded as ${status}.`); }); [cite: 165]
+        fetch('save_delivery.php', { method: 'POST', body: body }).then(() => { closeModal(); alert(`Stop recorded as ${status}.`); });
     }
 
     function openGoogleMaps() {
         if (!activeStop) return;
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeStop.address + ", Grande Prairie, AB")}`;
+        const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeStop.address + ", Grande Prairie, AB")}`;
         window.open(url, '_blank');
     }
 </script>
