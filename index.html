@@ -47,14 +47,16 @@
     .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
     .number-pin.warn { background:#ffc107; color:black;}
 
-    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
+    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
     #manager-panel.open { bottom: 0; }
-    .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; }
-    .mgr-tab-btn { padding: 15px 25px; border: none; background: none; color: #aaa; cursor: pointer; font-weight: bold; }
+    .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; overflow-x: auto;}
+    .mgr-tab-btn { padding: 15px 20px; border: none; background: none; color: #aaa; cursor: pointer; font-weight: bold; white-space: nowrap;}
     .mgr-tab-btn.active { color: #0078ff; border-bottom: 2px solid #0078ff; background: #2a2a2a; }
     .mgr-content { padding: 20px; display: none; overflow-y: auto; height: calc(100% - 150px); color: white;}
     .mgr-content.active { display: block; }
-    .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
+    .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; z-index: 1001;}
+    
+    .mgr-card { background: #222; border: 1px solid #444; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
 </style>
 </head>
 
@@ -139,21 +141,50 @@
         <div class="mgr-tabs">
             <button class="mgr-tab-btn active" onclick="switchTab('reports')">DAILY SUMMARY</button>
             <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
+            <button class="mgr-tab-btn" onclick="switchTab('rush-orders')">RUSH ORDERS</button>
+            <button class="mgr-tab-btn" onclick="switchTab('cust-maint')">CUSTOMER MAINT.</button>
         </div>
+        
         <div id="reports" class="mgr-content active">
-            <h2 style="color:#0078ff; text-align:center;">DAILY SUMMARY CULLIGAN</h2>
+            <h2 style="color:#0078ff;">DAILY SUMMARY</h2>
             <div id="summary-data"></div>
             <hr style="border:0; border-top:1px solid #444; margin:20px 0;">
             <button class="btn" style="background:#dc3545; width:100%;" onclick="adminResetCounter()">RESET CURRENT SLIP COUNTER</button>
         </div>
+
         <div id="live-report" class="mgr-content">
             <table id="live-table" style="width:100%; border-collapse:collapse; font-size:11px; color: white;">
                 <thead>
-                    <tr><th>Customer</th><th>Status</th><th>18L</th><th>Sm</th><th>Cs</th><th>R18</th><th>Rsm</th><th>Notes</th><th>Time</th></tr>
+                    <tr><th>Customer</th><th>Status</th><th>18L</th><th>Sm</th><th>Cs</th><th>R18</th><th>Rsm</th><th>Time</th></tr>
                 </thead>
                 <tbody id="live-body"></tbody>
             </table>
         </div>
+
+        <div id="rush-orders" class="mgr-content">
+            <h2 style="color:#ffc107;">RUSH ORDER ENTRY</h2>
+            <div class="mgr-card">
+                <input type="text" id="rush-cust" placeholder="Customer Name" style="width:100%; padding:10px; margin-bottom:10px; background:#333; border:1px solid #444; color:white;">
+                <input type="text" id="rush-addr" placeholder="Address" style="width:100%; padding:10px; margin-bottom:10px; background:#333; border:1px solid #444; color:white;">
+                <textarea id="rush-note" placeholder="Instructions..." style="width:100%; padding:10px; background:#333; border:1px solid #444; color:white;"></textarea>
+                <button class="btn" style="width:100%; margin-top:10px;" onclick="addRushOrder()">ADD TO ROUTE</button>
+            </div>
+        </div>
+
+        <div id="cust-maint" class="mgr-content">
+            <h2 style="color:#0078ff;">CUSTOMER MAINTENANCE</h2>
+            <div class="mgr-card">
+                <p>Edit Current Stop Details:</p>
+                <label>Company Name</label>
+                <input type="text" id="edit-name" style="width:100%; padding:10px; margin-bottom:10px; background:#333; border:1px solid #444; color:white;">
+                <label>Address</label>
+                <input type="text" id="edit-addr" style="width:100%; padding:10px; margin-bottom:10px; background:#333; border:1px solid #444; color:white;">
+                <label>Phone</label>
+                <input type="text" id="edit-phone" style="width:100%; padding:10px; margin-bottom:10px; background:#333; border:1px solid #444; color:white;">
+                <button class="btn" style="width:100%;" onclick="saveCustomerEdits()">UPDATE CURRENT STOP</button>
+            </div>
+        </div>
+
         <div class="mgr-footer" style="padding:20px;">
             <button class="btn-eod" style="background:#ffc107; color: black; width:100%; padding:15px; font-weight:bold; border:none; border-radius: 4px;" onclick="executeEOD()">END OF DAY</button>
         </div>
@@ -174,28 +205,50 @@ window.onload = () => {
     initSignaturePad();
 };
 
-function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
+function toggleManager() { 
+    document.getElementById('manager-panel').classList.toggle('open'); 
+    if(stops[currentStopIndex]) {
+        document.getElementById('edit-name').value = stops[currentStopIndex].company;
+        document.getElementById('edit-addr').value = stops[currentStopIndex].address;
+        document.getElementById('edit-phone').value = stops[currentStopIndex].phone;
+    }
+}
+
 function switchTab(tabId) {
     document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
 }
 
 function adminResetCounter() {
-    const pin = prompt("Enter Admin Password to Reset Counter:");
-    if (pin === "5645") {
-        document.getElementById('p-18l').value = 0;
-        document.getElementById('p-small').value = 0;
-        document.getElementById('p-18l-ret').value = 0;
-        document.getElementById('p-cases').value = 0;
-        document.getElementById('p-small-ret').value = 0;
-        document.getElementById('p-rec-by').value = "";
-        document.getElementById('p-notes').value = "";
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        alert("Slip counters and signature have been reset.");
-    } else {
-        alert("Incorrect Password.");
+    if (prompt("Enter Admin Password:") === "5645") {
+        document.getElementById('p-18l').value = 0; document.getElementById('p-small').value = 0;
+        document.getElementById('p-18l-ret').value = 0; document.getElementById('p-cases').value = 0;
+        document.getElementById('p-small-ret').value = 0; document.getElementById('p-rec-by').value = "";
+        document.getElementById('p-notes').value = ""; ctx.clearRect(0, 0, canvas.width, canvas.height);
+        alert("Reset successful.");
     }
+}
+
+async function addRushOrder() {
+    const name = document.getElementById('rush-cust').value;
+    const addr = document.getElementById('rush-addr').value;
+    if(!name || !addr) return alert("Fill required fields.");
+    let geo = await geocodeArcGIS(addr);
+    const rush = { company: "[RUSH] " + name, address: addr, phone: "RUSH", lat: geo?.lat || warehouse[0], lng: geo?.lng || warehouse[1], flagged: !geo };
+    stops.splice(currentStopIndex + 1, 0, rush);
+    renderRoute(); renderSidebar(); updateHeader();
+    alert("Rush Order added as the next stop!");
+}
+
+function saveCustomerEdits() {
+    if(!stops[currentStopIndex]) return;
+    stops[currentStopIndex].company = document.getElementById('edit-name').value;
+    stops[currentStopIndex].address = document.getElementById('edit-addr').value;
+    stops[currentStopIndex].phone = document.getElementById('edit-phone').value;
+    renderSidebar(); updateHeader();
+    alert("Customer details updated for this session.");
 }
 
 function startRoute() {
@@ -203,7 +256,7 @@ function startRoute() {
     if (driverName) {
         document.getElementById('start-btn').style.display = 'none';
         document.getElementById('status').innerText = `Driver: ${driverName}`;
-    } else alert("Name required.");
+    }
 }
 
 async function loadRoute() {
@@ -241,12 +294,12 @@ async function loadRoute() {
             stops.push(next);
             currentPos = { lat: next.lat, lng: next.lng };
         }
-        stops.push({ company: "WAREHOUSE (END ROUTE)", address: "8805 111 St, Grande Prairie, AB", lat: warehouse[0], lng: warehouse[1], phone: "OFFICE" });
+        stops.push({ company: "WAREHOUSE (END)", address: "8805 111 St, Grande Prairie", lat: warehouse[0], lng: warehouse[1], phone: "OFFICE" });
         
         currentStopIndex = 0; renderRoute(); renderSidebar(); updateHeader();
         document.getElementById('start-btn').style.display = 'inline-block';
         document.getElementById("status").innerText = "Route Optimized.";
-    } catch (e) { document.getElementById("status").innerText = "Error Loading."; }
+    } catch (e) { document.getElementById("status").innerText = "Error."; }
 }
 
 async function geocodeArcGIS(addr) {
@@ -286,10 +339,9 @@ function navStep(dir) {
 
 function openGoogleMaps() {
     const s = stops[currentStopIndex];
-    if (!s) return alert("Load a route first.");
+    if (!s) return alert("Load route.");
     const destination = encodeURIComponent(`${s.address}, Grande Prairie, AB`);
-    const url = `http://maps.google.com/maps?q=${destination}&travelmode=driving`;
-    window.open(url, '_blank');
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
 }
 
 function openProfile(i) {
@@ -309,12 +361,10 @@ function closeProfile() {
 async function submitLog(status) {
     if(!driverName) return alert("Click START ROUTE first!");
     const now = new Date(), s = stops[currentStopIndex];
-    const entry = { driver: driverName, customer: s.company, status: status, time: now.toLocaleTimeString(), date: now.toLocaleDateString(), v18l: document.getElementById('p-18l').value, vSmall: document.getElementById('p-small').value, vCases: document.getElementById('p-cases').value, r18l: document.getElementById('p-18l-ret').value, rSmall: document.getElementById('p-small-ret').value, notes: document.getElementById('p-notes').value };
-    if (status === 'NOT DELIVERED') entry.reason = prompt("Reason:");
+    const entry = { driver: driverName, customer: s.company, status: status, time: now.toLocaleTimeString(), v18l: document.getElementById('p-18l').value, vSmall: document.getElementById('p-small').value, vCases: document.getElementById('p-cases').value, r18l: document.getElementById('p-18l-ret').value, rSmall: document.getElementById('p-small-ret').value, notes: document.getElementById('p-notes').value };
     deliveryLog.push(entry);
     updateReports();
     if (currentStopIndex === stops.length - 1) {
-        updateRouteLines(); closeProfile();
         if(confirm("Route Complete. Run EOD?")) executeEOD();
     } else {
         currentStopIndex++; updateHeader(); updateRouteLines(); closeProfile();
@@ -326,7 +376,7 @@ function updateReports() {
     const body = document.getElementById('live-body'), sum = document.getElementById('summary-data');
     body.innerHTML = ""; sum.innerHTML = "";
     deliveryLog.forEach(l => {
-        body.innerHTML += `<tr><td>${l.customer}</td><td>${l.status}</td><td>${l.v18l}</td><td>${l.vSmall}</td><td>${l.vCases}</td><td>${l.r18l}</td><td>${l.rSmall}</td><td>${l.notes}</td><td>${l.time}</td></tr>`;
+        body.innerHTML += `<tr><td>${l.customer}</td><td>${l.status}</td><td>${l.v18l}</td><td>${l.vSmall}</td><td>${l.vCases}</td><td>${l.r18l}</td><td>${l.rSmall}</td><td>${l.time}</td></tr>`;
         sum.innerHTML += `<div style="padding:5px; border-bottom:1px solid #444;"><b>${l.customer}</b>: ${l.status} (${l.time})</div>`;
     });
 }
@@ -344,8 +394,8 @@ function renderSidebar() {
 async function executeEOD() {
     try {
         await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "EOD", driver: driverName, log: deliveryLog }) });
-        alert("EOD Successful");
-    } catch(e) { alert("Error sending data."); }
+        alert("EOD Successful.");
+    } catch(e) { alert("Error."); }
 }
 
 function initSignaturePad() {
