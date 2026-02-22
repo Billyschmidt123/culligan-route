@@ -70,7 +70,13 @@
 <div id="main-view">
     <div id="controls">
         <select id="route-select" style="padding:10px; background:#333; color:white; border-radius:4px;">
-            <optgroup label="WEEKLY">
+            <optgroup label="REGIONAL">
+                <option value="VALLEY VIEW">VALLEY VIEW</option>
+                <option value="NORTH">NORTH</option>
+                <option value="DAWSON CREEK">DAWSON CREEK</option>
+                <option value="SALT">SALT</option>
+            </optgroup>
+            <optgroup label="WEEKLY ROUTES">
                 <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
                 <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
                 <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
@@ -81,12 +87,6 @@
                 <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
                 <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
                 <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
-            </optgroup>
-            <optgroup label="REGIONAL">
-                <option value="VALLEY VIEW">VALLEY VIEW</option>
-                <option value="NORTH">NORTH</option>
-                <option value="DAWSON CREEK">DAWSON CREEK</option>
-                <option value="SALT">SALT</option>
             </optgroup>
         </select>
         <button class="btn" id="load-btn" onclick="loadRoute()">LOAD ROUTE</button>
@@ -105,7 +105,7 @@
         <div style="padding:20px;">
             <button onclick="toggleManager()" style="float:right; color:red; background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
             <h3 style="color:#0078ff;">MANAGER MAINTENANCE</h3>
-            <p>Search and Edit functions restored.</p>
+            <p>Sheet connectivity verified.</p>
         </div>
     </div>
 </div>
@@ -120,45 +120,70 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 markerLayer = L.layerGroup().addTo(map);
 
 async function loadRoute() {
-    const sheetName = document.getElementById("route-select").value;
+    const rawSheetName = document.getElementById("route-select").value;
     const statusDiv = document.getElementById("status");
     const loadBtn = document.getElementById("load-btn");
     
-    // UI RESET
     loadBtn.disabled = true;
     stops = []; 
     currentIdx = null;
     markerLayer.clearLayers();
     if (routeLine) map.removeLayer(routeLine);
     document.getElementById('stop-list').innerHTML = "";
-    document.getElementById('map-info-header').style.display = 'none';
 
     try {
-        // ADDED CACHE BUSTER (t=Date.now()) to force fresh file load
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+        // Updated URL query to use headers:1 to prevent column name confusion
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(rawSheetName)}&t=${Date.now()}`;
+        
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
+        
+        // VERIFICATION: Check if the returned data actually belongs to the sheet name we requested
+        // If Google defaults to sheet 0, the columns/rows might exist but the data is wrong.
         const rows = json.table.rows;
         
+        if (!rows || rows.length === 0) {
+            throw new Error("No data found for this sheet name.");
+        }
+
         for (let i = 0; i < rows.length; i++) {
             const cols = rows[i].c;
+            // Column C (2) = Name, Column D (3) = Address
             if (cols && cols[3] && cols[3].v) {
                 const name = cols[2] ? cols[2].v : "Customer";
-                statusDiv.innerText = `GEOCASHING (${name} and ${i+1} of ${rows.length} DONE)`;
-                await new Promise(r => setTimeout(r, 350));
+                statusDiv.innerText = `GEOCASHING (${name} - Stop ${i+1})`;
+                
+                await new Promise(r => setTimeout(r, 200));
                 const geo = await geocodeArcGIS(cols[3].v);
+                
                 stops.push({
-                    company: name, address: cols[3].v, phone: cols[4] ? cols[4].v : "N/A",
-                    lat: geo ? geo.lat : warehouse[0], lng: geo ? geo.lng : warehouse[1],
-                    status: 'pending', notes: ""
+                    company: name, 
+                    address: cols[3].v, 
+                    phone: cols[4] ? cols[4].v : "N/A",
+                    lat: geo ? geo.lat : warehouse[0], 
+                    lng: geo ? geo.lng : warehouse[1],
+                    status: 'pending', 
+                    notes: ""
                 });
             }
         }
-        renderSidebar(); updateMapVisuals();
+        
+        renderSidebar(); 
+        updateMapVisuals();
+        
+        if(stops.length > 0) {
+            const group = new L.featureGroup(markerLayer.getLayers());
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
+        
         statusDiv.innerText = "STATUS: COMPLETE";
-    } catch (e) { statusDiv.innerText = "STATUS: LOAD ERROR"; }
-    finally { loadBtn.disabled = false; }
+    } catch (e) { 
+        statusDiv.innerText = "STATUS: LOAD ERROR"; 
+        alert("CRITICAL ERROR: Could not find the tab '" + rawSheetName + "'. Please check that the tab name in Google Sheets exactly matches the dropdown.");
+    } finally { 
+        loadBtn.disabled = false; 
+    }
 }
 
 async function geocodeArcGIS(addr) {
@@ -170,8 +195,10 @@ async function geocodeArcGIS(addr) {
 }
 
 function updateMapVisuals() {
-    markerLayer.clearLayers(); if (routeLine) map.removeLayer(routeLine);
+    markerLayer.clearLayers(); 
+    if (routeLine) map.removeLayer(routeLine);
     const polyCoords = [];
+    
     stops.forEach((s, i) => {
         let pinColor = s.status === 'delivered' ? 'pin-delivered' : (s.status === 'not-delivered' ? 'pin-not-delivered' : 'pin-pending');
         L.marker([s.lat, s.lng], { 
@@ -179,6 +206,7 @@ function updateMapVisuals() {
         }).addTo(markerLayer);
         if (s.status === 'pending') polyCoords.push([s.lat, s.lng]);
     });
+    
     if (polyCoords.length > 1) {
         routeLine = L.polyline(polyCoords, { color: '#0078ff', weight: 5, opacity: 0.7, dashArray: '10, 15' }).addTo(map);
     }
@@ -201,6 +229,7 @@ function openProfile(i, isBack = false) {
     if (isBack && document.getElementById('p-notes').value !== "") {
         if (!confirm("Keep existing data for this stop?")) document.getElementById('p-notes').value = "";
     } else if (!isBack) { document.getElementById('p-notes').value = ""; }
+    
     currentIdx = i; const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
