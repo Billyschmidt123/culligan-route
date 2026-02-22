@@ -1,27 +1,259 @@
-function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    
-    // 1. Decode the PDF data
-    var decodedPdf = Utilities.base64Decode(data.pdfData);
-    var blob = Utilities.newBlob(decodedPdf, 'application/pdf', data.filename);
-    
-    // 2. Target your DeliverySlip folder
-    var folderId = "1HKgPJrRiRVUTMdmVWazY31p_FqLZBiiJ"; 
-    var folder = DriveApp.getFolderById(folderId);
-    
-    // 3. Save the file
-    var file = folder.createFile(blob);
-    
-    // 4. Record the delivery in the first tab of your Google Sheet
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-    sheet.appendRow([new Date(), data.customer, data.status, "PDF Saved", file.getUrl()]);
-    
-    return ContentService.createTextOutput("Success")
-      .setMimeType(ContentService.MimeType.TEXT);
-      
-  } catch (err) {
-    return ContentService.createTextOutput("Error: " + err.toString())
-      .setMimeType(ContentService.MimeType.TEXT);
-  }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Culligan Route - Delivery Card</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
+#sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
+#sidebar-header { padding:15px; border-bottom:1px solid #444;}
+#stop-list { flex:1; overflow-y:auto; padding:10px;}
+.stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
+.stop-card:hover { background:#444;}
+
+#customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
+.profile-group { margin-bottom:12px; }
+.profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
+.profile-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+.section-divider { border-top: 1px solid #444; margin: 15px 0; padding-top: 10px; }
+#sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:150px; touch-action: none; display: block; border: 2px solid #555;}
+
+.form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
+.btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; text-transform: uppercase;}
+.btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; text-transform: uppercase;}
+.back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold; text-transform: uppercase;}
+
+#main-view { flex:1; display:flex; flex-direction:column;}
+#controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
+#map { flex:1; }
+.btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
+#status { font-size:13px; color:#aaa;}
+#route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; cursor: pointer; }
+.custom-div-icon { background:transparent; border:none;}
+.number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
+</style>
+</head>
+
+<body>
+
+<div id="sidebar">
+    <div id="list-view">
+        <div id="sidebar-header">
+            <h3 style="margin:0">Route Stops</h3>
+            <p id="stop-count" style="font-size:12px; color:#aaa;">No route loaded</p>
+        </div>
+        <div id="stop-list"></div>
+    </div>
+
+    <div id="customer-profile">
+        <button class="back-btn" onclick="closeProfile()">← BACK TO LIST</button>
+        <h3 id="prof-name" style="margin:0 0 5px 0">Customer Name</h3>
+        <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:2px;">Address</p>
+        <p id="prof-phone" style="font-size:13px; color:#0078ff; margin-bottom:15px; font-weight: bold;">Phone Loading...</p>
+        
+        <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l" value="0"></div>
+        <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div>
+        
+        <div class="section-divider"></div>
+        
+        <div class="profile-group"><label>18 L RETURNS</label><input type="number" id="p-18l-ret" value="0"></div>
+        <div class="profile-group"><label>CASES</label><input type="number" id="p-cases" value="0"></div>
+        <div class="profile-group"><label>SMALL BOTTLES RETURNED</label><input type="number" id="p-small-ret" value="0"></div>
+        
+        <div class="section-divider"></div>
+
+        <div class="profile-group"><label>RECEIVED BY</label><input type="text" id="p-rec-by" placeholder="Name"></div>
+        
+        <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
+        <canvas id="sig-canvas"></canvas>
+        <button onclick="clearSig()" style="font-size:10px; background:none; border:none; color:#dc3545; cursor:pointer; margin-top:5px; font-weight:bold;">CLEAR SIGNATURE</button>
+
+        <div class="form-btns">
+            <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
+            <button class="btn-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button>
+        </div>
+    </div>
+</div>
+
+<div id="main-view">
+    <div id="controls">
+        <select id="route-select">
+            <option value="917509026">WEEK 1 MONDAY</option>
+            <option value="GID_HERE">WEEK 1 TUESDAY</option>
+            <option value="GID_HERE">WEEK 1 WEDNESDAY</option>
+            <option value="GID_HERE">WEEK 1 THURSDAY</option>
+            <option value="GID_HERE">WEEK 1 FRIDAY</option>
+            <option value="GID_HERE">WEEK 2 MONDAY</option>
+            <option value="GID_HERE">WEEK 2 TUESDAY</option>
+            <option value="GID_HERE">WEEK 2 WEDNESDAY</option>
+            <option value="GID_HERE">WEEK 2 THURSDAY</option>
+            <option value="GID_HERE">WEEK 2 FRIDAY</option>
+            <option value="GID_HERE">WEEK 3 MONDAY</option>
+            <option value="GID_HERE">WEEK 3 TUESDAY</option>
+            <option value="GID_HERE">WEEK 3 WEDNESDAY</option>
+            <option value="GID_HERE">WEEK 3 THURSDAY</option>
+            <option value="GID_HERE">WEEK 3 FRIDAY</option>
+            <option value="GID_HERE">WEEK 4 MONDAY</option>
+            <option value="GID_HERE">WEEK 4 TUESDAY</option>
+            <option value="GID_HERE">WEEK 4 WEDNESDAY</option>
+            <option value="GID_HERE">WEEK 4 THURSDAY</option>
+            <option value="GID_HERE">WEEK 4 FRIDAY</option>
+            <option value="GID_HERE">VALLEY VIEW</option>
+            <option value="GID_HERE">NORTH</option>
+            <option value="GID_HERE">DAWSON CREEK</option>
+            <option value="GID_HERE">SALT</option>
+        </select>
+        <button class="btn" onclick="loadRoute()">Load Route</button>
+        <div id="status">Status: Ready</div>
+    </div>
+    <div id="map"></div>
+</div>
+
+<script>
+const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
+
+let map, markerLayer, routeLine, canvas, ctx, drawing = false;
+let stops = [];
+let currentStopIndex = null;
+const warehouse = { lat: 55.1707, lng: -118.7947 };
+
+window.onload = () => {
+    map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    markerLayer = L.layerGroup().addTo(map);
+    routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map);
+    initSignaturePad();
+};
+
+function initSignaturePad() {
+    canvas = document.getElementById('sig-canvas');
+    ctx = canvas.getContext('2d');
+    const getPos = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+    };
+    const start = (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); };
+    const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.lineWidth=3; ctx.strokeStyle="#000"; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
+    canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', () => drawing=false);
+    canvas.addEventListener('touchstart', start, {passive:false}); canvas.addEventListener('touchmove', move, {passive:false}); canvas.addEventListener('touchend', () => drawing=false);
 }
+
+function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+async function submitLog(status) {
+    let reason = "";
+    if (status === 'NOT DELIVERED') {
+        reason = prompt("REASON FOR NOT DELIVERED:");
+        if (!reason) return;
+    }
+
+    document.getElementById('status').innerText = "Uploading to DeliverySlip Folder...";
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(22);
+    doc.text("Culligan Delivery Receipt", 20, 20);
+    doc.setFontSize(12);
+    doc.text(`Customer: ${stops[currentStopIndex].company}`, 20, 40);
+    doc.text(`Address: ${stops[currentStopIndex].address}`, 20, 50);
+    doc.text(`Status: ${status}`, 20, 60);
+    doc.text(`18L Bottles: ${document.getElementById('p-18l').value}`, 20, 70);
+    doc.text(`Small Bottles: ${document.getElementById('p-small').value}`, 20, 80);
+    doc.text(`18L Returns: ${document.getElementById('p-18l-ret').value}`, 20, 90);
+    doc.text(`Cases: ${document.getElementById('p-cases').value}`, 20, 100);
+    doc.text(`Small Returns: ${document.getElementById('p-small-ret').value}`, 20, 110);
+    doc.text(`Received By: ${document.getElementById('p-rec-by').value}`, 20, 120);
+    if(reason) doc.text(`Reason: ${reason}`, 20, 130);
+    
+    const sigData = canvas.toDataURL("image/png");
+    doc.addImage(sigData, 'PNG', 20, 140, 60, 30);
+
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    const filename = `Culligan_${stops[currentStopIndex].company.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+
+    const payload = { filename: filename, pdfData: pdfBase64, customer: stops[currentStopIndex].company, status: status };
+
+    try {
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+        alert("SUCCESS: PDF Saved to DeliverySlip Folder");
+    } catch (e) {
+        alert("UPLOAD ERROR");
+    }
+
+    document.getElementById('status').innerText = "Ready";
+    closeProfile();
+}
+
+async function loadRoute() {
+    const gid = document.getElementById("route-select").value;
+    document.getElementById("status").innerText = "Loading Stops...";
+    try {
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}`;
+        const res = await fetch(url);
+        const text = await res.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        const rows = json.table.rows.map(r => Object.fromEntries(r.c.map((c,i)=>[json.table.cols[i].label, c ? c.v : ""])));
+        
+        stops = [];
+        for (let r of rows) {
+            const geo = await geocode(r["Address"]);
+            if(geo) stops.push({ company: r["Company"]||"Customer", address: r["Address"], phone: r["Phone"]||"N/A", ...geo });
+        }
+        renderRoute();
+        renderSidebar();
+        document.getElementById("status").innerText = "Route Ready";
+    } catch (e) { alert("Error loading Sheet data."); }
+}
+
+async function geocode(addr) {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Grande Prairie, AB")}`);
+    const data = await res.json();
+    return data.length ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+}
+
+function renderRoute() {
+    markerLayer.clearLayers();
+    stops.forEach((s, i) => {
+        L.marker([s.lat, s.lng], { icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) }).addTo(markerLayer);
+    });
+}
+
+function renderSidebar() {
+    const list = document.getElementById("stop-list");
+    list.innerHTML = "";
+    stops.forEach((s, i) => {
+        const div = document.createElement("div");
+        div.className = "stop-card";
+        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
+        div.onclick = () => { map.setView([s.lat, s.lng], 15); openProfile(i); };
+        list.appendChild(div);
+    });
+}
+
+function openProfile(i) {
+    currentStopIndex = i;
+    document.getElementById('list-view').style.display = 'none';
+    document.getElementById('customer-profile').style.display = 'block';
+    document.getElementById('prof-name').innerText = stops[i].company;
+    document.getElementById('prof-addr').innerText = stops[i].address;
+    document.getElementById('prof-phone').innerText = "Phone: " + stops[i].phone;
+    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    clearSig();
+}
+
+function closeProfile() {
+    document.getElementById('list-view').style.display = 'block';
+    document.getElementById('customer-profile').style.display = 'none';
+}
+</script>
+</body>
+</html>
