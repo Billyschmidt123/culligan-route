@@ -33,8 +33,11 @@
     .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
     #status { font-size:13px; color:#0078ff; font-weight: bold;}
     #route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; }
+    
+    /* Pin Styles */
     .custom-div-icon { background:transparent; border:none;}
-    .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
+    .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+    .number-pin.warn { background:#ffc107; color:black;}
 
     /* Manager Panel Overlay */
     #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
@@ -138,18 +141,7 @@
             <h3>LIVE REPORT (ACTIVE TRACKING)</h3>
             <table id="live-table">
                 <thead>
-                    <tr>
-                        <th>Customer</th>
-                        <th>Status</th>
-                        <th>18L</th>
-                        <th>Small</th>
-                        <th>Cases</th>
-                        <th>Ret 18L</th>
-                        <th>Ret Sm</th>
-                        <th>Reason</th>
-                        <th>Notes</th>
-                        <th>Time</th>
-                    </tr>
+                    <tr><th>Customer</th><th>Status</th><th>18L</th><th>Sm</th><th>Cs</th><th>R18</th><th>Rsm</th><th>Reason</th><th>Notes</th><th>Time</th></tr>
                 </thead>
                 <tbody id="live-body"></tbody>
             </table>
@@ -227,7 +219,6 @@ async function loadRoute() {
             document.getElementById("status").innerText = `Mapping: ${i+1}/${rows.length}`;
             let geo = await geocodeArcGIS(address);
             let flagged = false;
-            
             if(!geo) { geo = { lat: warehouse[0], lng: warehouse[1] }; flagged = true; }
 
             stops.push({ 
@@ -254,10 +245,15 @@ async function geocodeArcGIS(addr) {
 function renderRoute() {
     markerLayer.clearLayers();
     stops.forEach((s, i) => {
-        L.marker([s.lat, s.lng], { 
-            icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin" style="${s.flagged ? 'background:#ffc107; color:black' : ''}">${i+1}</div>` }) 
+        const pinClass = s.flagged ? 'number-pin warn' : 'number-pin';
+        const marker = L.marker([s.lat, s.lng], { 
+            icon: L.divIcon({ className:'custom-div-icon', html:`<div class="${pinClass}">${i+1}</div>` }) 
         }).addTo(markerLayer);
+        
+        // ADD TOOLTIPS (Popups) BACK IN
+        marker.bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}<br><button onclick="openProfile(${i})" style="margin-top:5px; padding:5px; width:100%; cursor:pointer;">Open Stop</button>`);
     });
+    if (stops.length > 0) map.fitBounds(stops.map(s => [s.lat, s.lng]), {padding: [50, 50]});
 }
 
 function renderSidebar() {
@@ -279,6 +275,7 @@ function openProfile(i) {
     document.getElementById('prof-name').innerText = stops[i].company;
     document.getElementById('prof-addr').innerText = stops[i].address;
     clearSig();
+    map.closePopup();
 }
 
 function closeProfile() {
@@ -333,62 +330,37 @@ function updateReports() {
     const summaryDiv = document.getElementById('summary-data');
     const liveBody = document.getElementById('live-body');
     const liveTotals = document.getElementById('live-totals');
-    
-    summaryDiv.innerHTML = "";
-    liveBody.innerHTML = "";
-    
+    summaryDiv.innerHTML = ""; liveBody.innerHTML = "";
     let t18 = 0, tSm = 0, tCs = 0, r18 = 0, rSm = 0;
 
     deliveryLog.forEach(log => {
         t18 += Number(log.v18l); tSm += Number(log.vSmall); tCs += Number(log.vCases);
         r18 += Number(log.r18l); rSm += Number(log.rSmall);
 
-        summaryDiv.innerHTML += `
-            <div style="border-bottom:1px solid #444; padding:10px;">
-                <b>${log.date} - ${log.customer}</b> [${log.status}] @ ${log.time}<br>
-                DEL: 18L(${log.v18l}) Small(${log.vSmall}) Cases(${log.vCases})<br>
-                RET: 18L(${log.r18l}) Small(${log.rSmall})<br>
-                NOTES: ${log.notes} ${log.reason ? '| REASON: ' + log.reason : ''}
-            </div>`;
+        summaryDiv.innerHTML += `<div style="border-bottom:1px solid #444; padding:10px;">
+            <b>${log.date} - ${log.customer}</b> [${log.status}] @ ${log.time}<br>
+            DEL: 18L(${log.v18l}) Small(${log.vSmall}) Cases(${log.vCases}) | RET: 18L(${log.r18l}) Small(${log.rSmall})<br>
+            NOTES: ${log.notes} ${log.reason ? '| REASON: ' + log.reason : ''}</div>`;
 
         liveBody.innerHTML += `<tr>
-            <td>${log.customer}</td>
-            <td>${log.status}</td>
-            <td>${log.v18l}</td>
-            <td>${log.vSmall}</td>
-            <td>${log.vCases}</td>
-            <td>${log.r18l}</td>
-            <td>${log.rSmall}</td>
-            <td style="color:#ffc107">${log.reason}</td>
-            <td style="font-style:italic; color:#aaa">${log.notes}</td>
-            <td>${log.time}</td>
-        </tr>`;
+            <td>${log.customer}</td><td>${log.status}</td><td>${log.v18l}</td><td>${log.vSmall}</td><td>${log.vCases}</td><td>${log.r18l}</td><td>${log.rSmall}</td>
+            <td style="color:#ffc107">${log.reason}</td><td style="color:#aaa">${log.notes}</td><td>${log.time}</td></tr>`;
     });
 
-    liveTotals.innerHTML = `
-        <h3 style="margin:0 0 10px 0; color:#0078ff">LIVE TOTALS</h3>
+    liveTotals.innerHTML = `<h3 style="margin:0 0 10px 0; color:#0078ff">LIVE TOTALS</h3>
         <p style="margin:5px 0"><b>Delivered:</b> 18L: ${t18} | Small: ${tSm} | Cases: ${tCs}</p>
-        <p style="margin:5px 0"><b>Returned:</b> 18L: ${r18} | Small: ${rSm}</p>
-    `;
+        <p style="margin:5px 0"><b>Returned:</b> 18L: ${r18} | Small: ${rSm}</p>`;
 }
 
 async function executeEOD() {
     if(!confirm("Execute End of Day?")) return;
     const route = document.getElementById("route-select").value;
     const longDate = new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-    
-    const eodPayload = {
-        action: "EOD",
-        route: route,
-        longDate: longDate,
-        summary: document.getElementById('summary-data').innerText,
-        log: deliveryLog
-    };
-
+    const eodPayload = { action: "EOD", route: route, longDate: longDate, summary: document.getElementById('summary-data').innerText, log: deliveryLog };
     document.getElementById('status').innerText = "Running EOD...";
     try {
         await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(eodPayload) });
-        alert("EOD Success: PDFs zipped and Summary saved.");
+        alert("EOD Success.");
     } catch(e) { alert("EOD Error"); }
     document.getElementById('status').innerText = "Ready";
 }
