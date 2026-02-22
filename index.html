@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan Route - Professional</title>
+<title>Culligan Route Management</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
     body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
@@ -32,21 +31,16 @@
     #info-text { flex:1; }
     #info-nav-btns { display:flex; gap:5px; align-items:center;}
     .nav-arrow { background:#333; border:1px solid #0078ff; color:white; padding:10px; cursor:pointer; border-radius:4px;}
-
     #controls { background:#222; padding:10px; border-bottom:1px solid #444; display: flex; align-items: center; gap: 10px;}
     #map { flex:1; }
-    
     #lost-btn { position:absolute; top:130px; right:10px; z-index:1000; background:#ffc107; color:black; border:none; padding:12px 20px; font-weight:bold; border-radius:4px; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.5);}
     
     .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
     #status { font-size:13px; color:#0078ff; font-weight: bold;}
-    #route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; }
-    
-    .custom-div-icon { background:transparent; border:none;}
-    .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
-    .number-pin.warn { background:#ffc107; color:black;}
+    .route-drop { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; width: 100%; margin-bottom: 10px;}
 
+    /* Manager Panel Styling */
     #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
     #manager-panel.open { bottom: 0; }
     .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; overflow-x: auto;}
@@ -55,9 +49,12 @@
     .mgr-content { padding: 20px; display: none; overflow-y: auto; height: calc(100% - 150px); color: white;}
     .mgr-content.active { display: block; }
     .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; z-index: 1001;}
-    
     .mgr-card { background: #222; border: 1px solid #444; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
     .mgr-input { width:100%; padding:10px; margin-bottom:10px; background:#333; border:1px solid #444; color:white; border-radius: 4px; box-sizing: border-box;}
+
+    .custom-div-icon { background:transparent; border:none;}
+    .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+    .number-pin.warn { background:#ffc107; color:black;}
 </style>
 </head>
 
@@ -103,29 +100,13 @@
         </div>
     </div>
     <div id="controls">
-        <select id="route-select">
+        <select id="route-select" class="route-drop" style="width: auto; margin: 0;">
             <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
             <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
             <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
             <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
             <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
-            <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
-            <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
-            <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
-            <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
-            <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
-            <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
-            <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
-            <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
-            <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
-            <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
-            <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
-            <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
-            <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
-            <option value="WEEK 4 THURSDAY">WEEK 4 THURSDAY</option>
-            <option value="WEEK 4 FRIDAY">WEEK 4 FRIDAY</option>
             <option value="VALLEY VIEW">VALLEY VIEW</option>
-            <option value="NORTH">NORTH</option>
             <option value="DAWSON CREEK">DAWSON CREEK</option>
             <option value="SALT">SALT</option>
         </select>
@@ -141,25 +122,14 @@
         <button class="close-mgr" onclick="toggleManager()">×</button>
         <div class="mgr-tabs">
             <button class="mgr-tab-btn active" onclick="switchTab('reports')">DAILY SUMMARY</button>
-            <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
             <button class="mgr-tab-btn" onclick="switchTab('rush-orders')">RUSH ORDERS</button>
-            <button class="mgr-tab-btn" onclick="switchTab('cust-maint')">CUSTOMER MAINT.</button>
+            <button class="mgr-tab-btn" onclick="switchTab('cust-maint')">GLOBAL SEARCH/MAINT</button>
         </div>
         
         <div id="reports" class="mgr-content active">
             <h2 style="color:#0078ff;">DAILY SUMMARY</h2>
             <div id="summary-data"></div>
-            <hr style="border:0; border-top:1px solid #444; margin:20px 0;">
-            <button class="btn" style="background:#dc3545; width:100%;" onclick="adminResetCounter()">RESET CURRENT SLIP COUNTER</button>
-        </div>
-
-        <div id="live-report" class="mgr-content">
-            <table id="live-table" style="width:100%; border-collapse:collapse; font-size:11px; color: white;">
-                <thead>
-                    <tr><th>Customer</th><th>Status</th><th>18L</th><th>Sm</th><th>Cs</th><th>R18</th><th>Rsm</th><th>Time</th></tr>
-                </thead>
-                <tbody id="live-body"></tbody>
-            </table>
+            <button class="btn" style="background:#dc3545; width:100%; margin-top:10px;" onclick="adminResetCounter()">RESET FORM DATA</button>
         </div>
 
         <div id="rush-orders" class="mgr-content">
@@ -168,24 +138,36 @@
                 <label>Company Name</label>
                 <input type="text" id="rush-cust" class="mgr-input" placeholder="Customer Name">
                 <label>Address</label>
-                <input type="text" id="rush-addr" class="mgr-input" placeholder="Address">
-                <label>Notes</label>
-                <textarea id="rush-note" class="mgr-input" placeholder="Instructions..."></textarea>
-                <button class="btn" style="width:100%; margin-top:10px;" onclick="addRushOrder()">INJECT AFTER CURRENT STOP</button>
+                <input type="text" id="rush-addr" class="mgr-input" placeholder="Full Address">
+                <label>Instructions</label>
+                <textarea id="rush-note" class="mgr-input"></textarea>
+                <button class="btn" style="width:100%;" onclick="addRushOrder()">INJECT AFTER CURRENT STOP</button>
             </div>
         </div>
 
         <div id="cust-maint" class="mgr-content">
-            <h2 style="color:#0078ff;">CUSTOMER MAINTENANCE</h2>
+            <h2 style="color:#0078ff;">GLOBAL CUSTOMER SEARCH</h2>
             <div class="mgr-card">
-                <p style="color:#aaa; font-size:12px;">Edit active stop data:</p>
-                <label>Company Name</label>
+                <label>Search All Routes by Name</label>
+                <div style="display:flex; gap:5px; margin-bottom:10px;">
+                    <input type="text" id="global-search-input" class="mgr-input" placeholder="Enter Company Name..." style="margin-bottom:0;">
+                    <button class="btn" onclick="runGlobalSearch()">SEARCH</button>
+                </div>
+                
+                <label>Select Search Result</label>
+                <select id="global-results-drop" class="route-drop" onchange="populateGlobalFields()">
+                    <option value="">-- No Results --</option>
+                </select>
+                
+                <hr style="border:0; border-top:1px solid #444; margin:15px 0;">
+                <label>Edit Stop Name</label>
                 <input type="text" id="edit-name" class="mgr-input">
-                <label>Address</label>
+                <label>Edit Stop Address</label>
                 <input type="text" id="edit-addr" class="mgr-input">
-                <label>Phone</label>
+                <label>Edit Phone</label>
                 <input type="text" id="edit-phone" class="mgr-input">
-                <button class="btn" style="width:100%;" onclick="saveCustomerEdits()">SAVE CHANGES TO ROUTE</button>
+                <p id="found-on-route" style="font-size:11px; color:#aaa;"></p>
+                <button class="btn" style="width:100%;" onclick="saveCustomerEdits()">APPLY TO ACTIVE STOP</button>
             </div>
         </div>
 
@@ -196,9 +178,12 @@
 </div>
 
 <script>
+/** CONFIGURATION **/
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
+const SCRIPT_URL = "REPLACE_WITH_YOUR_DEPLOYED_WEB_APP_URL"; // Update this!
+
 let map, markerLayer, routeLine, canvas, ctx, drawing = false, stops = [], deliveryLog = [], currentStopIndex = 0, driverName = "";
+let globalSearchResults = [];
 const warehouse = [55.1707, -118.7947];
 
 window.onload = () => {
@@ -209,13 +194,9 @@ window.onload = () => {
     initSignaturePad();
 };
 
+/** MANAGER PANEL LOGIC **/
 function toggleManager() { 
     document.getElementById('manager-panel').classList.toggle('open'); 
-    if(stops[currentStopIndex]) {
-        document.getElementById('edit-name').value = stops[currentStopIndex].company;
-        document.getElementById('edit-addr').value = stops[currentStopIndex].address;
-        document.getElementById('edit-phone').value = stops[currentStopIndex].phone;
-    }
 }
 
 function switchTab(tabId) {
@@ -225,48 +206,85 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-function adminResetCounter() {
-    if (prompt("Enter Admin Password:") === "5645") {
-        document.getElementById('p-18l').value = 0; document.getElementById('p-small').value = 0;
-        document.getElementById('p-18l-ret').value = 0; document.getElementById('p-cases').value = 0;
-        document.getElementById('p-small-ret').value = 0; document.getElementById('p-rec-by').value = "";
-        document.getElementById('p-notes').value = ""; ctx.clearRect(0, 0, canvas.width, canvas.height);
-        alert("Slip data reset.");
+/** GLOBAL SEARCH & MAINT **/
+async function runGlobalSearch() {
+    const term = document.getElementById('global-search-input').value;
+    if (term.length < 3) return alert("Search term too short.");
+    
+    document.getElementById('status').innerText = "Searching database...";
+    const res = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`);
+    globalSearchResults = await res.json();
+    
+    const drop = document.getElementById('global-results-drop');
+    drop.innerHTML = '<option value="">-- Select Result --</option>';
+    
+    if (globalSearchResults.length === 0) {
+        alert("No matches found.");
+    } else {
+        globalSearchResults.forEach((r, i) => {
+            drop.innerHTML += `<option value="${i}">${r.company} (${r.route})</option>`;
+        });
+    }
+    document.getElementById('status').innerText = "Search Ready.";
+}
+
+function populateGlobalFields() {
+    const idx = document.getElementById('global-results-drop').value;
+    if (idx !== "") {
+        const s = globalSearchResults[idx];
+        document.getElementById('edit-name').value = s.company;
+        document.getElementById('edit-addr').value = s.address;
+        document.getElementById('edit-phone').value = s.phone;
+        document.getElementById('found-on-route').innerText = "Database Location: " + s.route;
     }
 }
 
+async function saveCustomerEdits() {
+    if(!stops[currentStopIndex]) return alert("Load a route first.");
+    const newAddr = document.getElementById('edit-addr').value;
+    
+    if (newAddr !== stops[currentStopIndex].address) {
+        document.getElementById('status').innerText = "Re-geocoding stop...";
+        let geo = await geocodeArcGIS(newAddr);
+        if (geo) {
+            stops[currentStopIndex].lat = geo.lat;
+            stops[currentStopIndex].lng = geo.lng;
+        }
+    }
+    
+    stops[currentStopIndex].company = document.getElementById('edit-name').value;
+    stops[currentStopIndex].address = newAddr;
+    stops[currentStopIndex].phone = document.getElementById('edit-phone').value;
+    
+    renderSidebar(); renderRoute(); updateHeader();
+    alert("Active stop details updated.");
+}
+
+/** RUSH ORDERS **/
 async function addRushOrder() {
     const name = document.getElementById('rush-cust').value;
     const addr = document.getElementById('rush-addr').value;
     if(!name || !addr) return alert("Fill required fields.");
     document.getElementById('status').innerText = "Geocoding Rush Order...";
     let geo = await geocodeArcGIS(addr);
-    const rush = { company: "[RUSH] " + name, address: addr, phone: "RUSH", lat: geo?.lat || warehouse[0], lng: geo?.lng || warehouse[1], flagged: !geo };
+    const rush = { 
+        company: "[RUSH] " + name, 
+        address: addr, 
+        phone: "RUSH", 
+        lat: geo?.lat || warehouse[0], 
+        lng: geo?.lng || warehouse[1], 
+        flagged: !geo,
+        notes: document.getElementById('rush-note').value
+    };
     stops.splice(currentStopIndex + 1, 0, rush);
     renderRoute(); renderSidebar(); updateHeader();
-    alert("Rush Order added to route!");
+    alert("Rush Order added as the next stop!");
 }
 
-function saveCustomerEdits() {
-    if(!stops[currentStopIndex]) return;
-    stops[currentStopIndex].company = document.getElementById('edit-name').value;
-    stops[currentStopIndex].address = document.getElementById('edit-addr').value;
-    stops[currentStopIndex].phone = document.getElementById('edit-phone').value;
-    renderSidebar(); renderRoute(); updateHeader();
-    alert("Customer details updated locally.");
-}
-
-function startRoute() {
-    driverName = prompt("Enter driver name:");
-    if (driverName) {
-        document.getElementById('start-btn').style.display = 'none';
-        document.getElementById('status').innerText = `Driver: ${driverName}`;
-    }
-}
-
+/** ROUTE ENGINE **/
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
-    document.getElementById("status").innerText = "Loading Stops...";
+    document.getElementById("status").innerText = "Loading " + sheetName + "...";
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
         const res = await fetch(url);
@@ -283,8 +301,15 @@ async function loadRoute() {
             const addr = row[addrIdx] ? row[addrIdx].v.toString() : "";
             if (!addr || addr.includes("http") || addr.toLowerCase().includes("address")) continue;
             let geo = await geocodeArcGIS(addr);
-            raw.push({ company: row[compIdx]?.v || "Customer", address: addr, phone: row[phoneIdx]?.v || "---", lat: geo?.lat || warehouse[0], lng: geo?.lng || warehouse[1], flagged: !geo });
-            await new Promise(r => setTimeout(r, 600));
+            raw.push({ 
+                company: row[compIdx]?.v || "Customer", 
+                address: addr, 
+                phone: row[phoneIdx]?.v || "---", 
+                lat: geo?.lat || warehouse[0], 
+                lng: geo?.lng || warehouse[1], 
+                flagged: !geo 
+            });
+            await new Promise(r => setTimeout(r, 600)); // Delay for API
         }
 
         stops = [];
@@ -315,6 +340,7 @@ async function geocodeArcGIS(addr) {
     } catch (e) { return null; }
 }
 
+/** CORE FUNCTIONS **/
 function renderRoute() {
     markerLayer.clearLayers();
     const latlngs = stops.map((s, i) => {
@@ -344,7 +370,7 @@ function navStep(dir) {
 
 function openGoogleMaps() {
     const s = stops[currentStopIndex];
-    if (!s) return alert("Load route.");
+    if (!s) return alert("Load route first.");
     const destination = encodeURIComponent(`${s.address}, Grande Prairie, AB`);
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
 }
@@ -366,9 +392,16 @@ function closeProfile() {
 async function submitLog(status) {
     if(!driverName) return alert("Click START ROUTE first!");
     const now = new Date(), s = stops[currentStopIndex];
-    const entry = { driver: driverName, customer: s.company, status: status, time: now.toLocaleTimeString(), v18l: document.getElementById('p-18l').value, vSmall: document.getElementById('p-small').value, vCases: document.getElementById('p-cases').value, r18l: document.getElementById('p-18l-ret').value, rSmall: document.getElementById('p-small-ret').value, notes: document.getElementById('p-notes').value };
+    const entry = { 
+        driver: driverName, customer: s.company, status: status, time: now.toLocaleTimeString(), 
+        v18l: document.getElementById('p-18l').value, vSmall: document.getElementById('p-small').value, vCases: document.getElementById('p-cases').value, 
+        r18l: document.getElementById('p-18l-ret').value, rSmall: document.getElementById('p-small-ret').value, notes: document.getElementById('p-notes').value 
+    };
     deliveryLog.push(entry);
-    updateReports();
+    
+    // Update Daily Summary UI
+    document.getElementById('summary-data').innerHTML += `<div><b>${s.company}</b>: ${status} (${entry.time})</div>`;
+    
     if (currentStopIndex === stops.length - 1) {
         if(confirm("Route Complete. Run EOD?")) executeEOD();
     } else {
@@ -377,13 +410,20 @@ async function submitLog(status) {
     }
 }
 
-function updateReports() {
-    const body = document.getElementById('live-body'), sum = document.getElementById('summary-data');
-    body.innerHTML = ""; sum.innerHTML = "";
-    deliveryLog.forEach(l => {
-        body.innerHTML += `<tr><td>${l.customer}</td><td>${l.status}</td><td>${l.v18l}</td><td>${l.vSmall}</td><td>${l.vCases}</td><td>${l.r18l}</td><td>${l.rSmall}</td><td>${l.time}</td></tr>`;
-        sum.innerHTML += `<div style="padding:5px; border-bottom:1px solid #444;"><b>${l.customer}</b>: ${l.status} (${l.time})</div>`;
-    });
+async function executeEOD() {
+    try {
+        document.getElementById('status').innerText = "Uploading Report...";
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "EOD", driver: driverName, log: deliveryLog }) });
+        alert("EOD TRIP REPORT SAVED TO GOOGLE DRIVE.");
+    } catch(e) { alert("Error saving to Drive."); }
+}
+
+function startRoute() {
+    driverName = prompt("Enter Driver Name:");
+    if (driverName) {
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('status').innerText = `Driver: ${driverName}`;
+    }
 }
 
 function renderSidebar() {
@@ -394,13 +434,6 @@ function renderSidebar() {
         d.onclick = () => openProfile(i);
         list.appendChild(d);
     });
-}
-
-async function executeEOD() {
-    try {
-        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "EOD", driver: driverName, log: deliveryLog }) });
-        alert("Trip Report Saved to Drive.");
-    } catch(e) { alert("Network Error."); }
 }
 
 function initSignaturePad() {
