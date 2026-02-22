@@ -14,7 +14,7 @@
         #sidebar-header { padding: 15px; border-bottom: 1px solid #444; }
         #stop-list { flex: 1; overflow-y: auto; padding: 10px; }
         .stop-card { background: #333; padding: 12px; margin-bottom: 10px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 13px; cursor: pointer; }
-        .stop-card.active-card { background: #444; border-left-color: #28a745; }
+        .stop-card.active-card { background: #444; border-left-color: #e74c3c; } /* Red for active sidebar card */
         .card-label { color: #0078ff; font-weight: bold; font-size: 11px; text-transform: uppercase; display: block; margin-top: 4px; }
         .card-val { color: #eee; display: block; margin-bottom: 2px; }
         .inv-grid-sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; border-top: 1px solid #444; padding-top: 5px; }
@@ -35,6 +35,11 @@
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         #sig-canvas { background: white; border-radius: 4px; cursor: crosshair; width: 100%; height: 100px; }
         .nav-container { display: flex; justify-content: space-between; padding: 10px; background: #222; border-top: 1px solid #444; }
+        
+        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; font-size: 13px; }
+        .active-pin { background: #e74c3c !important; border-color: white !important; scale: 1.2; box-shadow: 0 0 10px #e74c3c; } /* Red Dot / Active Pin */
+        .warehouse-pin { background: #222 !important; border-color: #f39c12 !important; color: #f39c12 !important; }
+        .leaflet-tooltip-own { background: rgba(0,0,0,0.7); border: 1px solid #0078ff; color: white; font-weight: bold; border-radius: 4px; padding: 2px 6px; }
     </style>
 </head>
 <body>
@@ -126,8 +131,6 @@
             const nameKey = h.find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
             const phoneKey = h.find(k => k.toLowerCase().includes("phone"));
             const noteKey = h.find(k => k.toLowerCase().includes("note"));
-            
-            // New column matches
             const key18L = h.find(k => k.includes("18 l bottles") || k.includes("18L"));
             const keySmall = h.find(k => k.includes("small bottles"));
             const keyCases = h.find(k => k.includes("cases"));
@@ -186,13 +189,17 @@
         stops.forEach((s, i) => {
             pathCoords.push([s.lat, s.lng]);
             const m = L.marker([s.lat, s.lng], {
-                icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin">${i + 1}</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
-            }).addTo(markerLayer).bindPopup(`<b>${i+1}. ${s.company}</b>`);
+                icon: L.divIcon({ className: 'custom-div-icon', html: `<div id="pin-${i}" class="number-pin">${i + 1}</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
+            }).addTo(markerLayer);
+            
+            // TOOLTIP: Always shows the address on the map
+            m.bindTooltip(s.address, { permanent: true, direction: 'right', className: 'leaflet-tooltip-own', offset: [15, -15] });
+            
             markers.push(m);
         });
         if (stops.length > 0) pathCoords.push([warehouse.lat, warehouse.lng]);
         routeLine.setLatLngs(pathCoords);
-        if (stops.length > 0) map.fitBounds(L.latLngBounds(pathCoords), { padding: [50, 50] });
+        if (stops.length > 0) map.fitBounds(L.latLngBounds(pathCoords), { padding: [80, 80] });
     }
 
     function updateSidebar() {
@@ -219,12 +226,23 @@
 
     function selectStop(index) {
         if (index < 0 || index >= stops.length) return;
+        
+        // Remove Red Dot from previous pin
+        if (activeIndex !== -1) {
+            const prevPin = document.getElementById(`pin-${activeIndex}`);
+            if (prevPin) prevPin.classList.remove('active-pin');
+        }
+
         activeIndex = index;
         const s = stops[index];
+
+        // Add Red Dot to current pin
+        const currPin = document.getElementById(`pin-${index}`);
+        if (currPin) currPin.classList.add('active-pin');
+
         document.getElementById('current-stop-bar').style.display = 'block';
         document.getElementById('active-addr').innerText = s.address;
         map.setView([s.lat, s.lng], 16);
-        markers[index].openPopup();
         updateSidebar();
         openEntryModal(s);
     }
@@ -256,7 +274,6 @@
         canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
         canvas.onmousemove = (e) => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
         window.onmouseup = () => { drawing = false; };
-        // Touch support
         canvas.ontouchstart = (e) => { e.preventDefault(); drawing = true; const t = e.touches[0]; const r = canvas.getBoundingClientRect(); ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
         canvas.ontouchmove = (e) => { e.preventDefault(); if (drawing) { const t = e.touches[0]; const r = canvas.getBoundingClientRect(); ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); } };
     }
@@ -279,20 +296,7 @@
         const receiver = document.getElementById('receivedBy').value;
         if (status === 'Not Delivered' && !notes.trim()) return alert("Reason required for skip.");
         const now = new Date();
-        let formData = { 
-            Customer: stops[activeIndex].company, 
-            Address: stops[activeIndex].address, 
-            Status: status, 
-            Timestamp: now.toLocaleString(), 
-            Notes: notes, 
-            ReceivedBy: receiver, 
-            Del18L: document.getElementById('inv18L').value,
-            DelSmall: document.getElementById('invSmall').value,
-            DelCases: document.getElementById('invCases').value,
-            Ret18L: document.getElementById('ret18L').value,
-            RetSmall: document.getElementById('retSmall').value,
-            Signature: canvas.toDataURL() 
-        };
+        let formData = { Customer: stops[activeIndex].company, Address: stops[activeIndex].address, Status: status, Timestamp: now.toLocaleString(), Notes: notes, ReceivedBy: receiver, Del18L: document.getElementById('inv18L').value, DelSmall: document.getElementById('invSmall').value, DelCases: document.getElementById('invCases').value, Ret18L: document.getElementById('ret18L').value, RetSmall: document.getElementById('retSmall').value, Signature: canvas.toDataURL() };
         fetch(SHEETS_API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) }).then(() => { closeModal(); alert(`Recorded.`); });
     }
 
