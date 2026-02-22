@@ -81,15 +81,30 @@
     let activeStop = null;
     const warehouse = { lat: 55.1707, lng: -118.7947 };
 
-    window.onload = async () => {
+window.onload = async () => {
+        // 1. Ask for the password
+        const password = prompt("Please enter the driver access code:");
+
+        // 2. Check if the password is correct
+        if (password !== "CBW2026!") {
+            alert("Incorrect code. Access denied.");
+            document.body.innerHTML = "<h1 style='color:white; text-align:center; margin-top:50px;'>Access Denied</h1>";
+            return;
+        }
+
+        // 3. If correct, setup the map and layers
         map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
         markerLayer = L.layerGroup().addTo(map);
         routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map);
 
+        // 4. Place the warehouse marker
         L.marker([warehouse.lat, warehouse.lng], {
             icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
         }).addTo(map).bindPopup("<b>Warehouse</b>");
+
+        // 5. Fetch the 25 route names for the dropdown menu
+        fetchRouteList();
     };
 
     function closeModal() { document.getElementById("dataModal").style.display = "none"; }
@@ -229,4 +244,5 @@
     }
 </script>
 </body>
+
 </html>
