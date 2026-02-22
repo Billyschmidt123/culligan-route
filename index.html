@@ -54,7 +54,8 @@
 <div id="sidebar">
     <div id="sidebar-header">
         <h3 style="margin:0">Route List</h3>
-        <p id="stop-count" style="font-size: 12px; color: #aaa; margin: 5px 0 10px 0;">No route loaded</p>
+        <p id="driver-display" style="font-size: 14px; color: #0078ff; margin: 5px 0 5px 0; font-weight: bold;"></p>
+        <p id="stop-count" style="font-size: 12px; color: #aaa; margin: 0 0 10px 0;">No route loaded</p>
         <button class="btn btn-mgr" style="width:100%;" onclick="openManagerMenu()">Manager Menu</button>
     </div>
     <div id="stop-list"></div>
@@ -84,6 +85,7 @@
     <div class="ticket-body">
         <p><strong>Customer:</strong> <span id="t-cust"></span></p>
         <p><strong>Address:</strong> <span id="t-addr"></span></p>
+        <p><strong>Driver:</strong> <span id="t-driver"></span></p>
         <div style="background:#f9f9f9; padding:10px; border-radius:8px;">
             <div class="ticket-row"><span>18L Bottles</span><strong id="t-18l"></strong></div>
             <div class="ticket-row"><span>Small Bottles</span><strong id="t-small"></strong></div>
@@ -114,7 +116,7 @@
             <div class="field-row"><label>Received By</label><input type="text" id="receivedBy"></div>
         </div>
         <div class="field-row"><label>Signature</label><canvas id="sig-canvas"></canvas><button class="btn btn-nav" style="width:100%; margin-top:5px;" onclick="clearSig()">Clear Signature</button></div>
-        <div class="field-row"><label>Notes / Reason for Skip</label><textarea id="driverNotes" rows="2"></textarea></div>
+        <div class="field-row"><label>Notes / Skip Reason</label><textarea id="driverNotes" rows="2"></textarea></div>
         <button class="btn" style="width:100%; background:#0078ff; margin-bottom:10px;" onclick="openGoogleMaps()">Google Maps</button>
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1;" onclick="processStop('Delivered')">DELIVERED</button>
@@ -124,17 +126,10 @@
     </div>
 </div>
 
-<div id="mgrModal">
-    <div class="modal-content">
-        <h3 style="color:#f39c12; margin-top:0;">Manager Details</h3>
-        <div id="mgrFields"></div>
-        <button class="btn" style="width:100%; background:#444; margin-top:10px;" onclick="document.getElementById('mgrModal').style.display='none'">Close</button>
-    </div>
-</div>
-
 <script>
     const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbyECaDUnW3yvG5J8dWmT1a-5YTykHuwDxEiAgByH91A5zAwIzONqV64_r9olmyd07MSMA/exec";
     let map, markerLayer, routeLine, stops = [], markers = [], activeIndex = -1, canvas, ctx, drawing = false;
+    let driverName = "Unknown Driver";
     const warehouse = { lat: 55.1707, lng: -118.7947 };
 
     async function fetchRouteList() {
@@ -146,8 +141,7 @@
             tabs.filter(t => t !== 'Deliveries').forEach(tabName => {
                 let opt = document.createElement('option'); opt.value = tabName; opt.innerHTML = tabName; selector.appendChild(opt);
             });
-            document.getElementById('status').textContent = "Routes Loaded.";
-        } catch (e) { document.getElementById('status').textContent = "Error."; }
+        } catch (e) { console.log(e); }
     }
 
     async function loadSelectedRoute() {
@@ -160,8 +154,6 @@
             const h = Object.keys(rows[0]);
             const addrKey = h.find(k => k.toLowerCase().includes("addr"));
             const nameKey = h.find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
-            const phoneKey = h.find(k => k.toLowerCase().includes("phone"));
-            const noteKey = h.find(k => k.toLowerCase().includes("note"));
             const key18L = h.find(k => k.includes("18 l bottles") || k.includes("18L"));
             const keySmall = h.find(k => k.includes("small bottles"));
             const keyCases = h.find(k => k.includes("cases"));
@@ -171,13 +163,8 @@
                 document.getElementById('status').textContent = `Mapping ${i + 1}/${rows.length}...`;
                 const geo = await geocodeAddress(rows[i][addrKey]);
                 if (geo) tempStops.push({ 
-                    company: rows[i][nameKey] || "Stop", 
-                    address: rows[i][addrKey], 
-                    phone: rows[i][phoneKey] || "N/A",
-                    notes: rows[i][noteKey] || "No instructions",
-                    inv18L: rows[i][key18L] || 0,
-                    invSmall: rows[i][keySmall] || 0,
-                    invCases: rows[i][keyCases] || 0,
+                    company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], 
+                    inv18L: rows[i][key18L] || 0, invSmall: rows[i][keySmall] || 0, invCases: rows[i][keyCases] || 0,
                     fullData: rows[i], ...geo 
                 });
                 await new Promise(r => setTimeout(r, 1200));
@@ -225,19 +212,17 @@
             m.bindTooltip(s.address, { permanent: true, direction: 'right', className: 'leaflet-tooltip-own', offset: [15, -15] });
             markers.push(m);
         });
-        if (stops.length > 0) pathCoords.push([warehouse.lat, warehouse.lng]);
         routeLine.setLatLngs(pathCoords);
         if (stops.length > 0) map.fitBounds(L.latLngBounds(pathCoords), { padding: [80, 80] });
     }
 
     function updateSidebar() {
-        const listDiv = document.getElementById('stop-list');
-        listDiv.innerHTML = '';
+        const listDiv = document.getElementById('stop-list'); listDiv.innerHTML = '';
         document.getElementById('stop-count').innerText = `${stops.length} Stops`;
         stops.forEach((s, i) => {
             const card = document.createElement('div');
             card.className = `stop-card ${i === activeIndex ? 'active-card' : ''}`;
-            card.innerHTML = `<b style="font-size:15px;">#${i + 1} ${s.company}</b><span class="card-label">Address</span><span class="card-val">${s.address}</span><div class="inv-grid-sidebar"><span>18L: ${s.inv18L}</span><span>Cases: ${s.invCases}</span></div>`;
+            card.innerHTML = `<b style="font-size:15px;">#${i + 1} ${s.company}</b><span class="card-val">${s.address}</span>`;
             card.onclick = () => selectStop(i);
             listDiv.appendChild(card);
         });
@@ -260,20 +245,12 @@
         openEntryModal(s);
     }
 
-    function nextStop() { if (activeIndex < stops.length - 1) selectStop(activeIndex + 1); }
-    function prevStop() { if (activeIndex > 0) selectStop(activeIndex - 1); }
-
     function openEntryModal(s) {
         document.getElementById('mCustName').innerText = s.company;
         document.getElementById('mCustAddr').innerText = s.address;
         document.getElementById('inv18L').value = s.inv18L;
         document.getElementById('invSmall').value = s.invSmall;
         document.getElementById('invCases').value = s.invCases;
-        document.getElementById('ret18L').value = "";
-        document.getElementById('retSmall').value = "";
-        document.getElementById('receivedBy').value = "";
-        document.getElementById('driverNotes').value = "";
-        clearSig();
         document.getElementById('dataModal').style.display = 'flex';
         initCanvas();
     }
@@ -285,24 +262,22 @@
         canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
         canvas.onmousemove = (e) => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
         window.onmouseup = () => { drawing = false; };
-        canvas.ontouchstart = (e) => { e.preventDefault(); drawing = true; const t = e.touches[0]; const r = canvas.getBoundingClientRect(); ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-        canvas.ontouchmove = (e) => { e.preventDefault(); if (drawing) { const t = e.touches[0]; const r = canvas.getBoundingClientRect(); ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); } };
     }
     function clearSig() { if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
     async function processStop(status) {
         const notes = document.getElementById('driverNotes').value;
         const receiver = document.getElementById('receivedBy').value;
-        if (status === 'Not Delivered' && !notes.trim()) return alert("Reason required for skip.");
-        
         const now = new Date();
         const routeName = document.getElementById('routeSelector').value;
         const slipNum = now.toISOString().replace(/[-:T.Z]/g, "").slice(0, 12);
         const longDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         
+        // Fill Ticket
         document.getElementById('t-slip').innerText = slipNum;
         document.getElementById('t-cust').innerText = stops[activeIndex].company;
         document.getElementById('t-addr').innerText = stops[activeIndex].address;
+        document.getElementById('t-driver').innerText = driverName;
         document.getElementById('t-18l').innerText = document.getElementById('inv18L').value;
         document.getElementById('t-small').innerText = document.getElementById('invSmall').value;
         document.getElementById('t-cases').innerText = document.getElementById('invCases').value;
@@ -314,22 +289,18 @@
         const element = document.getElementById('ticket-output');
         element.style.display = 'block';
         const fileName = `${stops[activeIndex].company} - ${routeName} - ${slipNum} - ${longDate}.pdf`;
-        
-        html2pdf().from(element).save(fileName).then(() => {
+
+        html2pdf().from(element).outputPdf('datauristring').then(pdfBase64 => {
             element.style.display = 'none';
+            let formData = { 
+                Customer: stops[activeIndex].company, Address: stops[activeIndex].address, Status: status, 
+                Timestamp: now.toLocaleString(), Notes: notes, ReceivedBy: receiver, Slip: slipNum, 
+                DriverID: driverName, FileName: fileName, pdfData: pdfBase64 
+            };
+            fetch(SHEETS_API_URL, { method: 'POST', body: JSON.stringify(formData) }).then(() => { 
+                closeModal(); alert(`Saved for ${driverName}`); 
+            });
         });
-
-        let formData = { Customer: stops[activeIndex].company, Address: stops[activeIndex].address, Status: status, Timestamp: now.toLocaleString(), Notes: notes, ReceivedBy: receiver, Slip: slipNum, Signature: canvas.toDataURL() };
-        fetch(SHEETS_API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) }).then(() => { closeModal(); alert(`Recorded. Ticket: ${fileName}`); });
-    }
-
-    function openManagerMenu() {
-        const pin = prompt("Manager PIN:");
-        if (pin !== "5678") return alert("Denied");
-        const s = stops[activeIndex];
-        const f = document.getElementById('mgrFields'); f.innerHTML = "";
-        for (const [k, v] of Object.entries(s.fullData)) { f.innerHTML += `<div class="field-row"><label>${k}</label><input type="text" value="${v}" readonly></div>`; }
-        document.getElementById('mgrModal').style.display = 'flex';
     }
 
     function closeModal() { document.getElementById("dataModal").style.display = "none"; }
@@ -338,6 +309,12 @@
     window.onload = async () => {
         const pw = prompt("Driver access code:");
         if (pw !== "1234") { document.body.innerHTML = "<h1>Access Denied</h1>"; return; }
+        
+        // Driver Sign-In
+        driverName = prompt("Please enter your Name:");
+        if (!driverName) driverName = "Unknown Driver";
+        document.getElementById('driver-display').innerText = `Driver: ${driverName}`;
+
         map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
         markerLayer = L.layerGroup().addTo(map);
