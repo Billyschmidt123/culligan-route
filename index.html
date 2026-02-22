@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Culligan Route Manager</title>
     
+    <link rel="icon" href="data:,">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -77,7 +79,6 @@
 </div>
 
 <script>
-    // Updated to your newest deployment URL
     const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwt6s3gSl-stP2kSDxsaryhXPZUajyJCTEFjaljSu4Z-IzU055oDADrS7fYxYdM1_EnhA/exec";
     
     let map, markerLayer, routeLine, stops = [], activeIndex = -1, canvas, ctx, drawing = false, driverName = "Unknown";
@@ -110,12 +111,10 @@
             stops = temp;
             render();
             document.getElementById('status').innerText = "Route Loaded";
-            // Show the start button after data is confirmed 
             document.getElementById('start-btn').style.display = "inline-block";
         } catch (e) { document.getElementById('status').innerText = "Error Loading"; }
     }
 
-    // Function for the new "Start Route" button workflow
     function startDriverSession() {
         const nameInput = prompt("Please enter your name to start the route:");
         if (nameInput && nameInput.trim() !== "") {
@@ -124,7 +123,7 @@
             document.getElementById('status').innerText = "Route Active";
             document.getElementById('start-btn').style.display = "none";
         } else {
-            alert("Driver name is required to begin.");
+            alert("Name required to start.");
         }
     }
 
@@ -145,7 +144,7 @@
             L.marker([s.lat, s.lng], { icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>` }) }).addTo(markerLayer).bindTooltip(s.address);
             const card = document.createElement('div'); card.className = "stop-card"; card.innerHTML = `<b>#${i+1} ${s.company}</b><br>${s.address}`;
             card.onclick = () => {
-                if(driverName === "Unknown") { alert("Please click 'Start Route' first."); return; }
+                if(driverName === "Unknown") { alert("Click 'Start Route' first."); return; }
                 activeIndex = i;
                 document.getElementById('mCustName').innerText = s.company;
                 document.getElementById('dataModal').style.display = "flex";
