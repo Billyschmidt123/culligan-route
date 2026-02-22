@@ -7,70 +7,35 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
     body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
-    #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
+    #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column; z-index: 20;}
     #sidebar-header { padding:15px; border-bottom:1px solid #444;}
     #stop-list { flex:1; overflow-y:auto; padding:10px;}
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
-    .stop-card:hover { background: #444; }
-    .stop-card.rush-order { border-left-color: #a335ee !important; background: #331d44 !important; border-left-width: 8px !important;}
-    #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
-    .profile-group { margin-bottom:12px; }
-    .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
-    .profile-group input, .profile-group textarea, .profile-group select { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
-    #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555;}
-    .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
-    .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-    .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
-    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 10;}
+    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 100;}
     #map { flex:1; z-index: 1;}
-    .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-    .btn-rush { background:#a335ee; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold; width:100%; margin-top:10px;}
-    .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
-    #status { font-size:13px; color:#0078ff; font-weight: bold;}
+    .btn { padding:12px 20px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; min-width: 120px;}
+    #status { font-size:13px; color:#0078ff; font-weight: bold; margin-left: 10px;}
     .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
-    .rush-pin { background:#a335ee !important; }
-
-    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
-    #manager-panel.open { bottom: 0; }
-    .mgr-content { padding: 20px; height: calc(100% - 150px); overflow-y: auto; color: white;}
-    .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
-    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; }
-    .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; max-height: 90vh; overflow-y: auto;}
 </style>
 </head>
 
 <body>
 
 <div id="sidebar">
-    <div id="list-view">
-        <div id="sidebar-header">
-            <h3 style="margin:0">Route Stops</h3>
-            <p id="stop-count" style="font-size:12px; color:#aaa;">No route loaded</p>
-        </div>
-        <div id="stop-list"></div>
+    <div id="sidebar-header">
+        <h3 style="margin:0">Route Stops</h3>
+        <p id="stop-count" style="font-size:12px; color:#aaa;">Ready to load</p>
     </div>
-
-    <div id="customer-profile">
-        <button class="back-btn" onclick="closeProfile()" style="background:none; border:none; color:#0078ff; cursor:pointer; margin-bottom:10px;">← BACK TO LIST</button>
-        <h3 id="prof-name">Customer Name</h3>
-        <p id="prof-addr" style="font-size:12px; color:#aaa;"></p>
-        <div class="profile-group"><label>NOTES</label><textarea id="p-notes" rows="3"></textarea></div>
-        <canvas id="sig-canvas"></canvas>
-        <div class="form-btns">
-            <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
-            <button class="btn-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button>
-        </div>
-    </div>
+    <div id="stop-list"></div>
 </div>
 
 <div id="main-view">
     <div id="controls">
-        <select id="route-select">
+        <select id="route-select" style="padding:10px; background:#333; color:white; border:1px solid #444;">
             <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
             <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
             <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
@@ -78,140 +43,87 @@
             <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
             <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
             <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
-            <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
-            <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
-            <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
             <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
-            <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
-            <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
-            <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
-            <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
             <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
-            <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
-            <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
-            <option value="WEEK 4 THURSDAY">WEEK 4 THURSDAY</option>
-            <option value="WEEK 4 FRIDAY">WEEK 4 FRIDAY</option>
             <option value="VALLEY VIEW">VALLEY VIEW</option>
             <option value="NORTH">NORTH</option>
             <option value="DAWSON CREEK">DAWSON CREEK</option>
             <option value="SALT">SALT</option>
         </select>
-        <button class="btn" id="load-btn" onclick="loadRoute()">Load Route</button>
-        <button class="btn-mgr" onclick="toggleManager()">Manager Panel</button>
-        <div id="status">Status: Ready</div>
+        <button type="button" class="btn" id="load-btn" onclick="loadRoute()">LOAD ROUTE</button>
+        <div id="status">STATUS: READY</div>
     </div>
     <div id="map"></div>
-
-    <div id="manager-panel">
-        <button class="close-mgr" onclick="toggleManager()">&times;</button>
-        <div class="mgr-content">
-            <h3 style="color:#0078ff;">Customer Maintenance</h3>
-            <input type="text" id="global-search-input" placeholder="Search Database..." style="width:100%; padding:10px; background:#333; border:1px solid #444; color:white; margin-bottom:10px;">
-            <button class="btn" onclick="performGlobalSearch()">SEARCH</button>
-            <button class="btn" style="background:#6c757d;" onclick="openAddCustomerModal()">ADD NEW CUSTOMER</button>
-            <button class="btn-rush" onclick="triggerRushWorkflow()">BUILD A RUSH ORDER</button>
-            <div id="search-results-area" style="margin-top:20px;"></div>
-        </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="global-modal-overlay" onclick="closeGlobalModal()"></div>
-<div id="global-modal" class="edit-modal">
-    <h3 id="modal-title">Customer Details</h3>
-    <div class="profile-group"><label>ASSIGN TO ROUTE</label><select id="m-cust-route"></select></div>
-    <div class="profile-group"><label>NAME</label><input type="text" id="m-cust-name"></div>
-    <div class="profile-group"><label>ADDRESS</label><input type="text" id="m-cust-addr"><small style="color:#ffc107; display:block;">* MUST include City and Postal Code</small></div>
-    <button id="modal-primary-btn" class="btn" style="width:100%;" onclick="handleModalSubmit()">SAVE</button>
 </div>
 
 <script>
+// 1. GLOBALS FIRST
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-let map, markerLayer, stops = [], currentStopIndex = null;
+let map, markerLayer, stops = [];
 const warehouse = [55.1707, -118.7947];
 
-window.onload = () => {
-    map = L.map("map").setView(warehouse, 11);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-    markerLayer = L.layerGroup().addTo(map);
-    
-    // Sync dropdowns
-    const mRoute = document.getElementById('m-cust-route');
-    const rSelect = document.getElementById('route-select');
-    Array.from(rSelect.options).forEach(opt => {
-        let newOpt = document.createElement('option');
-        newOpt.value = opt.value; newOpt.text = opt.text;
-        mRoute.appendChild(newOpt);
-    });
-};
-
+// 2. DEFINE THE FUNCTION GLOBALLY SO THE BUTTON CAN SEE IT
 async function loadRoute() {
+    console.log("Load Route Clicked");
     const sheetName = document.getElementById("route-select").value;
-    const loadBtn = document.getElementById("load-btn");
     const statusDiv = document.getElementById("status");
+    const list = document.getElementById("stop-list");
     
-    loadBtn.disabled = true;
-    statusDiv.innerText = "Fetching Data...";
-    
+    statusDiv.innerText = "STATUS: FETCHING...";
+    list.innerHTML = "Loading data from Google Sheets...";
+
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
         const res = await fetch(url);
         const text = await res.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
+        
+        // Clean up Google's JSON response
+        const jsonText = text.substring(text.indexOf("(") + 1, text.lastIndexOf(")"));
+        const json = JSON.parse(jsonText);
         
         stops = [];
         const rows = json.table.rows;
         
-        rows.forEach(row => {
-            const r = row.c;
-            if (r && r[3] && r[3].v) {
+        rows.forEach((row, i) => {
+            const cols = row.c;
+            // Column 3 is the address
+            if (cols && cols[3] && cols[3].v) {
                 stops.push({
-                    company: r[2] ? r[2].v : "Customer",
-                    address: r[3].v,
+                    company: cols[2] ? cols[2].v : "Customer",
+                    address: cols[3].v,
                     lat: warehouse[0],
-                    lng: warehouse[1],
-                    geocoded: false
+                    lng: warehouse[1]
                 });
             }
         });
 
-        renderSidebar();
-        renderRoute();
+        updateSidebar();
+        updateMap();
         
-        statusDiv.innerText = "Mapping Stops...";
-        
-        // Background Geocoding to keep button clickable
-        for (let i = 0; i < stops.length; i++) {
-            const geo = await geocodeArcGIS(stops[i].address);
-            if (geo) {
-                stops[i].lat = geo.lat;
-                stops[i].lng = geo.lng;
-                stops[i].geocoded = true;
-            }
-            if (i % 3 === 0) { // Update map every 3 stops
-                renderRoute();
-                statusDiv.innerText = `Mapped ${i+1}/${stops.length}`;
-            }
-        }
-        
-        renderRoute();
-        statusDiv.innerText = "Ready";
-    } catch (e) {
-        statusDiv.innerText = "Error Loading";
-        console.error(e);
-    } finally {
-        loadBtn.disabled = false;
+        statusDiv.innerText = "STATUS: LOADED";
+        document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
+
+    } catch (err) {
+        console.error(err);
+        statusDiv.innerText = "STATUS: ERROR";
+        list.innerHTML = "Failed to load. Check Sheet permissions.";
     }
 }
 
-async function geocodeArcGIS(addr) {
-    try {
-        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`);
-        const data = await res.json();
-        return data.candidates.length ? { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x } : null;
-    } catch (e) { return null; }
+function updateSidebar() {
+    const list = document.getElementById("stop-list");
+    list.innerHTML = "";
+    stops.forEach((s, i) => {
+        const div = document.createElement("div");
+        div.className = "stop-card";
+        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
+        div.onclick = () => map.setView([s.lat, s.lng], 14);
+        list.appendChild(div);
+    });
 }
 
-function renderRoute() {
+function updateMap() {
+    if (!markerLayer) return;
     markerLayer.clearLayers();
     stops.forEach((s, i) => {
         L.marker([s.lat, s.lng], { 
@@ -220,44 +132,14 @@ function renderRoute() {
     });
 }
 
-function renderSidebar() {
-    const list = document.getElementById("stop-list");
-    list.innerHTML = "";
-    document.getElementById("stop-count").innerText = `${stops.length} Stops Found`;
-    stops.forEach((s, i) => {
-        const div = document.createElement("div");
-        div.className = "stop-card";
-        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
-        div.onclick = () => { map.setView([s.lat, s.lng], 15); openProfile(i); };
-        list.appendChild(div);
-    });
+// 3. INITIALIZE MAP SEPARATELY
+try {
+    map = L.map("map").setView(warehouse, 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    markerLayer = L.layerGroup().addTo(map);
+} catch (e) {
+    console.error("Map initialization failed", e);
 }
-
-function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
-function openProfile(i) {
-    currentStopIndex = i;
-    document.getElementById('list-view').style.display = 'none';
-    document.getElementById('customer-profile').style.display = 'block';
-    document.getElementById('prof-name').innerText = stops[i].company;
-    document.getElementById('prof-addr').innerText = stops[i].address;
-}
-function closeProfile() {
-    document.getElementById('list-view').style.display = 'block';
-    document.getElementById('customer-profile').style.display = 'none';
-}
-function openAddCustomerModal(name = "") {
-    document.getElementById('m-cust-name').value = name;
-    document.getElementById('global-modal-overlay').style.display = 'block';
-    document.getElementById('global-modal').style.display = 'block';
-}
-function closeGlobalModal() {
-    document.getElementById('global-modal-overlay').style.display = 'none';
-    document.getElementById('global-modal').style.display = 'none';
-}
-function handleModalSubmit() { alert("Customer Processed!"); closeGlobalModal(); }
-function triggerRushWorkflow() { openAddCustomerModal(); document.getElementById('modal-title').innerText = "RUSH ORDER"; }
-async function submitLog(s) { closeProfile(); }
-function performGlobalSearch() { alert("Searching Database..."); }
 </script>
 </body>
 </html>
