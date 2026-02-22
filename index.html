@@ -1,24 +1,90 @@
-culligan-route/:67 Error scanning WEEK 1 MONDAY
-culligan-route/:67 Error scanning WEEK 1 TUESDAY
-culligan-route/:67 Error scanning WEEK 1 WEDNESDAY
-culligan-route/:67 Error scanning WEEK 1 THURSDAY
-culligan-route/:67 Error scanning WEEK 1 FRIDAY
-culligan-route/:67 Error scanning WEEK 2 MONDAY
-culligan-route/:67 Error scanning WEEK 2 TUESDAY
-culligan-route/:67 Error scanning WEEK 2 WEDNESDAY
-culligan-route/:67 Error scanning WEEK 2 THURSDAY
-culligan-route/:67 Error scanning WEEK 2 FRIDAY
-culligan-route/:67 Error scanning WEEK 3 MONDAY
-culligan-route/:67 Error scanning WEEK 3 TUESDAY
-culligan-route/:67 Error scanning WEEK 3 WEDNESDAY
-culligan-route/:67 Error scanning WEEK 3 THURSDAY
-culligan-route/:67 Error scanning WEEK 3 FRIDAY
-culligan-route/:67 Error scanning WEEK 4 MONDAY
-culligan-route/:67 Error scanning WEEK 4 TUESDAY
-culligan-route/:67 Error scanning WEEK 4 WEDNESDAY
-culligan-route/:67 Error scanning WEEK 4 THURSDAY
-culligan-route/:67 Error scanning WEEK 4 FRIDAY
-culligan-route/:67 Error scanning VALLEY VIEW
-culligan-route/:67 Error scanning NORTH
-culligan-route/:67 Error scanning DAWSON CREEK
-culligan-route/:67 Error scanning SALT
+<div id="global-search-tab" class="mgr-content">
+    <h3>SEARCH ALL ROUTES</h3>
+    <input type="text" id="global-search-input" placeholder="Enter Company Name..." style="width:100%; padding:12px; margin-bottom:10px; background:#333; color:white; border:1px solid #0078ff;">
+    <button class="btn" onclick="runGlobalSearch()" style="width:100%;">Execute Global Search</button>
+    
+    <div id="search-status-bar" style="margin-top:12px; display:none;">
+        <div id="progress-text" style="font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px;">INITIALIZING SCAN...</div>
+        <div style="width:100%; background:#444; height:6px; border-radius:3px; overflow:hidden;">
+            <div id="progress-fill" style="width:0%; height:100%; background:#0078ff; transition: width 0.2s ease;"></div>
+        </div>
+    </div>
+    
+    <div id="search-results-list" style="margin-top:20px;"></div>
+</div>
+
+<script>
+/** UPDATED SEARCH LOGIC WITH PROGRESS TRACKER **/
+async function runGlobalSearch() {
+    const term = document.getElementById('global-search-input').value.trim();
+    const statusBox = document.getElementById('search-status-bar');
+    const progText = document.getElementById('progress-text');
+    const progFill = document.getElementById('progress-fill');
+    const resultsDiv = document.getElementById('search-results-list');
+    
+    if(!term) return alert("Please enter a name to search.");
+    
+    // Reset View
+    resultsDiv.innerHTML = "";
+    statusBox.style.display = "block";
+    progFill.style.width = "0%";
+    
+    const routes = [
+        "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY",
+        "WEEK 2 MONDAY", "WEEK 2 TUESDAY", "WEEK 2 WEDNESDAY", "WEEK 2 THURSDAY", "WEEK 2 FRIDAY",
+        "WEEK 3 MONDAY", "WEEK 3 TUESDAY", "WEEK 3 WEDNESDAY", "WEEK 3 THURSDAY", "WEEK 3 FRIDAY",
+        "WEEK 4 MONDAY", "WEEK 4 TUESDAY", "WEEK 4 WEDNESDAY", "WEEK 4 THURSDAY", "WEEK 4 FRIDAY",
+        "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT"
+    ];
+
+    let allFound = [];
+
+    for (let i = 0; i < routes.length; i++) {
+        const route = routes[i];
+        
+        // Update Progress Bar UI
+        const percent = Math.round(((i + 1) / routes.length) * 100);
+        progFill.style.width = percent + "%";
+        progText.innerText = `SCANNING: ${route}`;
+
+        try {
+            // Fetching sheet data directly to avoid script permission locks
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(route)}`;
+            const res = await fetch(url);
+            const text = await res.text();
+            const json = JSON.parse(text.substring(47).slice(0, -2));
+            
+            const rows = json.table.rows;
+            rows.forEach(row => {
+                const company = row.c[0] ? row.c[0].v.toString() : "";
+                const address = row.c[1] ? row.c[1].v.toString() : "";
+                
+                if (company.toLowerCase().includes(term.toLowerCase())) {
+                    allFound.push({ company, address, route });
+                }
+            });
+        } catch (e) {
+            console.warn("Skipping " + route + " due to error or empty sheet.");
+        }
+    }
+
+    // Wrap Up
+    progText.innerText = "SCAN COMPLETE";
+    if (allFound.length === 0) {
+        resultsDiv.innerHTML = `<div style="padding:10px; background:#442222; color:#ff8888; border-radius:4px;">No customers found matching "${term}".</div>`;
+    } else {
+        allFound.forEach(item => {
+            const card = document.createElement('div');
+            card.style = "background:#2a2a2a; padding:12px; margin-bottom:8px; border-left:4px solid #0078ff; border-radius:4px;";
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <b style="color:white;">${item.company}</b>
+                    <span style="color:#0078ff; font-size:10px; font-weight:bold;">${item.route}</span>
+                </div>
+                <div style="color:#aaa; font-size:11px; margin-top:4px;">${item.address}</div>
+            `;
+            resultsDiv.appendChild(card);
+        });
+    }
+}
+</script>
