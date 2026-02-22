@@ -44,14 +44,34 @@
             margin-bottom: 10px;
         }
 
+        .btn-group { display: flex; gap: 5px; }
+
         .search-btn {
-            width: 100%;
+            flex: 2;
             padding: 12px;
             background: #0078ff;
             color: white;
             border: none;
             border-radius: 4px;
             font-weight: bold;
+            cursor: pointer;
+        }
+
+        .edit-btn {
+            flex: 1;
+            padding: 12px;
+            background: #555; /* Default Disabled Color */
+            color: #aaa;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: not-allowed;
+            transition: 0.3s;
+        }
+
+        .edit-btn.active {
+            background: #f39c12;
+            color: white;
             cursor: pointer;
         }
 
@@ -74,7 +94,10 @@
             position: relative;
         }
 
-        .stop-card:hover { background: #3d3d3d; }
+        .stop-card.selected {
+            border-left: 5px solid #f39c12;
+            background: #444;
+        }
 
         .tab-badge {
             position: absolute;
@@ -100,18 +123,21 @@
 
 <div id="sidebar">
     <div id="sidebar-header">
-        <h2 style="margin:0;">Culligan Water</h2>
-        <div id="status-bar">Ready to Search</div>
+        <h2 style="margin:0;">Route Manager</h2>
+        <div id="status-bar">Ready</div>
     </div>
 
     <div id="search-box">
-        <input type="text" id="query" class="search-input" placeholder="Search customer (e.g. Rexall)">
-        <button class="search-btn" onclick="globalSearch()">SEARCH ALL ROUTES</button>
+        <input type="text" id="query" class="search-input" placeholder="Search customer name...">
+        <div class="btn-group">
+            <button class="search-btn" onclick="globalSearch()">SEARCH</button>
+            <button id="edit-button" class="edit-btn" onclick="openEdit()">EDIT</button>
+        </div>
     </div>
 
     <div id="stop-list">
         <div style="text-align:center; color:#777; margin-top:30px;">
-            Enter a name above to scan your sheets
+            Search results will appear here
         </div>
     </div>
 </div>
@@ -121,7 +147,6 @@
 <script>
     const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
     
-    // The exact tab names from your spreadsheet
     const TABS = [
         "Week 1 Monday", "Week 1 Tuesday", "Week 1 Wednessday", "Week 1 Thursday", "Week 1 Friday",
         "Week 2 Monday", "Week 2 Tuesday", "week 2 tues north ", "Week 2 Wednessday", "Week 2 Thursday", "Week 2 Friday",
@@ -133,16 +158,20 @@
     let map = L.map('map').setView([55.1707, -118.7947], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
+    let selectedCustomer = null;
+
     async function globalSearch() {
         const term = document.getElementById('query').value.trim().toLowerCase();
         if (!term) return;
 
+        // Reset state
+        selectedCustomer = null;
+        updateEditButton(false);
+        
         const list = document.getElementById('stop-list');
         const status = document.getElementById('status-bar');
+        list.innerHTML = `<div style="text-align:center; padding:20px;">Scanning routes...</div>`;
         
-        list.innerHTML = `<div style="text-align:center; padding:20px;">Scanning 25 sheets...</div>`;
-        status.innerText = "Searching...";
-
         let found = 0;
 
         for (let tab of TABS) {
@@ -155,59 +184,65 @@
                 if (json.table && json.table.rows) {
                     json.table.rows.forEach(row => {
                         const rowData = row.c.map(cell => cell ? String(cell.v) : "");
-                        const combined = rowData.join(" ").toLowerCase();
-
-                        if (combined.includes(term)) {
-                            if (found === 0) list.innerHTML = ""; // Clear loader on first match
+                        if (rowData.join(" ").toLowerCase().includes(term)) {
+                            if (found === 0) list.innerHTML = "";
                             found++;
-                            
-                            // Guessing Name and Address based on your sheet structure
-                            const company = rowData[2] || rowData[1] || "Unknown";
-                            const address = rowData[3] || "No Address Found";
-                            
-                            createCard(company, address, tab);
+                            createCard(rowData, tab);
                         }
                     });
                 }
-            } catch (e) {
-                console.error("Error on tab: " + tab);
-            }
+            } catch (e) { console.error("Tab error:", tab); }
         }
 
-        status.innerText = `Search Complete: ${found} found`;
-        if (found === 0) {
-            list.innerHTML = `<div style="padding:20px; color:#ff4d4d; text-align:center;">No customers matching "${term}" found.</div>`;
-        }
+        status.innerText = `Matches: ${found}`;
+        if (found === 0) list.innerHTML = `<div style="padding:20px; text-align:center;">No matches found.</div>`;
     }
 
-    function createCard(name, addr, tab) {
+    function createCard(data, tab) {
+        const name = data[2] || data[1] || "Unknown";
+        const addr = data[3] || "No Address";
+        
         const list = document.getElementById('stop-list');
         const card = document.createElement('div');
         card.className = 'stop-card';
-        card.innerHTML = `
-            <span class="tab-badge">${tab}</span>
-            <div style="font-weight:bold; color:#0078ff; font-size:16px;">${name}</div>
-            <div style="font-size:13px; color:#bbb; margin-top:5px;">${addr}</div>
-        `;
+        card.innerHTML = `<span class="tab-badge">${tab}</span><b>${name}</b><br><small>${addr}</small>`;
         
         card.onclick = () => {
-            // Geographic lookup
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Grande Prairie, AB")}`)
-            .then(r => r.json())
-            .then(data => {
-                if(data[0]) {
-                    const pos = [data[0].lat, data[0].lon];
-                    map.setView(pos, 16);
-                    L.marker(pos).addTo(map).bindPopup(`<b>${name}</b><br>${addr}`).openPopup();
-                } else {
-                    alert("Customer found in list, but address could not be located on the map.");
+            // Highlight card
+            document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            
+            // Activate Edit Button
+            selectedCustomer = { name, addr, tab };
+            updateEditButton(true);
+
+            // Map Logic
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", AB")}`)
+            .then(r => r.json()).then(geo => {
+                if(geo[0]) {
+                    const pos = [geo[0].lat, geo[0].lon];
+                    map.setView(pos, 15);
+                    L.marker(pos).addTo(map).bindPopup(name).openPopup();
                 }
             });
         };
-        
         list.appendChild(card);
     }
-</script>
 
+    function updateEditButton(active) {
+        const btn = document.getElementById('edit-button');
+        if (active) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    }
+
+    function openEdit() {
+        if (!selectedCustomer) return;
+        alert("Opening Maintenance for: " + selectedCustomer.name + "\nLocation: " + selectedCustomer.tab);
+        // Note: Actual 'Editing' requires a Google Service Account or API Key setup
+    }
+</script>
 </body>
 </html>
