@@ -25,14 +25,25 @@
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold;}
-    #main-view { flex:1; display:flex; flex-direction:column;}
+    #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
     #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
     #map { flex:1; }
     .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
+    .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
     #status { font-size:13px; color:#0078ff; font-weight: bold;}
     #route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; }
     .custom-div-icon { background:transparent; border:none;}
     .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
+
+    /* Manager Panel Styles */
+    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 50%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
+    #manager-panel.open { bottom: 0; }
+    .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; }
+    .mgr-tab-btn { padding: 15px 25px; border: none; background: none; color: #aaa; cursor: pointer; font-weight: bold; }
+    .mgr-tab-btn.active { color: #0078ff; border-bottom: 2px solid #0078ff; background: #2a2a2a; }
+    .mgr-content { padding: 20px; display: none; overflow-y: auto; height: calc(100% - 60px); }
+    .mgr-content.active { display: block; }
+    .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
 </style>
 </head>
 
@@ -97,9 +108,26 @@
             <option value="SALT">SALT</option>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
+        <button class="btn-mgr" onclick="toggleManager()">Manager Panel</button>
         <div id="status">Status: Ready</div>
     </div>
     <div id="map"></div>
+
+    <div id="manager-panel">
+        <button class="close-mgr" onclick="toggleManager()">&times;</button>
+        <div class="mgr-tabs">
+            <button class="mgr-tab-btn active" onclick="switchTab('reports')">REPORTS</button>
+            <button class="mgr-tab-btn" onclick="switchTab('cust-mgmt')">CUSTOMER MANAGEMENT</button>
+        </div>
+        <div id="reports" class="mgr-content active">
+            <h3>Delivery Reports</h3>
+            <p>Access your delivery data logs here.</p>
+        </div>
+        <div id="cust-mgmt" class="mgr-content">
+            <h3>Customer Management</h3>
+            <p>Manage customer lists and route details.</p>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -116,6 +144,17 @@ window.onload = () => {
     markerLayer = L.layerGroup().addTo(map);
     initSignaturePad();
 };
+
+function toggleManager() {
+    document.getElementById('manager-panel').classList.toggle('open');
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
 
 function initSignaturePad() {
     canvas = document.getElementById('sig-canvas');
@@ -221,7 +260,7 @@ async function submitLog(status) {
 
     if (status === 'NOT DELIVERED') {
         const reason = prompt("Enter reason for NOT DELIVERED:");
-        if (!reason) return; // Cancel if no reason given
+        if (!reason) return;
         payload.reason = reason;
         document.getElementById('status').innerText = "Logging skip...";
     } else {
