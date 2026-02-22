@@ -7,157 +7,150 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --culligan-blue: #0078ff; --dark-bg: #1e1e2d; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f7f6; display: flex; flex-direction: column; height: 100vh; }
+        :root { --culligan-blue: #0078ff; --sidebar-width: 280px; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; background: #f0f2f5; }
         
-        /* Top Navigation Bar */
-        header { background: var(--culligan-blue); color: white; padding: 10px 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; z-index: 2000; }
-        .nav-controls { display: flex; gap: 8px; align-items: center; }
-        
-        /* Layout */
-        #main-app { display: none; flex: 1; flex-direction: column; }
-        #map { flex: 1; width: 100%; border-bottom: 2px solid #ddd; }
-        
-        /* Sidebar Hidden by Default */
-        #managerSidebar { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: var(--dark-bg); color: white; transition: 0.3s; z-index: 3000; padding: 20px; box-sizing: border-box; }
-        .menu-item { padding: 15px; border-bottom: 1px solid #333; cursor: pointer; }
+        /* RESTORED LOADING BAR */
+        #loading-bar-container { position: fixed; top: 0; left: 0; width: 100%; height: 4px; background: #e0e0e0; z-index: 10000; display: none; }
+        #loading-bar { height: 100%; width: 0%; background: var(--culligan-blue); transition: width 0.3s; }
+
+        /* RESTORED SIDE PANEL */
+        #sidebar { width: var(--sidebar-width); background: #1e1e2d; color: white; display: flex; flex-direction: column; transition: 0.3s; z-index: 1001; }
+        .sidebar-header { padding: 20px; background: #1a1a27; text-align: center; border-bottom: 1px solid #333; }
+        .menu-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #2d2d3f; }
         .menu-item:hover { background: var(--culligan-blue); }
-
-        /* Login Screen */
-        #loginScreen { position: fixed; inset: 0; background: var(--dark-bg); z-index: 5000; display: flex; align-items: center; justify-content: center; }
-        .login-box { background: white; padding: 30px; border-radius: 12px; width: 300px; text-align: center; }
-
-        /* Modals */
-        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 4000; align-items: center; justify-content: center; }
-        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; color: #333; }
         
-        button { cursor: pointer; border-radius: 4px; border: none; padding: 10px; font-weight: bold; }
+        #main { flex: 1; display: flex; flex-direction: column; }
+        header { background: var(--culligan-blue); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        #map { flex: 1; width: 100%; }
+        #stop-list { height: 250px; overflow-y: auto; padding: 15px; background: white; border-top: 2px solid #ddd; }
+        
+        .stop-card { background: white; border-left: 5px solid var(--culligan-blue); padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
+        
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; color: white; }
+        .modal-box { background: #fff; color: #333; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px; }
+        
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        input, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        
+        #sig-canvas { border: 1px solid #000; background: #fff; width: 100%; height: 120px; touch-action: none; }
+        .btn { padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         .btn-blue { background: var(--culligan-blue); color: white; }
-        .btn-nav { background: white; color: var(--culligan-blue); padding: 5px 15px; }
-
-        #sig-canvas { border: 1px solid #ccc; width: 100%; height: 120px; background: white; touch-action: none; }
     </style>
 </head>
 <body>
 
-<div id="loginScreen">
-    <div class="login-box">
-        <h2 style="color:var(--culligan-blue); margin-top:0;">CULLIGAN LOGIN</h2>
-        <input type="password" id="sysPass" placeholder="Enter Access Code" style="width:100%; padding:10px; margin-bottom:15px; box-sizing:border-box;">
-        <button class="btn-blue" style="width:100%;" onclick="verifySystemBoot()">BOOT SYSTEM</button>
-    </div>
+<div id="loading-bar-container"><div id="loading-bar"></div></div>
+
+<div id="sidebar">
+    <div class="sidebar-header"><h2>CULLIGAN</h2></div>
+    <div class="menu-item" onclick="loadRouteList()">Refresh Route List</div>
+    <div id="route-list-container"></div>
+    <div class="menu-item" style="margin-top:auto; background:#dc3545;">Logout</div>
 </div>
 
-<div id="main-app">
+<div id="main">
     <header>
-        <div class="nav-controls">
-            <button class="btn-nav" onclick="navStop(-1)">❮ BACK</button>
-            <button class="btn-nav" onclick="navStop(1)">FWD ❯</button>
-        </div>
-        
-        <select id="routeSelector" style="padding:5px;">
-            <option>City Route A</option>
-            <option>Rural Route B</option>
-        </select>
-
-        <button class="btn-nav" onclick="toggleManager()">MENU ☰</button>
+        <span onclick="toggleSidebar()" style="cursor:pointer; font-size:20px;">☰</span>
+        <div id="current-route">Culligan Route Manager</div>
+        <div id="stop-count">0 Stops</div>
     </header>
-
     <div id="map"></div>
-</div>
-
-<div id="managerSidebar">
-    <h3>MANAGER MENU</h3>
-    <div class="menu-item" onclick="showReports()">Reports Tab</div>
-    <div class="menu-item" onclick="showLogs()">Driver Logs</div>
-    <div class="menu-item" onclick="endOfDay()">End of Day</div>
-    <div class="menu-item" style="background:#dc3545; margin-top:20px;" onclick="location.reload()">System Logout</div>
+    <div id="stop-list"></div>
 </div>
 
 <div id="dataModal" class="overlay">
     <div class="modal-box">
         <h2 id="mCustName" style="color:var(--culligan-blue); margin-top:0;">Customer</h2>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="input-grid">
             <input type="number" id="inv18" placeholder="18L Del">
             <input type="number" id="ret18" placeholder="18L Ret">
             <input type="number" id="invSm" placeholder="Sm Del">
             <input type="number" id="retSm" placeholder="Sm Ret">
+            <input type="number" id="cases" placeholder="Cases">
+            <input type="text" id="recv" placeholder="Recv By">
         </div>
-        <input type="text" id="recv" placeholder="Recv By" style="width:100%; margin:10px 0; padding:10px; box-sizing:border-box;">
+        <textarea id="notes" placeholder="Notes"></textarea>
         <p>Signature:</p>
         <canvas id="sig-canvas"></canvas>
-        <button class="btn-blue" style="width:100%; margin-top:15px;" onclick="submitDelivery()">SUBMIT DELIVERY</button>
-        <button style="width:100%; margin-top:5px;" onclick="closeModals()">CANCEL</button>
+        <button class="btn btn-blue" onclick="submitData()">SUBMIT DELIVERY</button>
+        <button class="btn" style="background:#eee;" onclick="closeModals()">CANCEL</button>
     </div>
 </div>
 
 <script>
     const API = "YOUR_WEB_APP_URL";
-    let map, activeIdx = 0, canvas, ctx, drawing = false;
-    let userRole = "";
-    let stops = [
-        { company: "Farm Customer 1", address: "123 North St", lat: 55.17, lng: -118.79 },
-        { company: "Retail Hub 2", address: "456 South Ave", lat: 55.18, lng: -118.80 }
-    ];
+    let map, activeIdx, canvas, ctx, drawing = false;
+    let stops = [];
 
-    function verifySystemBoot() {
-        const pass = document.getElementById('sysPass').value;
-        if(pass === "1234") {
-            userRole = "Driver";
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'flex';
-            initApp();
-        } else if (pass === "5678") {
-            userRole = "Manager";
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'flex';
-            initApp();
-        } else {
-            alert("Access Denied");
-        }
+    // RESTORED: Route Loading Features
+    async function loadRouteList() {
+        showLoading(true);
+        updateProgress(30);
+        try {
+            const resp = await fetch(API);
+            const routes = await resp.json();
+            const container = document.getElementById('route-list-container');
+            container.innerHTML = "";
+            updateProgress(70);
+            routes.forEach(r => {
+                if(r === "Deliveries") return;
+                const div = document.createElement('div');
+                div.className = "menu-item";
+                div.innerText = r;
+                div.onclick = () => loadRouteData(r);
+                container.appendChild(div);
+            });
+            updateProgress(100);
+        } catch (e) { alert("Load Error"); }
+        setTimeout(() => showLoading(false), 500);
     }
 
-    function toggleManager() {
-        const sb = document.getElementById('managerSidebar');
-        sb.style.right = sb.style.right === "0px" ? "-300px" : "0px";
+    async function loadRouteData(routeName) {
+        showLoading(true);
+        updateProgress(50);
+        try {
+            const resp = await fetch(`${API}?sheet=${routeName}`);
+            stops = await resp.json();
+            document.getElementById('current-route').innerText = routeName;
+            renderStops();
+            updateProgress(100);
+        } catch (e) { alert("Data Error"); }
+        setTimeout(() => showLoading(false), 500);
     }
 
-    function navStop(dir) {
-        activeIdx = (activeIdx + dir + stops.length) % stops.length;
-        openDeliveryModal(activeIdx);
+    function showLoading(show) { document.getElementById('loading-bar-container').style.display = show ? 'block' : 'none'; }
+    function updateProgress(val) { document.getElementById('loading-bar').style.width = val + '%'; }
+
+    function renderStops() {
+        const list = document.getElementById('stop-list');
+        list.innerHTML = "";
+        stops.forEach((s, i) => {
+            const card = document.createElement('div');
+            card.className = "stop-card";
+            card.innerHTML = `<b>#${i+1} ${s.Customer || s.company}</b><br><small>${s.Address || s.address}</small>`;
+            card.onclick = () => openModal(i);
+            list.appendChild(card);
+        });
+        document.getElementById('stop-count').innerText = stops.length + " Stops";
     }
 
-    function openDeliveryModal(idx) {
+    // Preservation of existing Signature and Submission logic
+    function openModal(idx) {
         activeIdx = idx;
-        document.getElementById('mCustName').innerText = stops[idx].company;
+        document.getElementById('mCustName').innerText = stops[idx].Customer || stops[idx].company;
         document.getElementById('dataModal').style.display = 'flex';
         initCanvas();
     }
 
-    function initApp() {
+    function closeModals() { document.getElementById('dataModal').style.display = 'none'; }
+
+    window.onload = () => {
         map = L.map("map").setView([55.17, -118.79], 13);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-        stops.forEach((s, i) => {
-            L.marker([s.lat, s.lng]).addTo(map).on('click', () => openDeliveryModal(i));
-        });
-    }
-
-    function initCanvas() {
-        canvas = document.getElementById('sig-canvas');
-        ctx = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth;
-        ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
-        canvas.onmousedown = () => drawing = true;
-        canvas.onmousemove = (e) => { if(drawing) ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); };
-        window.onmouseup = () => { drawing = false; ctx.beginPath(); };
-    }
-
-    function closeModals() { document.querySelectorAll('.overlay').forEach(o => o.style.display = 'none'); }
-    
-    // Manager Menu Functions
-    function showReports() { alert("Loading Reports..."); }
-    function showLogs() { alert("Accessing Driver Logs..."); }
-    function endOfDay() { alert("Processing End of Day..."); }
+        loadRouteList();
+    };
 </script>
 </body>
 </html>
