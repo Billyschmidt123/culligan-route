@@ -21,7 +21,7 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 .form-group { margin-bottom:12px; }
 .form-group label { display:block; font-size:12px; color:#aaa; margin-bottom:4px; }
 .form-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
-#sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:100px; }
+#sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:100px; touch-action: none; }
 .form-btns { display:flex; gap:10px; margin-top:15px; }
 .btn-del { flex:1; background:#28a745; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold; }
 .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold; }
@@ -117,65 +117,87 @@ window.onload = () => {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
     routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map);
+    
     L.marker([warehouse.lat, warehouse.lng], {
         icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">W</div>` })
     }).addTo(map).bindPopup("<b>Warehouse</b>");
 
-    // Signature Pad Setup
-    canvas = document.getElementById('sig-canvas');
-    ctx = canvas.getContext('2d');
-    canvas.addEventListener('mousedown', () => drawing = true);
-    window.addEventListener('mouseup', () => drawing = false);
-    canvas.addEventListener('mousemove', draw);
+    initSignaturePad();
 };
+
+function initSignaturePad() {
+    canvas = document.getElementById('sig-canvas');
+    if(!canvas) return;
+    ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    const startDraw = (e) => { drawing = true; draw(e); };
+    const stopDraw = () => { drawing = false; ctx.beginPath(); };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('touchstart', (e) => { startDraw(e.touches[0]); e.preventDefault(); });
+    canvas.addEventListener('touchend', stopDraw);
+    canvas.addEventListener('touchmove', (e) => { draw(e.touches[0]); e.preventDefault(); });
+}
 
 function draw(e) {
     if (!drawing) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.strokeStyle = 'black';
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.lineTo(x, y);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.moveTo(x, y);
 }
 
 function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
 
 async function loadRoute() {
     const selectedGid = document.getElementById("route-select").value;
-    document.getElementById("status").innerText = "Loading Google Sheet...";
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
-    const res = await fetch(url);
-    const text = await res.text();
-    const json = JSON.parse(text.substring(47).slice(0, -2));
-    const rows = json.table.rows.map(r => Object.fromEntries(r.c.map((c,i)=>[json.table.cols[i].label, c ? c.v : ""])));
+    if(selectedGid === "GID_HERE") { alert("Please replace GID_HERE with your Sheet Tab ID"); return; }
     
-    const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
-    const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
-    let tempStops = [];
+    document.getElementById("status").innerText = "Loading Google Sheet...";
+    try {
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
+        const res = await fetch(url);
+        const text = await res.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        const rows = json.table.rows.map(r => Object.fromEntries(r.c.map((c,i)=>[json.table.cols[i].label, c ? c.v : ""])));
+        
+        const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
+        const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
+        
+        let tempStops = [];
+        for (let i = 0; i < rows.length; i++) {
+            document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
+            const geo = await geocode(rows[i][addrKey]);
+            if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], ...geo });
+            await new Promise(r => setTimeout(r, 1500));
+        }
 
-    for (let i = 0; i < rows.length; i++) {
-        document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
-        const geo = await geocode(rows[i][addrKey]);
-        if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], ...geo });
-        await new Promise(r => setTimeout(r, 1500));
+        stops = optimize(tempStops);
+        renderRoute();
+        renderSidebar();
+        document.getElementById("status").innerText = "Route Ready";
+    } catch (e) {
+        document.getElementById("status").innerText = "Error loading data.";
+        console.error(e);
     }
-
-    stops = optimize(tempStops);
-    renderRoute();
-    renderSidebar();
-    document.getElementById("status").innerText = "Route Ready";
 }
 
 function openForm(index) {
     currentStopIndex = index;
-    const stop = stops[index];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('driver-form').style.display = 'block';
-    document.getElementById('form-customer-name').innerText = stop.company;
-    document.getElementById('form-customer-addr').innerText = stop.address;
+    document.getElementById('form-customer-name').innerText = stops[index].company;
+    document.getElementById('form-customer-addr').innerText = stops[index].address;
     clearSig();
 }
 
@@ -187,32 +209,18 @@ function closeForm() {
 async function submitLog(status) {
     let reason = "";
     if (status === 'NOT DELIVERED') {
-        reason = prompt("Please supply a reason for non-delivery:");
+        reason = prompt("Reason for non-delivery:");
         if (!reason) return;
     }
 
-    const timestamp = new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'medium' });
-    const logName = `TRIP LOG ${document.getElementById("route-select").selectedOptions[0].text} - ${new Date().toLocaleDateString('en-US', { dateStyle: 'long' })}`;
+    const now = new Date();
+    const timestamp = now.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'medium' });
+    const logTitle = `TRIP LOG ${document.getElementById("route-select").selectedOptions[0].text} - ${now.toLocaleDateString('en-US', { dateStyle: 'long' })}`;
 
-    const logData = {
-        Route: logName,
-        Customer: stops[currentStopIndex].company,
-        Status: status,
-        Timestamp: timestamp,
-        Bottles18L: document.getElementById('f-18l').value,
-        SmallBottles: document.getElementById('f-small').value,
-        Returns18L: document.getElementById('f-18l-ret').value,
-        SmallReturns: document.getElementById('f-small-ret').value,
-        ReceivedBy: document.getElementById('f-rec-by').value,
-        Reason: reason
-    };
-
-    console.log("Saving to Trip Log Sheet:", logData);
-    alert(`Entry Saved to ${logName}\nStatus: ${status} at ${timestamp}`);
+    alert(`Saved to ${logTitle}\nStatus: ${status}\nTime: ${timestamp}`);
     closeForm();
 }
 
-// REST OF THE ORIGINAL LOGIC (Geocode, Distance, Optimize, Render)
 async function geocode(address) {
     const query = encodeURIComponent(address + ", Grande Prairie, AB");
     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
