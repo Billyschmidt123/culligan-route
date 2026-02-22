@@ -27,12 +27,12 @@
         .btn-fail { background: #e74c3c; }
         select { padding: 9px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 160px; }
         #dataModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; align-items:center; justify-content:center; }
-        .modal-content { background:#222; padding:20px; border-radius:8px; width:450px; border:1px solid #444; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background:#222; padding:20px; border-radius:8px; width:420px; border:1px solid #444; max-height: 90vh; overflow-y: auto; }
         .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
         .field-row { margin-bottom: 12px; }
-        .field-row label { display: block; font-size: 11px; color: #aaa; margin-bottom: 4px; text-transform: uppercase; }
-        .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; border-radius: 4px; }
-        #sig-canvas { background: white; border-radius: 4px; width: 100%; height: 120px; cursor: crosshair; touch-action: none; }
+        .field-row label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
+        .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; }
+        #sig-canvas { background: white; border-radius: 4px; width: 100%; height: 100px; cursor: crosshair; touch-action: none; }
         .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; }
         .leaflet-tooltip-own { background: rgba(0,0,0,0.7); border: 1px solid #0078ff; color: white; border-radius: 4px; padding: 2px 6px; }
         #ticket-output { display: none; padding: 30px; background: white; color: black; width: 500px; }
@@ -62,17 +62,16 @@
 </div>
 
 <div id="ticket-output">
-    <h2 style="text-align:center; color:#0078ff; border-bottom: 2px solid #0078ff;">Culligan Delivery Ticket</h2>
+    <h2 style="text-align:center; color:#0078ff;">Culligan Ticket</h2>
     <p><strong>Customer:</strong> <span id="t-cust"></span></p>
     <p><strong>Driver:</strong> <span id="t-driver"></span></p>
     <p><strong>Date:</strong> <span id="t-date"></span></p>
-    <hr>
-    <p><strong>Deliveries:</strong> 18L: <span id="t-18l"></span> | Small: <span id="t-sm"></span> | Cases: <span id="t-cs"></span></p>
-    <p><strong>Returns:</strong> 18L: <span id="t-18r"></span> | Small: <span id="t-smr"></span></p>
+    <p><strong>Items:</strong> 18L: <span id="t-18l"></span> | Sm: <span id="t-sm"></span> | Cs: <span id="t-cs"></span></p>
+    <p><strong>Returns:</strong> 18L: <span id="t-18r"></span> | Sm: <span id="t-smr"></span></p>
     <p><strong>Received By:</strong> <span id="t-recv"></span></p>
     <p><strong>Notes:</strong> <span id="t-notes"></span></p>
     <p><strong>Signature:</strong></p>
-    <img id="t-sig" style="width:250px; border-bottom:1px solid #000;">
+    <img id="t-sig" style="width:200px; border-bottom:1px solid #000;">
 </div>
 
 <div id="dataModal">
@@ -85,7 +84,7 @@
             <div class="field-row"><label>Small Bottles</label><input type="number" id="invSm" value="0"></div>
             <div class="field-row"><label>Small Returns</label><input type="number" id="retSm" value="0"></div>
             <div class="field-row"><label>Cases</label><input type="number" id="invCs" value="0"></div>
-            <div class="field-row"><label>Received By</label><input type="text" id="recvBy" placeholder="Name"></div>
+            <div class="field-row"><label>Received By</label><input type="text" id="recvBy"></div>
         </div>
 
         <div class="field-row">
@@ -98,11 +97,11 @@
             <textarea id="driverNotes" rows="2"></textarea>
         </div>
 
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
             <button class="btn" style="flex: 1;" onclick="processStop('Delivered')">DELIVERED</button>
             <button class="btn btn-fail" style="flex: 1;" onclick="processStop('Not Delivered')">NOT DELIVERED</button>
         </div>
-        <button class="btn" style="width:100%; background:#444; margin-top:10px;" onclick="document.getElementById('dataModal').style.display='none'">Cancel</button>
+        <button class="btn" style="width:100%; background:#444;" onclick="document.getElementById('dataModal').style.display='none'">Cancel</button>
     </div>
 </div>
 
@@ -170,16 +169,12 @@
         stops.forEach((s, i) => {
             path.push([s.lat, s.lng]);
             L.marker([s.lat, s.lng], { icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>` }) }).addTo(markerLayer).bindTooltip(s.address, { className: 'leaflet-tooltip-own' });
-            const card = document.createElement('div'); card.className = "stop-card"; card.id = "card-"+i; card.innerHTML = `<b>#${i+1} ${s.company}</b><br>${s.address}`;
+            const card = document.createElement('div'); card.className = "stop-card"; card.innerHTML = `<b>#${i+1} ${s.company}</b><br>${s.address}`;
             card.onclick = () => {
                 if(driverName === "Unknown") { alert("Please click 'Start Route' first."); return; }
                 activeIndex = i;
-                document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('active-card'));
-                card.classList.add('active-card');
                 document.getElementById('mCustName').innerText = s.company;
-                document.getElementById('active-addr').innerText = s.address;
-                document.getElementById('current-stop-bar').style.display = "block";
-                resetModalFields();
+                resetModal();
                 document.getElementById('dataModal').style.display = "flex";
                 initCanvas();
             };
@@ -190,7 +185,7 @@
         document.getElementById('stop-count').innerText = `${stops.length} Stops`;
     }
 
-    function resetModalFields() {
+    function resetModal() {
         document.getElementById('inv18L').value = 0;
         document.getElementById('ret18L').value = 0;
         document.getElementById('invSm').value = 0;
@@ -205,26 +200,26 @@
         const routeName = document.getElementById('routeSelector').value;
         const longDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         
-        const data = {
+        const counts = {
             l18: document.getElementById('inv18L').value,
             r18: document.getElementById('ret18L').value,
-            sm: document.getElementById('invSm').value,
-            rsm: document.getElementById('retSm').value,
+            lSm: document.getElementById('invSm').value,
+            rSm: document.getElementById('retSm').value,
             cs: document.getElementById('invCs').value,
-            recv: document.getElementById('recvBy').value,
-            notes: document.getElementById('driverNotes').value
+            recv: document.getElementById('recvBy').value
         };
 
+        // Populate Ticket
         document.getElementById('t-cust').innerText = stops[activeIndex].company;
         document.getElementById('t-driver').innerText = driverName;
         document.getElementById('t-date').innerText = longDate;
-        document.getElementById('t-18l').innerText = data.l18;
-        document.getElementById('t-sm').innerText = data.sm;
-        document.getElementById('t-cs').innerText = data.cs;
-        document.getElementById('t-18r').innerText = data.r18;
-        document.getElementById('t-smr').innerText = data.rsm;
-        document.getElementById('t-recv').innerText = data.recv;
-        document.getElementById('t-notes').innerText = data.notes;
+        document.getElementById('t-18l').innerText = counts.l18;
+        document.getElementById('t-sm').innerText = counts.lSm;
+        document.getElementById('t-cs').innerText = counts.cs;
+        document.getElementById('t-18r').innerText = counts.r18;
+        document.getElementById('t-smr').innerText = counts.rSm;
+        document.getElementById('t-recv').innerText = counts.recv;
+        document.getElementById('t-notes').innerText = document.getElementById('driverNotes').value;
         document.getElementById('t-sig').src = canvas.toDataURL();
         
         const ticket = document.getElementById('ticket-output');
@@ -238,16 +233,11 @@
                 Customer: stops[activeIndex].company,
                 Address: stops[activeIndex].address, 
                 Status: status, 
-                "18L_Delivered": data.l18,
-                "18L_Returns": data.r18,
-                "Small_Delivered": data.sm,
-                "Small_Returns": data.rsm,
-                "Cases": data.cs,
-                "Received_By": data.recv,
-                Notes: data.notes,
+                Notes: document.getElementById('driverNotes').value,
                 Signature: canvas.toDataURL(), 
                 RouteName: routeName, 
                 LongDate: longDate,
+                l18: counts.l18, r18: counts.r18, lSm: counts.lSm, rSm: counts.rSm, cs: counts.cs, recv: counts.recv,
                 FileName: `${stops[activeIndex].company} - ${longDate}.pdf`, 
                 pdfData: pdfData
             };
@@ -263,19 +253,20 @@
         canvas = document.getElementById('sig-canvas');
         ctx = canvas.getContext('2d');
         canvas.width = canvas.offsetWidth; 
-        canvas.height = 120;
+        canvas.height = 100;
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
 
-        const getXY = (e) => {
+        const getPos = (e) => {
             const rect = canvas.getBoundingClientRect();
-            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-            return [x, y];
+            return {
+                x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left,
+                y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top
+            };
         };
 
-        const start = (e) => { drawing = true; ctx.beginPath(); const [x,y] = getXY(e); ctx.moveTo(x,y); e.preventDefault(); };
-        const move = (e) => { if (drawing) { const [x,y] = getXY(e); ctx.lineTo(x,y); ctx.stroke(); } e.preventDefault(); };
+        const start = (e) => { drawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); if(e.touches) e.preventDefault(); };
+        const move = (e) => { if (drawing) { const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); } if(e.touches) e.preventDefault(); };
         const stop = () => drawing = false;
 
         canvas.onmousedown = start; canvas.onmousemove = move; window.onmouseup = stop;
