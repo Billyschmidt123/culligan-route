@@ -7,150 +7,170 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --culligan-blue: #0078ff; --sidebar-width: 280px; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; background: #f0f2f5; }
+        :root { --culligan-blue: #0078ff; --sidebar-width: 300px; --dark-bg: #1e1e2d; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; background: #f4f7f6; }
         
-        /* RESTORED LOADING BAR */
-        #loading-bar-container { position: fixed; top: 0; left: 0; width: 100%; height: 4px; background: #e0e0e0; z-index: 10000; display: none; }
-        #loading-bar { height: 100%; width: 0%; background: var(--culligan-blue); transition: width 0.3s; }
-
-        /* RESTORED SIDE PANEL */
-        #sidebar { width: var(--sidebar-width); background: #1e1e2d; color: white; display: flex; flex-direction: column; transition: 0.3s; z-index: 1001; }
+        /* Side Panel Styling */
+        #sidebar { width: var(--sidebar-width); background: var(--dark-bg); color: white; display: flex; flex-direction: column; z-index: 1001; }
         .sidebar-header { padding: 20px; background: #1a1a27; text-align: center; border-bottom: 1px solid #333; }
-        .menu-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #2d2d3f; }
-        .menu-item:hover { background: var(--culligan-blue); }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
         
+        /* Stop List in Side Panel */
+        .stop-card { background: #2d2d3f; border-left: 4px solid var(--culligan-blue); padding: 12px; margin-bottom: 10px; border-radius: 4px; cursor: pointer; color: white; transition: 0.2s; }
+        .stop-card:hover { background: #3d3d52; }
+        .stop-card b { font-size: 14px; }
+        .stop-card small { color: #bbb; display: block; margin-top: 4px; }
+
+        /* Main Display */
         #main { flex: 1; display: flex; flex-direction: column; }
-        header { background: var(--culligan-blue); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        
+        header { background: var(--culligan-blue); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
+        .nav-controls { display: flex; gap: 8px; }
         #map { flex: 1; width: 100%; }
-        #stop-list { height: 250px; overflow-y: auto; padding: 15px; background: white; border-top: 2px solid #ddd; }
-        
-        .stop-card { background: white; border-left: 5px solid var(--culligan-blue); padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
-        
-        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; color: white; }
-        .modal-box { background: #fff; color: #333; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px; }
-        
+
+        /* Login Screen */
+        #loginScreen { position: fixed; inset: 0; background: var(--dark-bg); z-index: 5000; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: white; padding: 30px; border-radius: 12px; width: 300px; text-align: center; }
+
+        /* Modals */
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 4000; align-items: center; justify-content: center; }
+        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; color: #333; }
         .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        input, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        input { width: 100%; padding: 10px; box-sizing: border-box; }
+        #sig-canvas { border: 1px solid #ccc; width: 100%; height: 120px; touch-action: none; background: #fafafa; }
         
-        #sig-canvas { border: 1px solid #000; background: #fff; width: 100%; height: 120px; touch-action: none; }
-        .btn { padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        .btn-blue { background: var(--culligan-blue); color: white; }
+        button { cursor: pointer; border: none; font-weight: bold; border-radius: 4px; }
+        .btn-blue { background: var(--culligan-blue); color: white; padding: 12px; }
+        .btn-nav { background: white; color: var(--culligan-blue); padding: 5px 12px; }
     </style>
 </head>
 <body>
 
-<div id="loading-bar-container"><div id="loading-bar"></div></div>
+<div id="loginScreen">
+    <div class="login-box">
+        <h2 style="color:var(--culligan-blue);">CULLIGAN BOOT</h2>
+        <input type="password" id="sysPass" placeholder="Enter PIN" style="margin-bottom:15px; text-align:center;">
+        <button class="btn-blue" style="width:100%;" onclick="verifyLogin()">LOGIN</button>
+    </div>
+</div>
 
 <div id="sidebar">
     <div class="sidebar-header"><h2>CULLIGAN</h2></div>
-    <div class="menu-item" onclick="loadRouteList()">Refresh Route List</div>
-    <div id="route-list-container"></div>
-    <div class="menu-item" style="margin-top:auto; background:#dc3545;">Logout</div>
+    <div class="sidebar-content">
+        <button class="btn-blue" style="width:100%; margin-bottom:15px;" onclick="loadRouteList()">Refresh Routes</button>
+        <div id="route-buttons" style="margin-bottom:20px;"></div>
+        <hr style="border: 0; border-top: 1px solid #333; margin-bottom:15px;">
+        <div id="stop-list-container"></div>
+    </div>
+    <div style="padding: 15px; background: #1a1a27; border-top: 1px solid #333;">
+        <button class="btn-blue" style="width:100%; background:#dc3545;" onclick="location.reload()">LOGOUT</button>
+    </div>
 </div>
 
 <div id="main">
     <header>
-        <span onclick="toggleSidebar()" style="cursor:pointer; font-size:20px;">☰</span>
-        <div id="current-route">Culligan Route Manager</div>
-        <div id="stop-count">0 Stops</div>
+        <div class="nav-controls">
+            <button class="btn-nav" onclick="navStop(-1)">❮ BACK</button>
+            <button class="btn-nav" onclick="navStop(1)">FWD ❯</button>
+        </div>
+        <div id="current-route" style="font-weight:bold;">Select Route</div>
+        <button class="btn-nav" onclick="openManager()">MANAGER ☰</button>
     </header>
     <div id="map"></div>
-    <div id="stop-list"></div>
 </div>
 
 <div id="dataModal" class="overlay">
     <div class="modal-box">
-        <h2 id="mCustName" style="color:var(--culligan-blue); margin-top:0;">Customer</h2>
+        <h3 id="mCustName" style="color:var(--culligan-blue); margin-top:0;">Customer</h3>
         <div class="input-grid">
             <input type="number" id="inv18" placeholder="18L Del">
             <input type="number" id="ret18" placeholder="18L Ret">
             <input type="number" id="invSm" placeholder="Sm Del">
             <input type="number" id="retSm" placeholder="Sm Ret">
-            <input type="number" id="cases" placeholder="Cases">
-            <input type="text" id="recv" placeholder="Recv By">
         </div>
-        <textarea id="notes" placeholder="Notes"></textarea>
-        <p>Signature:</p>
+        <input type="text" id="recv" placeholder="Received By" style="margin-bottom:10px;">
         <canvas id="sig-canvas"></canvas>
-        <button class="btn btn-blue" onclick="submitData()">SUBMIT DELIVERY</button>
-        <button class="btn" style="background:#eee;" onclick="closeModals()">CANCEL</button>
+        <button class="btn-blue" style="width:100%; margin-top:15px;" onclick="submitData()">COMPLETE DELIVERY</button>
+        <button style="width:100%; margin-top:5px; padding:10px;" onclick="closeModals()">CANCEL</button>
     </div>
 </div>
 
 <script>
     const API = "YOUR_WEB_APP_URL";
-    let map, activeIdx, canvas, ctx, drawing = false;
+    let map, activeIdx = 0, canvas, ctx, drawing = false;
     let stops = [];
 
-    // RESTORED: Route Loading Features
+    function verifyLogin() {
+        const pass = document.getElementById('sysPass').value;
+        if(pass === "1234" || pass === "5678") {
+            document.getElementById('loginScreen').style.display = 'none';
+            initMap();
+        } else { alert("Incorrect PIN"); }
+    }
+
     async function loadRouteList() {
-        showLoading(true);
-        updateProgress(30);
-        try {
-            const resp = await fetch(API);
-            const routes = await resp.json();
-            const container = document.getElementById('route-list-container');
-            container.innerHTML = "";
-            updateProgress(70);
-            routes.forEach(r => {
-                if(r === "Deliveries") return;
-                const div = document.createElement('div');
-                div.className = "menu-item";
-                div.innerText = r;
-                div.onclick = () => loadRouteData(r);
-                container.appendChild(div);
-            });
-            updateProgress(100);
-        } catch (e) { alert("Load Error"); }
-        setTimeout(() => showLoading(false), 500);
+        const resp = await fetch(API);
+        const routes = await resp.json();
+        const container = document.getElementById('route-buttons');
+        container.innerHTML = "";
+        routes.forEach(r => {
+            if(r === "Deliveries") return;
+            const btn = document.createElement('button');
+            btn.className = "btn-blue";
+            btn.style.width = "100%"; btn.style.marginBottom = "5px";
+            btn.innerText = r;
+            btn.onclick = () => loadRouteData(r);
+            container.appendChild(btn);
+        });
     }
 
     async function loadRouteData(routeName) {
-        showLoading(true);
-        updateProgress(50);
-        try {
-            const resp = await fetch(`${API}?sheet=${routeName}`);
-            stops = await resp.json();
-            document.getElementById('current-route').innerText = routeName;
-            renderStops();
-            updateProgress(100);
-        } catch (e) { alert("Data Error"); }
-        setTimeout(() => showLoading(false), 500);
+        const resp = await fetch(`${API}?sheet=${routeName}`);
+        stops = await resp.json();
+        document.getElementById('current-route').innerText = routeName;
+        renderSidebarStops();
     }
 
-    function showLoading(show) { document.getElementById('loading-bar-container').style.display = show ? 'block' : 'none'; }
-    function updateProgress(val) { document.getElementById('loading-bar').style.width = val + '%'; }
-
-    function renderStops() {
-        const list = document.getElementById('stop-list');
-        list.innerHTML = "";
+    function renderSidebarStops() {
+        const container = document.getElementById('stop-list-container');
+        container.innerHTML = "";
         stops.forEach((s, i) => {
             const card = document.createElement('div');
             card.className = "stop-card";
-            card.innerHTML = `<b>#${i+1} ${s.Customer || s.company}</b><br><small>${s.Address || s.address}</small>`;
+            card.innerHTML = `<b>#${i+1} ${s.Customer}</b><small>${s.Address}</small>`;
             card.onclick = () => openModal(i);
-            list.appendChild(card);
+            container.appendChild(card);
+            L.marker([s.lat, s.lng]).addTo(map).on('click', () => openModal(i));
         });
-        document.getElementById('stop-count').innerText = stops.length + " Stops";
     }
 
-    // Preservation of existing Signature and Submission logic
     function openModal(idx) {
         activeIdx = idx;
-        document.getElementById('mCustName').innerText = stops[idx].Customer || stops[idx].company;
+        document.getElementById('mCustName').innerText = stops[idx].Customer;
         document.getElementById('dataModal').style.display = 'flex';
         initCanvas();
     }
 
-    function closeModals() { document.getElementById('dataModal').style.display = 'none'; }
+    function navStop(dir) {
+        if(stops.length === 0) return;
+        activeIdx = (activeIdx + dir + stops.length) % stops.length;
+        openModal(activeIdx);
+    }
 
-    window.onload = () => {
+    function initMap() {
         map = L.map("map").setView([55.17, -118.79], 13);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-        loadRouteList();
-    };
+    }
+
+    function closeModals() { document.getElementById('dataModal').style.display = 'none'; }
+    function openManager() { alert("Manager Portal - Reports/End of Day/Logs"); }
+
+    function initCanvas() {
+        canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.onmousedown = () => drawing = true;
+        canvas.onmousemove = (e) => { if(drawing) ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); };
+        window.onmouseup = () => { drawing = false; ctx.beginPath(); };
+    }
 </script>
 </body>
 </html>
