@@ -33,7 +33,7 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
 #map { flex:1; }
 .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-#status { font-size:13px; color:#aaa;}
+#status { font-size:13px; color:#0078ff; font-weight: bold;}
 #route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; cursor: pointer; }
 .custom-div-icon { background:transparent; border:none;}
 .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
@@ -55,19 +55,15 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
         <button class="back-btn" onclick="closeProfile()">← BACK TO LIST</button>
         <h3 id="prof-name" style="margin:0 0 5px 0">Customer Name</h3>
         <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:2px;">Address</p>
-        <p id="prof-phone" style="font-size:13px; color:#0078ff; margin-bottom:15px; font-weight: bold;">Phone Loading...</p>
+        <p id="prof-phone" style="font-size:13px; color:#0078ff; margin-bottom:15px; font-weight: bold;">Phone: N/A</p>
         
         <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l" value="0"></div>
         <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div>
-        
         <div class="section-divider"></div>
-        
         <div class="profile-group"><label>18 L RETURNS</label><input type="number" id="p-18l-ret" value="0"></div>
         <div class="profile-group"><label>CASES</label><input type="number" id="p-cases" value="0"></div>
         <div class="profile-group"><label>SMALL BOTTLES RETURNED</label><input type="number" id="p-small-ret" value="0"></div>
-        
         <div class="section-divider"></div>
-
         <div class="profile-group"><label>RECEIVED BY</label><input type="text" id="p-rec-by" placeholder="Name"></div>
         
         <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
@@ -119,16 +115,14 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
 
-let map, markerLayer, routeLine, canvas, ctx, drawing = false;
+let map, markerLayer, canvas, ctx, drawing = false;
 let stops = [];
 let currentStopIndex = null;
-const warehouse = { lat: 55.1707, lng: -118.7947 };
 
 window.onload = () => {
-    map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
+    map = L.map("map").setView([55.1707, -118.7947], 11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
-    routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map);
     initSignaturePad();
 };
 
@@ -149,99 +143,74 @@ function initSignaturePad() {
 
 function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
-async function submitLog(status) {
-    let reason = "";
-    if (status === 'NOT DELIVERED') {
-        reason = prompt("REASON FOR NOT DELIVERED:");
-        if (!reason) return;
-    }
-
-    document.getElementById('status').innerText = "Uploading to DeliverySlip Folder...";
-    
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(22);
-    doc.text("Culligan Delivery Receipt", 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Customer: ${stops[currentStopIndex].company}`, 20, 40);
-    doc.text(`Address: ${stops[currentStopIndex].address}`, 20, 50);
-    doc.text(`Status: ${status}`, 20, 60);
-    doc.text(`18L Bottles: ${document.getElementById('p-18l').value}`, 20, 70);
-    doc.text(`Small Bottles: ${document.getElementById('p-small').value}`, 20, 80);
-    doc.text(`18L Returns: ${document.getElementById('p-18l-ret').value}`, 20, 90);
-    doc.text(`Cases: ${document.getElementById('p-cases').value}`, 20, 100);
-    doc.text(`Small Returns: ${document.getElementById('p-small-ret').value}`, 20, 110);
-    doc.text(`Received By: ${document.getElementById('p-rec-by').value}`, 20, 120);
-    if(reason) doc.text(`Reason: ${reason}`, 20, 130);
-    
-    const sigData = canvas.toDataURL("image/png");
-    doc.addImage(sigData, 'PNG', 20, 140, 60, 30);
-
-    const pdfBase64 = doc.output('datauristring').split(',')[1];
-    const filename = `Culligan_${stops[currentStopIndex].company.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
-
-    const payload = { filename: filename, pdfData: pdfBase64, customer: stops[currentStopIndex].company, status: status };
-
-    try {
-        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-        alert("SUCCESS: PDF Saved to DeliverySlip Folder");
-    } catch (e) {
-        alert("UPLOAD ERROR");
-    }
-
-    document.getElementById('status').innerText = "Ready";
-    closeProfile();
-}
-
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
-    document.getElementById("status").innerText = "Loading Stops...";
+    document.getElementById("status").innerText = "Connecting to Sheet...";
+    
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
         
-        // Match columns by label
         const cols = json.table.cols;
         const addrIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('addr'));
         const compIdx = cols.findIndex(c => c.label && (c.label.toLowerCase().includes('comp') || c.label.toLowerCase().includes('cust')));
         const phoneIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('phone'));
 
+        if (addrIdx === -1) {
+            alert("Error: Could not find 'Address' column in this tab.");
+            return;
+        }
+
         stops = [];
         const rows = json.table.rows;
         
         for (let i = 0; i < rows.length; i++) {
-            const rowData = rows[i].c;
-            const address = rowData[addrIdx] ? rowData[addrIdx].v : "";
+            const raw = rows[i].c;
+            const rawAddr = (raw[addrIdx] && raw[addrIdx].v) ? raw[addrIdx].v.toString() : "";
             
-            if (address && address.toString().trim() !== "" && address !== "undefined") {
-                const geo = await geocode(address);
-                if(geo) {
-                    stops.push({ 
-                        company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v : "Customer", 
-                        address: address, 
-                        phone: (rowData[phoneIdx] && rowData[phoneIdx].v) ? rowData[phoneIdx].v : "N/A", 
-                        ...geo 
-                    });
-                }
-                // Optional: add a small 200ms delay if you find it still hits rate limits
+            // Clean out headers or empty rows
+            if (!rawAddr || rawAddr.toLowerCase() === "address" || rawAddr.includes("http")) continue;
+
+            document.getElementById("status").innerText = `Mapping Stop ${i+1}/${rows.length}...`;
+            
+            const geo = await geocode(rawAddr);
+            if (geo) {
+                stops.push({
+                    company: (raw[compIdx] && raw[compIdx].v) ? raw[compIdx].v : "Customer",
+                    address: rawAddr,
+                    phone: (raw[phoneIdx] && raw[phoneIdx].v) ? raw[phoneIdx].v : "N/A",
+                    ...geo
+                });
             }
+            // CRITICAL: Wait 1.2 seconds between stops for Nominatim API
+            await new Promise(r => setTimeout(r, 1200));
         }
-        
+
         renderRoute();
         renderSidebar();
         document.getElementById("status").innerText = "Route Ready";
         document.getElementById("stop-count").innerText = `${stops.length} Stops Found`;
-    } catch (e) { 
+
+    } catch (e) {
+        document.getElementById("status").innerText = "Error Loading Data";
         console.error(e);
-        alert("Error loading Sheet data. Ensure tab names match exactly."); 
     }
 }
 
 async function geocode(addr) {
+    // Clean building numbers/units for better mapping results
+    let cleanAddr = addr.split('#')[0].split('Unit')[0].trim();
+    const query = encodeURIComponent(cleanAddr + ", Grande Prairie, AB");
+    
     try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Grande Prairie, AB")}`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+        if (res.status === 429) {
+            document.getElementById("status").innerText = "Throttled... waiting...";
+            await new Promise(r => setTimeout(r, 3000));
+            return null;
+        }
         const data = await res.json();
         return data.length ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
     } catch (e) { return null; }
@@ -249,9 +218,13 @@ async function geocode(addr) {
 
 function renderRoute() {
     markerLayer.clearLayers();
+    const coords = stops.map(s => [s.lat, s.lng]);
     stops.forEach((s, i) => {
-        L.marker([s.lat, s.lng], { icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) }).addTo(markerLayer);
+        L.marker([s.lat, s.lng], { 
+            icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) 
+        }).addTo(markerLayer);
     });
+    if (coords.length > 0) map.fitBounds(coords, {padding: [50, 50]});
 }
 
 function renderSidebar() {
@@ -261,7 +234,7 @@ function renderSidebar() {
         const div = document.createElement("div");
         div.className = "stop-card";
         div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
-        div.onclick = () => { map.setView([s.lat, s.lng], 15); openProfile(i); };
+        div.onclick = () => { map.setView([s.lat, s.lng], 16); openProfile(i); };
         list.appendChild(div);
     });
 }
@@ -280,6 +253,34 @@ function openProfile(i) {
 function closeProfile() {
     document.getElementById('list-view').style.display = 'block';
     document.getElementById('customer-profile').style.display = 'none';
+}
+
+async function submitLog(status) {
+    document.getElementById('status').innerText = "Saving PDF...";
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.text(`Customer: ${stops[currentStopIndex].company}`, 20, 40);
+    doc.text(`Address: ${stops[currentStopIndex].address}`, 20, 50);
+    doc.text(`18L: ${document.getElementById('p-18l').value}`, 20, 60);
+    
+    const sigData = canvas.toDataURL("image/png");
+    doc.addImage(sigData, 'PNG', 20, 100, 60, 30);
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    
+    const payload = { 
+        filename: `Culligan_${stops[currentStopIndex].company}.pdf`, 
+        pdfData: pdfBase64, 
+        customer: stops[currentStopIndex].company, 
+        status: status 
+    };
+
+    try {
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+        alert("SUCCESS: PDF Saved");
+    } catch (e) { alert("UPLOAD ERROR"); }
+    
+    document.getElementById('status').innerText = "Ready";
+    closeProfile();
 }
 </script>
 </body>
