@@ -271,7 +271,7 @@ function renderRoute() {
         latlngs.push([s.lat, s.lng]);
         L.marker([s.lat, s.lng], { 
             icon: L.divIcon({ className:'custom-div-icon', html:`<div class="${pinClass}">${i+1}</div>` }) 
-        }).addTo(markerLayer).bindPopup(`<b>${s.company}</b><br><button onclick="openProfile(${i})">Open</button>`);
+        }).addTo(markerLayer).bindPopup(`<b>${s.company}</b><br><button onclick="openProfile(${i})">Open Stop</button>`);
     });
     updateRouteLines();
     if (stops.length > 0) map.fitBounds(latlngs, {padding: [50, 50]});
