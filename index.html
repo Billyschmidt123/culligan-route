@@ -16,23 +16,19 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
 .stop-card:hover { background:#444;}
 
-/* Driver Form Styles */
-#driver-form { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
-.form-group { margin-bottom:12px; }
-.form-group label { display:block; font-size:12px; color:#aaa; margin-bottom:4px; }
-.form-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+/* New styles for the input fields on the customer profile */
+#customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
+.profile-group { margin-bottom:12px; }
+.profile-group label { display:block; font-size:12px; color:#aaa; margin-bottom:4px; }
+.profile-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
 #sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:100px; touch-action: none; }
-.form-btns { display:flex; gap:10px; margin-top:15px; }
-.btn-del { flex:1; background:#28a745; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold; }
-.btn-not { flex:1; background:#dc3545; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold; }
 .back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; }
 
 #main-view { flex:1; display:flex; flex-direction:column;}
-#controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
+#controls { background:#222; padding:15px; border-bottom:2px solid #0078ff;}
 #map { flex:1; }
 .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-#status { font-size:13px; color:#aaa;}
-#route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; cursor: pointer; }
+#status { font-size:13px; color:#aaa; margin-top:8px;}
 .custom-div-icon { background:transparent; border:none;}
 .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
 </style>
@@ -49,67 +45,37 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
         <div id="stop-list"></div>
     </div>
 
-    <div id="driver-form">
-        <button class="back-btn" onclick="closeForm()">← Back to List</button>
-        <h3 id="form-customer-name" style="margin:0 0 5px 0">Customer Name</h3>
-        <p id="form-customer-addr" style="font-size:12px; color:#aaa; margin-bottom:15px;">Address</p>
+    <div id="customer-profile">
+        <button class="back-btn" onclick="closeProfile()">← Back to List</button>
+        <h3 id="prof-name" style="margin:0 0 5px 0">Customer Name</h3>
+        <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:15px;">Address</p>
         
-        <div class="form-group"><label>18 L BOTTLES</label><input type="number" id="f-18l"></div>
-        <div class="form-group"><label>SMALL BOTTLES</label><input type="number" id="f-small"></div>
-        <div class="form-group"><label>CASED 18 L RETURNS</label><input type="number" id="f-18l-ret"></div>
-        <div class="form-group"><label>SMALL RETURNS</label><input type="number" id="f-small-ret"></div>
-        <div class="form-group"><label>RECEIVED BY</label><input type="text" id="f-rec-by"></div>
+        <div class="profile-group"><label>18l BOTTLES</label><input type="number" id="p-18l"></div>
+        <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small"></div>
+        <div class="profile-group"><label>CASES 18L RETURNS</label><input type="number" id="p-18l-ret"></div>
+        <div class="profile-group"><label>SMALL BOTTLES RETURNED</label><input type="number" id="p-small-ret"></div>
+        <div class="profile-group"><label>RECEIVED BY</label><input type="text" id="p-rec-by"></div>
         
-        <label style="font-size:12px; color:#aaa;">CUSTOMER SIGNATURE</label>
+        <label style="font-size:12px; color:#aaa;">SIGNATURE PANEL</label>
         <canvas id="sig-canvas"></canvas>
-        <button onclick="clearSig()" style="font-size:10px; background:none; border:none; color:#aaa; cursor:pointer;">Clear Signature</button>
-
-        <div class="form-btns">
-            <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
-            <button class="btn-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button>
-        </div>
+        <button onclick="clearSig()" style="font-size:10px; background:none; border:none; color:#aaa; cursor:pointer; margin-top:5px;">Clear Signature</button>
     </div>
 </div>
 
 <div id="main-view">
-    <div id="controls">
-        <select id="route-select">
-            <option value="917509026">WEEK 1 MONDAY</option>
-            <option value="GID_HERE">WEEK 1 TUESDAY</option>
-            <option value="GID_HERE">WEEK 1 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 1 THURSDAY</option>
-            <option value="GID_HERE">WEEK 1 FRIDAY</option>
-            <option value="GID_HERE">WEEK 2 MONDAY</option>
-            <option value="GID_HERE">WEEK 2 TUESDAY</option>
-            <option value="GID_HERE">WEEK 2 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 2 THURSDAY</option>
-            <option value="GID_HERE">WEEK 2 FRIDAY</option>
-            <option value="GID_HERE">WEEK 3 MONDAY</option>
-            <option value="GID_HERE">WEEK 3 TUESDAY</option>
-            <option value="GID_HERE">WEEK 3 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 3 THURSDAY</option>
-            <option value="GID_HERE">WEEK 3 FRIDAY</option>
-            <option value="GID_HERE">WEEK 4 MONDAY</option>
-            <option value="GID_HERE">WEEK 4 TUESDAY</option>
-            <option value="GID_HERE">WEEK 4 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 4 THURSDAY</option>
-            <option value="GID_HERE">WEEK 4 FRIDAY</option>
-            <option value="GID_HERE">VALLEY VIEW</option>
-            <option value="GID_HERE">NORTH</option>
-            <option value="GID_HERE">DAWSON CREEK</option>
-            <option value="GID_HERE">SALT</option>
-        </select>
-        <button class="btn" onclick="loadRoute()">Load Route</button>
-        <div id="status">Status: Ready</div>
-    </div>
-    <div id="map"></div>
+<div id="controls">
+<button class="btn" onclick="loadRoute()">Load Route</button>
+<div id="status">Status: Ready</div>
+</div>
+<div id="map"></div>
 </div>
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
+const ROUTE_GID = "917509026"; 
+
 let map, markerLayer, routeLine, canvas, ctx, drawing = false;
 let stops = [];
-let currentStopIndex = null;
 const warehouse = { lat: 55.1707, lng: -118.7947 };
 
 window.onload = () => {
@@ -117,9 +83,11 @@ window.onload = () => {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
     routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map);
-    
     L.marker([warehouse.lat, warehouse.lng], {
-        icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">W</div>` })
+        icon: L.divIcon({
+            className:'custom-div-icon',
+            html:`<div class="number-pin">W</div>`
+        })
     }).addTo(map).bindPopup("<b>Warehouse</b>");
 
     initSignaturePad();
@@ -129,6 +97,8 @@ function initSignaturePad() {
     canvas = document.getElementById('sig-canvas');
     if(!canvas) return;
     ctx = canvas.getContext('2d');
+    
+    // Set canvas resolution
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
 
@@ -138,6 +108,8 @@ function initSignaturePad() {
     canvas.addEventListener('mousedown', startDraw);
     canvas.addEventListener('mouseup', stopDraw);
     canvas.addEventListener('mousemove', draw);
+    
+    // Touch support
     canvas.addEventListener('touchstart', (e) => { startDraw(e.touches[0]); e.preventDefault(); });
     canvas.addEventListener('touchend', stopDraw);
     canvas.addEventListener('touchmove', (e) => { draw(e.touches[0]); e.preventDefault(); });
@@ -148,6 +120,7 @@ function draw(e) {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.strokeStyle = 'black';
@@ -157,82 +130,82 @@ function draw(e) {
     ctx.moveTo(x, y);
 }
 
-function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
-
-async function loadRoute() {
-    const selectedGid = document.getElementById("route-select").value;
-    if(selectedGid === "GID_HERE") { alert("Please replace GID_HERE with your Sheet Tab ID"); return; }
-    
-    document.getElementById("status").innerText = "Loading Google Sheet...";
-    try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
-        const res = await fetch(url);
-        const text = await res.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        const rows = json.table.rows.map(r => Object.fromEntries(r.c.map((c,i)=>[json.table.cols[i].label, c ? c.v : ""])));
-        
-        const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
-        const nameKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
-        
-        let tempStops = [];
-        for (let i = 0; i < rows.length; i++) {
-            document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
-            const geo = await geocode(rows[i][addrKey]);
-            if (geo) tempStops.push({ company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], ...geo });
-            await new Promise(r => setTimeout(r, 1500));
-        }
-
-        stops = optimize(tempStops);
-        renderRoute();
-        renderSidebar();
-        document.getElementById("status").innerText = "Route Ready";
-    } catch (e) {
-        document.getElementById("status").innerText = "Error loading data.";
-        console.error(e);
-    }
+function clearSig() { 
+    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+    ctx.beginPath(); 
 }
 
-function openForm(index) {
-    currentStopIndex = index;
+async function loadRoute() {
+    document.getElementById("status").innerText = "Loading Google Sheet...";
+
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${ROUTE_GID}`;
+    const res = await fetch(url);
+    const text = await res.text();
+    const json = JSON.parse(text.substring(47).slice(0, -2));
+    const rows = json.table.rows.map(r =>
+        Object.fromEntries(
+            r.c.map((c,i)=>[
+                json.table.cols[i].label,
+                c ? c.v : ""
+            ])
+        )
+    );
+    const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
+    const nameKey = Object.keys(rows[0]).find(k =>
+        k.toLowerCase().includes("comp") ||
+        k.toLowerCase().includes("cust")
+    );
+    let tempStops = [];
+
+    for (let i = 0; i < rows.length; i++) {
+        document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
+        const geo = await geocode(rows[i][addrKey]);
+        if (geo) {
+            tempStops.push({
+                company: rows[i][nameKey] || "Stop",
+                address: rows[i][addrKey],
+                ...geo
+            });
+        }
+
+        await new Promise(r => setTimeout(r, 1100));
+    }
+
+    stops = optimize(tempStops);
+    renderRoute();
+    renderSidebar();
+
+    document.getElementById("status").innerText = "Route Ready";
+}
+
+function openProfile(index) {
+    const stop = stops[index];
     document.getElementById('list-view').style.display = 'none';
-    document.getElementById('driver-form').style.display = 'block';
-    document.getElementById('form-customer-name').innerText = stops[index].company;
-    document.getElementById('form-customer-addr').innerText = stops[index].address;
+    document.getElementById('customer-profile').style.display = 'block';
+    document.getElementById('prof-name').innerText = stop.company;
+    document.getElementById('prof-addr').innerText = stop.address;
     clearSig();
 }
 
-function closeForm() {
+function closeProfile() {
     document.getElementById('list-view').style.display = 'block';
-    document.getElementById('driver-form').style.display = 'none';
-}
-
-async function submitLog(status) {
-    let reason = "";
-    if (status === 'NOT DELIVERED') {
-        reason = prompt("Reason for non-delivery:");
-        if (!reason) return;
-    }
-
-    const now = new Date();
-    const timestamp = now.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'medium' });
-    const logTitle = `TRIP LOG ${document.getElementById("route-select").selectedOptions[0].text} - ${now.toLocaleDateString('en-US', { dateStyle: 'long' })}`;
-
-    alert(`Saved to ${logTitle}\nStatus: ${status}\nTime: ${timestamp}`);
-    closeForm();
+    document.getElementById('customer-profile').style.display = 'none';
 }
 
 async function geocode(address) {
     const query = encodeURIComponent(address + ", Grande Prairie, AB");
     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
     const data = await res.json();
-    return data.length === 0 ? null : { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    if (data.length === 0) return null;
+    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
 }
 
 function distance(a,b){
     const R=6371;
     const dLat=(b.lat-a.lat)*Math.PI/180;
     const dLon=(b.lng-a.lng)*Math.PI/180;
-    const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+    const x=Math.sin(dLat/2)**2+
+        Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
     return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 
@@ -250,11 +223,19 @@ function optimize(list){
 function renderRoute(){
     markerLayer.clearLayers();
     let coords=[[warehouse.lat,warehouse.lng]];
+
     stops.forEach((s,i)=>{
         coords.push([s.lat,s.lng]);
-        L.marker([s.lat,s.lng],{ icon:L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) })
-        .addTo(markerLayer).bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`);
+        L.marker([s.lat,s.lng],{
+            icon:L.divIcon({
+                className:'custom-div-icon',
+                html:`<div class="number-pin">${i+1}</div>`
+            })
+        }).addTo(markerLayer)
+        .bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`);
     });
+
+    coords.push([warehouse.lat,warehouse.lng]);
     routeLine.setLatLngs(coords);
     map.fitBounds(coords,{padding:[50,50]});
 }
@@ -263,14 +244,19 @@ function renderSidebar(){
     const list=document.getElementById("stop-list");
     list.innerHTML="";
     document.getElementById("stop-count").innerText=`${stops.length} Stops Found`;
+
     stops.forEach((s,i)=>{
         const card=document.createElement("div");
         card.className="stop-card";
         card.innerHTML=`<b>${i+1}.</b> ${s.company}<br><small>${s.address}</small>`;
-        card.onclick=()=>{ map.setView([s.lat,s.lng], 16); openForm(i); };
+        card.onclick=()=>{
+            map.setView([s.lat,s.lng],16);
+            openProfile(i); // Opens the input fields when clicked
+        };
         list.appendChild(card);
     });
 }
 </script>
+
 </body>
 </html>
