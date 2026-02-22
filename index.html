@@ -127,6 +127,7 @@
         <div class="mgr-tabs">
             <button class="mgr-tab-btn active" onclick="switchTab('reports')">DAILY SUMMARY</button>
             <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
+            <button class="mgr-tab-btn" onclick="switchTab('global-search-tab')">GLOBAL SEARCH</button>
         </div>
         
         <div id="reports" class="mgr-content active">
@@ -143,6 +144,13 @@
                 <tbody id="live-body"></tbody>
             </table>
             <div id="live-totals" style="margin-top:20px; background:#222; padding:15px; border:1px solid #444;"></div>
+        </div>
+
+        <div id="global-search-tab" class="mgr-content">
+            <h3>SEARCH ALL ROUTES</h3>
+            <input type="text" id="global-search-input" placeholder="Enter Company Name..." style="width:100%; padding:12px; margin-bottom:10px;">
+            <button class="btn" onclick="runGlobalSearch()" style="width:100%;">Execute Global Search</button>
+            <div id="search-results-list" style="margin-top:20px;"></div>
         </div>
 
         <div class="mgr-footer">
@@ -174,6 +182,36 @@ function switchTab(tabId) {
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     event.currentTarget.classList.add('active');
+}
+
+/** RESTORED GLOBAL SEARCH LOGIC **/
+async function runGlobalSearch() {
+    const term = document.getElementById('global-search-input').value;
+    const resultsDiv = document.getElementById('search-results-list');
+    if(!term) return alert("Enter a name");
+    
+    resultsDiv.innerHTML = "Searching database...";
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`, {
+            method: 'GET',
+            redirect: 'follow'
+        });
+        const data = await res.json();
+        resultsDiv.innerHTML = "";
+        
+        if(!data || data.length === 0) {
+            resultsDiv.innerHTML = "No customers found with that name.";
+        } else {
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.style = "background:#333; padding:10px; margin-bottom:5px; border-left:4px solid #0078ff;";
+                card.innerHTML = `<b>${item.company}</b><br><small>${item.address}</small><br><span style="color:#0078ff">Found in: ${item.route}</span>`;
+                resultsDiv.appendChild(card);
+            });
+        }
+    } catch (e) { 
+        resultsDiv.innerHTML = "Search Error. Check connection."; 
+    }
 }
 
 function initSignaturePad() {
@@ -375,4 +413,3 @@ async function executeEOD() {
 </script>
 </body>
 </html>
-
