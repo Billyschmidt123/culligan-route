@@ -152,20 +152,20 @@
             <div style="background: #222; padding: 20px; border-radius: 8px; border: 1px solid #444;">
                 <div class="profile-group">
                     <label>Find Customer String</label>
-                    <input type="text" id="global-search-input" placeholder="Enter name to search 25 files...">
+                    <input type="text" id="global-search-input" placeholder="Type name (e.g. Rexall)...">
                 </div>
 
                 <div id="search-progress-area" style="margin-top: 10px; margin-bottom: 15px; display: none;">
                     <div id="progress-label" style="font-size: 11px; color: #0078ff; font-weight: bold; margin-bottom: 5px;">INITIALIZING SCAN...</div>
                     <div style="width: 100%; background: #111; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #444;">
-                        <div id="progress-bar-fill" style="width: 0%; height: 100%; background: #0078ff; transition: width 0.2s ease;"></div>
+                        <div id="progress-bar-fill" style="width: 0%; height: 100%; background: #0078ff; transition: width 0.1s linear;"></div>
                     </div>
                 </div>
 
-                <button class="btn" onclick="runGlobalDeepSearch()" style="width:100%; height: 50px; font-size: 16px; background: #0078ff;">SEARCH</button>
+                <button class="btn" id="search-trigger-btn" onclick="runGlobalDeepSearch()" style="width:100%; height: 50px; font-size: 16px; background: #0078ff;">SEARCH ALL 25 SHEETS</button>
             </div>
 
-            <div id="global-search-results" style="margin-top: 20px;"></div>
+            <div id="global-search-results" style="margin-top: 20px; padding-bottom: 50px;"></div>
         </div>
 
         <div class="mgr-footer">
@@ -200,18 +200,22 @@ function switchTab(tabId) {
 }
 
 async function runGlobalDeepSearch() {
-    const term = document.getElementById('global-search-input').value.trim();
+    const rawTerm = document.getElementById('global-search-input').value.trim();
+    const term = rawTerm.toLowerCase();
     const progArea = document.getElementById('search-progress-area');
     const progFill = document.getElementById('progress-bar-fill');
     const progLabel = document.getElementById('progress-label');
     const resultsDiv = document.getElementById('global-search-results');
+    const searchBtn = document.getElementById('search-trigger-btn');
     
     if(!term) return alert("Please enter a name to search.");
     
     resultsDiv.innerHTML = "";
     progArea.style.display = "block";
     progFill.style.width = "0%";
-    
+    searchBtn.disabled = true;
+    searchBtn.innerText = "SCANNING...";
+
     const allRoutes = [
         "WEEK 1 MONDAY", "WEEK 1 TUESDAY", "WEEK 1 WEDNESDAY", "WEEK 1 THURSDAY", "WEEK 1 FRIDAY",
         "WEEK 2 MONDAY", "WEEK 2 TUESDAY", "WEEK 2 WEDNESDAY", "WEEK 2 THURSDAY", "WEEK 2 FRIDAY",
@@ -220,11 +224,13 @@ async function runGlobalDeepSearch() {
         "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT"
     ];
 
+    let foundCount = 0;
+
     for (let i = 0; i < allRoutes.length; i++) {
         const routeName = allRoutes[i];
         const percent = Math.round(((i + 1) / allRoutes.length) * 100);
         progFill.style.width = percent + "%";
-        progLabel.innerText = `SCANNING: ${routeName} (${i+1}/24)`;
+        progLabel.innerText = `SCANNING: ${routeName}`;
 
         try {
             const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(routeName)}`;
@@ -233,30 +239,43 @@ async function runGlobalDeepSearch() {
             const json = JSON.parse(text.substring(47).slice(0, -2));
             
             json.table.rows.forEach(row => {
-                const company = row.c[0] ? row.c[0].v.toString() : "";
-                const address = row.c[1] ? row.c[1].v.toString() : "";
-                
-                if (company.toLowerCase().includes(term.toLowerCase())) {
+                let rowMatch = false;
+                let cName = "Unknown";
+                let cAddr = "No Address";
+
+                if (row.c[0] && row.c[0].v) {
+                    cName = row.c[0].v.toString().trim();
+                    if (cName.toLowerCase().includes(term)) rowMatch = true;
+                }
+                if (row.c[1] && row.c[1].v) {
+                    cAddr = row.c[1].v.toString().trim();
+                    if (cAddr.toLowerCase().includes(term)) rowMatch = true;
+                }
+
+                if (rowMatch) {
+                    foundCount++;
                     const card = document.createElement('div');
                     card.className = "stop-card";
-                    card.innerHTML = `<b>${company}</b><br><small>${address}</small><br><span style="color:#0078ff; font-size:10px;">ROUTE: ${routeName}</span>`;
+                    card.style.borderLeftColor = "#28a745";
+                    card.innerHTML = `<b>${cName}</b><br><small>${cAddr}</small><br><span style="color:#0078ff; font-size:10px;">ROUTE: ${routeName}</span>`;
                     
                     card.onclick = async () => {
                         toggleManager(); 
                         document.getElementById('route-select').value = routeName;
                         await loadRoute(); 
-                        
-                        const stopIdx = stops.findIndex(s => s.company === company);
-                        if(stopIdx !== -1) {
-                            openProfile(stopIdx); 
-                        }
+                        const stopIdx = stops.findIndex(s => s.company.trim().toLowerCase() === cName.toLowerCase());
+                        if(stopIdx !== -1) openProfile(stopIdx);
                     };
                     resultsDiv.appendChild(card);
                 }
             });
         } catch (e) { console.error("Error at " + routeName); }
     }
-    progLabel.innerText = "SCAN COMPLETE";
+
+    progLabel.innerText = `SCAN COMPLETE: ${foundCount} FOUND`;
+    searchBtn.disabled = false;
+    searchBtn.innerText = "SEARCH ALL 25 SHEETS";
+    if (foundCount === 0) resultsDiv.innerHTML = "<p style='text-align:center; color:#aaa;'>No matching customers found.</p>";
 }
 
 function initSignaturePad() {
@@ -303,7 +322,7 @@ async function loadRoute() {
             if(!geo) { geo = { lat: warehouse[0], lng: warehouse[1] }; flagged = true; }
 
             stops.push({ 
-                company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v : "Customer", 
+                company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v.toString() : "Customer", 
                 address: address, flagged: flagged, ...geo 
             });
             await new Promise(resolve => setTimeout(resolve, 800));
