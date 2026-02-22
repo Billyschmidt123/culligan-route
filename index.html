@@ -14,24 +14,25 @@
         #sidebar-header { padding: 15px; border-bottom: 1px solid #444; }
         #stop-list { flex: 1; overflow-y: auto; padding: 10px; }
         
-        /* Progress Bar */
-        #progress-container { width: 100%; background: #444; height: 4px; display: none; overflow: hidden; margin-top: 10px; }
+        /* Progress Bar Styles */
+        #progress-container { width: 100%; background: #444; height: 4px; display: none; overflow: hidden; margin-top: 10px; border-radius: 2px; }
         #progress-bar { width: 0%; height: 100%; background: #0078ff; transition: width 0.3s; }
 
-        /* Stop Cards */
-        .stop-card { background: #333; padding: 12px; margin-bottom: 10px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 13px; cursor: pointer; }
+        /* Stop Card Styles [cite: 8] */
+        .stop-card { background: #333; padding: 12px; margin-bottom: 10px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 14px; cursor: pointer; transition: 0.2s; }
         .stop-card:hover { background: #444; }
-        .stop-card.active { background: #0078ff; border-left-color: white; }
+        .stop-card.active-card { background: #0078ff; border-left-color: white; }
 
         #main-view { flex: 1; display: flex; flex-direction: column; }
         #controls { background: #222; padding: 12px; border-bottom: 2px solid #0078ff; display: flex; gap: 10px; align-items: center; }
         #map { flex: 1; width: 100%; }
         
-        select { padding: 10px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 220px; }
+        select { padding: 10px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 220px; font-size: 14px; }
         .btn-blue { padding: 10px 15px; background: #0078ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         
-        /* Numbered Pin Style */
-        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        /* Numbered Pin Styles [cite: 25] */
+        .number-pin { background: #0078ff; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); font-size: 13px; }
+        .warehouse-pin { background: #222 !important; border-color: #f39c12 !important; color: #f39c12 !important; }
     </style>
 </head>
 <body>
@@ -40,7 +41,7 @@
     <div id="sidebar-header">
         <h3 style="margin:0">CULLIGAN ROUTES</h3>
         <div id="progress-container"><div id="progress-bar"></div></div>
-        <p id="stop-count" style="font-size: 12px; color: #aaa;">Connecting to Database...</p>
+        <p id="stop-count" style="font-size: 12px; color: #aaa;">Syncing with Bottle-water...</p>
     </div>
     <div id="stop-list"></div>
 </div>
@@ -50,109 +51,136 @@
         <select id="routeSelect" onchange="loadRouteData(this.value)">
             <option value="">Fetching Routes...</option>
         </select>
-        <button class="btn-blue" onclick="optimizeRoute()">Re-Optimize</button>
+        <button class="btn-blue" onclick="optimizeRoute()">Optimize Path</button>
         <div id="status" style="font-size: 12px; color: #888; margin-left: auto;">Connected</div>
     </div>
     <div id="map"></div>
 </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
     
     let map, markerLayer, routeLine, stops = [];
-    const baseLocation = { lat: 55.1707, lng: -118.7947 };
+    let markers = []; 
+    const warehouse = { lat: 55.1707, lng: -118.7947 }; 
 
     window.onload = () => {
-        map = L.map("map").setView([baseLocation.lat, baseLocation.lng], 12);
+        map = L.map("map").setView([warehouse.lat, warehouse.lng], 12);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
         markerLayer = L.layerGroup().addTo(map);
-        routeLine = L.polyline([], { color: '#0078ff', weight: 4, opacity: 0.8 }).addTo(map);
-        fetchTabs();
+        routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map); 
+
+        // Add Warehouse Pin 
+        L.marker([warehouse.lat, warehouse.lng], {
+            icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>` })
+        }).addTo(map).bindPopup("<b>Warehouse</b>");
+
+        fetchRouteTabs();
     };
 
-    async function fetchTabs() {
+    async function fetchRouteTabs() {
         try {
             const res = await fetch(API_URL);
             const tabs = await res.json();
-            const sel = document.getElementById('routeSelect');
-            sel.innerHTML = `<option value="">Select Route</option>` + tabs.map(t => `<option value="${t}">${t}</option>`).join('');
-            document.getElementById('stop-count').innerText = "Select a route";
-        } catch (e) { document.getElementById('status').innerText = "Sync Error"; }
+            const selector = document.getElementById('routeSelect');
+            selector.innerHTML = `<option value="">Select Route</option>` + 
+                tabs.map(t => `<option value="${t}">${t}</option>`).join('');
+            document.getElementById('stop-count').innerText = "Select a route to begin";
+        } catch (e) { 
+            document.getElementById('status').innerText = "Sync Error"; 
+        }
     }
 
     async function loadRouteData(name) {
         if (!name) return;
+        
         const pBar = document.getElementById('progress-bar');
         const pCont = document.getElementById('progress-container');
-        pCont.style.display = 'block'; pBar.style.width = '30%';
-
-        document.getElementById('status').innerText = "Downloading...";
+        pCont.style.display = 'block'; pBar.style.width = '20%';
+        
+        document.getElementById('status').innerText = "Loading " + name + "...";
         try {
             const res = await fetch(`${API_URL}?sheet=${encodeURIComponent(name)}`);
             stops = await res.json();
-            pBar.style.width = '70%';
+            pBar.style.width = '60%';
             optimizeRoute();
             pBar.style.width = '100%';
             setTimeout(() => { pCont.style.display = 'none'; }, 500);
-        } catch (e) { document.getElementById('status').innerText = "Data Error"; }
+            document.getElementById('status').innerText = name + " Ready";
+        } catch (e) { 
+            document.getElementById('status').innerText = "Data Error";
+            pCont.style.display = 'none';
+        }
     }
 
-    // --- OPTIMIZATION CODE (Greedy Nearest Neighbor) ---
+    // --- RESTORED: Optimization Logic  ---
+    function getDistance(p1, p2) {
+        const R = 6371;
+        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+        const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    }
+
     function optimizeRoute() {
         if (stops.length < 1) return;
-        let unvisited = [...stops], ordered = [], current = baseLocation;
+        let unvisited = [...stops], ordered = [], currentPos = warehouse;
 
         while (unvisited.length > 0) {
-            unvisited.sort((a, b) => {
-                const dA = Math.hypot(parseFloat(a.lat) - current.lat, parseFloat(a.lng) - current.lng);
-                const dB = Math.hypot(parseFloat(b.lat) - current.lat, parseFloat(b.lng) - current.lng);
-                return dA - dB;
-            });
-            let next = unvisited.shift();
-            ordered.push(next);
-            current = { lat: parseFloat(next.lat), lng: parseFloat(next.lng) };
+            unvisited.sort((a, b) => getDistance(currentPos, a) - getDistance(currentPos, b)); 
+            let closest = unvisited.shift(); 
+            ordered.push(closest);
+            currentPos = closest;
         }
         stops = ordered;
         renderUI();
     }
 
-    // --- RENDER MAP PINS & ROUTE MARKERS ---
+    // --- RESTORED: Pins, Tooltips, and Sidebar Info [cite: 62, 63, 66] ---
     function renderUI() {
         markerLayer.clearLayers();
+        markers = []; 
         const list = document.getElementById('stop-list');
         list.innerHTML = "";
-        let path = [[baseLocation.lat, baseLocation.lng]];
+        let path = [[warehouse.lat, warehouse.lng]];
 
         stops.forEach((s, i) => {
-            const lat = parseFloat(s.lat), lng = parseFloat(s.lng);
+            const lat = parseFloat(s.lat);
+            const lng = parseFloat(s.lng);
             if (isNaN(lat)) return;
             path.push([lat, lng]);
 
-            // Map Pins with Tooltips
+            // Map Pins with Tooltips 
             const marker = L.marker([lat, lng], { 
                 icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>`, className: '' }) 
             })
-            .bindPopup(`<b>${i+1}. ${s.Customer || s.Company}</b><br>${s.Address}`)
+            .bindPopup(`<b>${i+1}. ${s.Customer || s.Company}</b><br>${s.Address}`) 
             .addTo(markerLayer);
+            markers.push(marker);
 
-            // Side Panel Cards
+            // Side Panel Cards 
             const card = document.createElement('div');
             card.className = "stop-card";
-            card.innerHTML = `<b>#${i+1} ${s.Customer || s.Company}</b><br><small>${s.Address}</small><br><small>Qty: ${s.Qty || 'N/A'}</small>`;
+            card.innerHTML = `
+                <div style="font-weight:bold; color:#0078ff;">${i+1}. ${s.Customer || s.Company}</div>
+                <div style="margin-top:4px; color:#ccc; font-size:12px;">${s.Address}</div>
+            `;
+            
             card.onclick = () => {
-                document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-                map.flyTo([lat, lng], 15);
-                marker.openPopup();
+                document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('active-card'));
+                card.classList.add('active-card');
+                map.flyTo([lat, lng], 16);
+                marker.openPopup(); 
             };
             list.appendChild(card);
         });
 
-        // Update Route Line
-        routeLine.setLatLngs(path);
+        // Closing the loop back to warehouse 
+        if (stops.length > 0) path.push([warehouse.lat, warehouse.lng]);
+        
+        routeLine.setLatLngs(path); 
         if (path.length > 1) map.fitBounds(L.polyline(path).getBounds(), { padding: [50, 50] });
         document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
-        document.getElementById('status').innerText = "Route Optimized";
     }
 </script>
 </body>
