@@ -3,137 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Culligan Route Manager</title>
+    <title>Culligan Driver Portal</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-        /* RESTORED: Factory Sidebar and Driver Colors  */
         body { margin: 0; height: 100vh; display: flex; flex-direction: row; font-family: 'Segoe UI', sans-serif; background: #111; color: white; overflow: hidden; }
+        
+        /* RESTORED: Factory Sidebar */
         #sidebar { width: 320px; background: #222; border-right: 2px solid #0078ff; display: flex; flex-direction: column; flex-shrink: 0; }
         #sidebar-header { padding: 15px; border-bottom: 1px solid #444; }
         #stop-list { flex: 1; overflow-y: auto; padding: 10px; }
         
-        /* RESTORED: Driver Stop Cards  */
+        /* RESTORED: Driver Stop Cards */
         .stop-card { background: #333; padding: 12px; margin-bottom: 10px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 13px; cursor: pointer; transition: 0.2s; }
         .stop-card:hover { background: #444; }
-        .stop-card.active { background: #0078ff; border-left-color: white; }
+        .stop-card.active { background: #0078ff; border-left-color: #fff; }
 
         #main-view { flex: 1; display: flex; flex-direction: column; }
-        header { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 10px; align-items: center; }
+        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 10px; align-items: center; }
         #map { flex: 1; width: 100%; }
         
-        .btn-blue { padding: 10px 15px; background: #0078ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        select { padding: 9px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 180px; }
-
-        /* Map Pin Styling [cite: 2] */
-        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5); }
+        select { padding: 10px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 200px; font-size: 14px; }
+        .btn-blue { padding: 10px 20px; background: #0078ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
+        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
     <div id="sidebar-header">
-        <h3 style="margin:0">CULLIGAN STOPS</h3>
-        <p id="stop-count" style="font-size: 12px; color: #aaa;">0 Stops Loaded</p>
+        <h3 style="margin:0">CULLIGAN ROUTES</h3>
+        <p id="stop-count" style="font-size: 12px; color: #aaa;">Select a route to begin</p>
     </div>
     <div id="stop-list"></div>
 </div>
 
 <div id="main-view">
-    <header>
-        <div id="route-selector-container">
-            <select id="routeSelect" onchange="loadRouteData(this.value)">
-                <option value="">Select Route</option>
-            </select>
-        </div>
-        <button class="btn-blue" onclick="optimizeRoute()">Manual Optimize</button>
-        <div id="status" style="font-size: 13px; color: #aaa; margin-left: auto;">Status: Ready</div>
-    </header>
+    <div id="controls">
+        <select id="routeSelect" onchange="loadRouteData(this.value)">
+            <option value="">Loading Spreadsheet...</option>
+        </select>
+        <button class="btn-blue" onclick="optimizeRoute()">Optimize Path</button>
+        <div id="status" style="font-size: 13px; color: #aaa; margin-left: auto;">Status: Connected</div>
+    </div>
     <div id="map"></div>
 </div>
 
 <script>
-    const API_URL = "YOUR_WEB_APP_URL"; // Replace with your current deployment URL
+    const API_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL"; // REPLACE WITH YOUR DEPLOYED URL
     let map, markerLayer, routeLine, stops = [];
+    const baseLocation = { lat: 55.1707, lng: -118.7947 };
 
     window.onload = () => {
-        map = L.map("map").setView([55.17, -118.79], 12);
+        map = L.map("map").setView([baseLocation.lat, baseLocation.lng], 12);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
         markerLayer = L.layerGroup().addTo(map);
-        routeLine = L.polyline([], { color: '#0078ff', weight: 4, opacity: 0.7 }).addTo(map);
-        fetchRouteList();
+        routeLine = L.polyline([], { color: '#0078ff', weight: 4, opacity: 0.8 }).addTo(map);
+        fetchRouteTabs();
     };
 
-    async function fetchRouteList() {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-        const selector = document.getElementById('routeSelect');
-        selector.innerHTML = `<option value="">Select Route</option>` + 
-            data.filter(t => t !== 'Deliveries').map(t => `<option value="${t}">${t}</option>`).join('');
+    // RESTORED: Fetch all tabs from the Bottle-water sheet
+    async function fetchRouteTabs() {
+        try {
+            const res = await fetch(API_URL);
+            const tabs = await res.json();
+            const selector = document.getElementById('routeSelect');
+            selector.innerHTML = `<option value="">Select Route</option>` + 
+                tabs.filter(t => t !== 'Deliveries').map(t => `<option value="${t}">${t}</option>`).join('');
+        } catch (e) { 
+            document.getElementById('status').innerText = "Sync Error"; 
+        }
     }
 
+    // RESTORED: Load Route and Auto-Optimize
     async function loadRouteData(name) {
         if (!name) return;
-        document.getElementById('status').innerText = "Fetching...";
-        const res = await fetch(`${API_URL}?sheet=${encodeURIComponent(name)}`);
-        stops = await res.json();
-        
-        // RESTORED: Automatic Optimization on Load 
-        optimizeRoute();
+        document.getElementById('status').innerText = "Downloading Route...";
+        try {
+            const res = await fetch(`${API_URL}?sheet=${encodeURIComponent(name)}`);
+            stops = await res.json();
+            optimizeRoute(); // Triggering optimization immediately on load
+        } catch (e) { 
+            document.getElementById('status').innerText = "Data Error"; 
+        }
     }
 
+    // RESTORED: Route Optimization Logic
     function optimizeRoute() {
         if (stops.length < 2) { renderUI(); return; }
-        document.getElementById('status').innerText = "Optimizing...";
+        document.getElementById('status').innerText = "Optimizing Path...";
         
-        // Greedy Algorithm for Route Optimization 
-        let optimized = [stops[0]];
-        let remaining = stops.slice(1);
-        while (remaining.length > 0) {
-            let last = optimized[optimized.length - 1];
-            remaining.sort((a, b) => 
-                Math.hypot(a.lat - last.lat, a.lng - last.lng) - 
-                Math.hypot(b.lat - last.lat, b.lng - last.lng)
-            );
-            optimized.push(remaining.shift());
+        let unvisited = [...stops];
+        let ordered = [];
+        let currentPos = baseLocation;
+
+        while (unvisited.length > 0) {
+            unvisited.sort((a, b) => {
+                const distA = Math.hypot(parseFloat(a.lat) - currentPos.lat, parseFloat(a.lng) - currentPos.lng);
+                const distB = Math.hypot(parseFloat(b.lat) - currentPos.lat, parseFloat(b.lng) - currentPos.lng);
+                return distA - distB;
+            });
+            let closest = unvisited.shift();
+            ordered.push(closest);
+            currentPos = { lat: parseFloat(closest.lat), lng: parseFloat(closest.lng) };
         }
-        stops = optimized;
+        stops = ordered;
         renderUI();
-        document.getElementById('status').innerText = "Active";
+        document.getElementById('status').innerText = "Route Optimized";
     }
 
+    // RESTORED: Driver Stop Cards and Map Pins
     function renderUI() {
         markerLayer.clearLayers();
         const list = document.getElementById('stop-list');
         list.innerHTML = "";
-        let path = [];
+        let path = [[baseLocation.lat, baseLocation.lng]];
 
         stops.forEach((s, i) => {
-            const pos = [parseFloat(s.lat), parseFloat(s.lng)];
-            path.push(pos);
+            const lat = parseFloat(s.lat);
+            const lng = parseFloat(s.lng);
+            if (isNaN(lat) || isNaN(lng)) return;
 
-            // RESTORED: Numbered Map Pins [cite: 2]
-            L.marker(pos, { 
+            path.push([lat, lng]);
+
+            // Map Markers
+            L.marker([lat, lng], { 
                 icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>`, className: '' }) 
             }).addTo(markerLayer);
 
-            // RESTORED: Factory Stop Cards 
+            // STOP CARDS
             const card = document.createElement('div');
             card.className = "stop-card";
             card.innerHTML = `<b>#${i+1} ${s.Customer || s.Company}</b><br><small>${s.Address}</small>`;
             card.onclick = () => {
-                map.panTo(pos);
-                // Trigger delivery modal logic here
+                document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                map.flyTo([lat, lng], 15);
             };
             list.appendChild(card);
         });
 
         routeLine.setLatLngs(path);
-        if (path.length > 0) map.fitBounds(L.polyline(path).getBounds(), { padding: [30, 30] });
-        document.getElementById('stop-count').innerText = `${stops.length} Stops Loaded`;
+        if (path.length > 0) map.fitBounds(L.polyline(path).getBounds(), { padding: [40, 40] });
+        document.getElementById('stop-count').innerText = `${stops.length} Deliveries Found`;
     }
 </script>
 </body>
