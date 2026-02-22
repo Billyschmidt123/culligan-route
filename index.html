@@ -161,7 +161,7 @@
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-let map, markerLayer, stops = [], currentStopIndex = null, currentModalMode = 'add';
+let map, markerLayer, stops = [], currentStopIndex = null;
 
 window.onload = () => {
     map = L.map("map").setView([55.1707, -118.7947], 11);
@@ -169,7 +169,6 @@ window.onload = () => {
     markerLayer = L.layerGroup().addTo(map);
 };
 
-// --- CORRECTED LOADING LOGIC ---
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
     const statusDiv = document.getElementById('status');
@@ -180,7 +179,6 @@ async function loadRoute() {
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        // Fetch via CSV to bypass all caching and ensure the correct tab ID is used
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}&t=${Date.now()}`;
         const res = await fetch(url);
         const data = await res.text();
@@ -189,7 +187,6 @@ async function loadRoute() {
         statusDiv.innerText = "Status: Geocoding...";
 
         for (let i = 1; i < lines.length; i++) {
-            // Regex handles commas within quotes in addresses
             const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols.length > 3) {
                 const company = cols[2]?.replace(/"/g, '').trim();
@@ -232,6 +229,30 @@ async function geocodeArcGIS(addr) {
     } catch (e) { return null; }
 }
 
+function renderRoute() {
+    markerLayer.clearLayers();
+    stops.forEach((s, i) => {
+        L.marker([s.lat, s.lng], { 
+            icon: L.divIcon({ 
+                className:'custom-div-icon', 
+                html:`<div class="number-pin ${s.isRush ? 'rush-pin' : ''}">${i+1}</div>` 
+            }) 
+        }).addTo(markerLayer);
+    });
+}
+
+function renderSidebar() {
+    const list = document.getElementById("stop-list");
+    list.innerHTML = "";
+    stops.forEach((s, i) => {
+        const div = document.createElement("div");
+        div.className = `stop-card ${s.isRush ? 'rush-order' : ''}`;
+        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
+        div.onclick = () => openProfile(i);
+        list.appendChild(div);
+    });
+}
+
 function openProfile(i) {
     currentStopIndex = i;
     const s = stops[i];
@@ -253,29 +274,7 @@ function switchTab(tabId) {
     document.getElementById(tabId).classList.add('active');
 }
 
-function renderRoute() {
-    markerLayer.clearLayers();
-    stops.forEach((s, i) => {
-        L.marker([s.lat, s.lng], { 
-            icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) 
-        }).addTo(markerLayer);
-    });
-}
-
-function renderSidebar() {
-    const list = document.getElementById("stop-list");
-    list.innerHTML = "";
-    stops.forEach((s, i) => {
-        const div = document.createElement("div");
-        div.className = "stop-card";
-        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
-        div.onclick = () => openProfile(i);
-        list.appendChild(div);
-    });
-}
-
 function openAddCustomerModal(name = "") {
-    currentModalMode = 'add';
     document.getElementById('m-cust-name').value = name;
     document.getElementById('global-modal-overlay').style.display = 'block';
     document.getElementById('global-modal').style.display = 'block';
@@ -286,7 +285,14 @@ function closeGlobalModal() {
     document.getElementById('global-modal').style.display = 'none';
 }
 
-function triggerRushWorkflow() { alert("Search for a customer to build a rush order."); }
+function submitLog(status) {
+    closeProfile();
+    alert("Logged: " + status);
+}
+
+function performGlobalSearch() { alert("Search initiated..."); }
+function triggerRushWorkflow() { alert("Building rush order..."); }
+function handleModalSubmit() { closeGlobalModal(); }
 </script>
 </body>
 </html>
