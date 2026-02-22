@@ -37,13 +37,11 @@
         #sig-canvas { background: white; border-radius: 4px; cursor: crosshair; width: 100%; height: 100px; }
         .nav-container { display: flex; justify-content: space-between; padding: 10px; background: #222; border-top: 1px solid #444; }
         
-        /* PIN STYLES */
         .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; font-size: 13px; }
         .active-pin { background: #e74c3c !important; scale: 1.2; box-shadow: 0 0 10px #e74c3c; }
         .warehouse-pin { background: #222 !important; border-color: #f39c12 !important; color: #f39c12 !important; }
         .leaflet-tooltip-own { background: rgba(0,0,0,0.7); border: 1px solid #0078ff; color: white; font-weight: bold; border-radius: 4px; padding: 2px 6px; }
 
-        /* TICKET STYLE */
         #ticket-output { display: none; padding: 30px; background: white; color: black; width: 500px; border-radius: 15px; border: 2px solid #0078ff; }
         .ticket-header { border-bottom: 4px solid #0078ff; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
         .ticket-footer { border-top: 4px solid #0078ff; padding-top: 10px; margin-top: 20px; text-align: center; font-style: italic; }
@@ -107,7 +105,6 @@
     <div class="modal-content">
         <h3 id="mCustName" style="color:#0078ff; margin-top:0;">Customer</h3>
         <p id="mCustAddr" style="color:#aaa; font-size:13px; margin-bottom:15px;"></p>
-        
         <div class="inv-grid">
             <div class="field-row"><label>18L Bottles</label><input type="number" id="inv18L"></div>
             <div class="field-row"><label>Small Bottles</label><input type="number" id="invSmall"></div>
@@ -116,10 +113,8 @@
             <div class="field-row"><label>Small Return</label><input type="number" id="retSmall"></div>
             <div class="field-row"><label>Received By</label><input type="text" id="receivedBy"></div>
         </div>
-
         <div class="field-row"><label>Signature</label><canvas id="sig-canvas"></canvas><button class="btn btn-nav" style="width:100%; margin-top:5px;" onclick="clearSig()">Clear Signature</button></div>
         <div class="field-row"><label>Notes / Reason for Skip</label><textarea id="driverNotes" rows="2"></textarea></div>
-        
         <button class="btn" style="width:100%; background:#0078ff; margin-bottom:10px;" onclick="openGoogleMaps()">Google Maps</button>
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1;" onclick="processStop('Delivered')">DELIVERED</button>
@@ -300,10 +295,11 @@
         const receiver = document.getElementById('receivedBy').value;
         if (status === 'Not Delivered' && !notes.trim()) return alert("Reason required for skip.");
         
-        // Generate Unique Slip Number
-        const slipNum = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 12);
+        const now = new Date();
+        const routeName = document.getElementById('routeSelector').value;
+        const slipNum = now.toISOString().replace(/[-:T.Z]/g, "").slice(0, 12);
+        const longDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         
-        // Prepare Ticket
         document.getElementById('t-slip').innerText = slipNum;
         document.getElementById('t-cust').innerText = stops[activeIndex].company;
         document.getElementById('t-addr').innerText = stops[activeIndex].address;
@@ -315,16 +311,16 @@
         document.getElementById('t-rec').innerText = receiver;
         document.getElementById('t-sig').src = canvas.toDataURL();
 
-        // Download Ticket
         const element = document.getElementById('ticket-output');
         element.style.display = 'block';
-        html2pdf().from(element).save(`${stops[activeIndex].company}_Slip_${slipNum}.pdf`).then(() => {
+        const fileName = `${stops[activeIndex].company} - ${routeName} - ${slipNum} - ${longDate}.pdf`;
+        
+        html2pdf().from(element).save(fileName).then(() => {
             element.style.display = 'none';
         });
 
-        const now = new Date();
         let formData = { Customer: stops[activeIndex].company, Address: stops[activeIndex].address, Status: status, Timestamp: now.toLocaleString(), Notes: notes, ReceivedBy: receiver, Slip: slipNum, Signature: canvas.toDataURL() };
-        fetch(SHEETS_API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) }).then(() => { closeModal(); alert(`Recorded. Ticket Downloaded.`); });
+        fetch(SHEETS_API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(formData) }).then(() => { closeModal(); alert(`Recorded. Ticket: ${fileName}`); });
     }
 
     function openManagerMenu() {
