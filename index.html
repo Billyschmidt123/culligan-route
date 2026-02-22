@@ -1,68 +1,239 @@
-/**
- * Google Apps Script for Culligan Route Manager
- * Destination: cbwdeliveries@outlook.com
- * OneDrive Folder: deliveries
- */
-
-function doGet(e) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (e.parameter.sheet) {
-    const sheet = ss.getSheetByName(e.parameter.sheet);
-    if (!sheet) return ContentService.createTextOutput("Sheet not found").setMimeType(ContentService.MimeType.TEXT);
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const json = data.slice(1).map(row => {
-      let obj = {};
-      headers.forEach((h, i) => obj[h] = row[i]);
-      return obj;
-    });
-    return ContentService.createTextOutput(JSON.stringify(json)).setMimeType(ContentService.MimeType.JSON);
-  }
-  const sheets = ss.getSheets().map(s => s.getName());
-  return ContentService.createTextOutput(JSON.stringify(sheets)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let deliverySheet = ss.getSheetByName("Deliveries");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Culligan Route Manager</title>
     
-    if (!deliverySheet) {
-      deliverySheet = ss.insertSheet("Deliveries");
-      deliverySheet.appendRow([
-        "Timestamp", "Driver ID", "Customer", "Address", "Status", 
-        "18L Delivered", "18L Returns", "Small Delivered", "Small Returns", 
-        "Cases", "Received By", "Notes", "Route Name", "Long Date"
-      ]);
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        body { margin: 0; height: 100vh; display: flex; flex-direction: row; font-family: 'Segoe UI', sans-serif; background: #111; color: white; overflow: hidden; }
+        #sidebar { width: 350px; background: #222; border-right: 2px solid #0078ff; display: flex; flex-direction: column; flex-shrink: 0; }
+        #sidebar-header { padding: 15px; border-bottom: 1px solid #444; }
+        #stop-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .stop-card { background: #333; padding: 12px; margin-bottom: 10px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 13px; cursor: pointer; }
+        .stop-card.active-card { background: #444; border-left-color: #e74c3c; }
+        #main-view { flex: 1; display: flex; flex-direction: column; }
+        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 10px; align-items: center; }
+        #current-stop-bar { background: #0078ff; color: white; padding: 10px; font-weight: bold; text-align: center; display: none; }
+        #map { flex: 1; width: 100%; }
+        .btn { padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-mgr { background: #f39c12; }
+        .btn-start { background: #0078ff; display: none; } 
+        select { padding: 9px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 160px; }
+        #dataModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; align-items:center; justify-content:center; }
+        .modal-content { background:#222; padding:20px; border-radius:8px; width:400px; border:1px solid #444; }
+        .field-row { margin-bottom: 12px; }
+        .field-row label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
+        .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; }
+        #sig-canvas { background: white; border-radius: 4px; width: 100%; height: 100px; cursor: crosshair; }
+        .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; }
+        .leaflet-tooltip-own { background: rgba(0,0,0,0.7); border: 1px solid #0078ff; color: white; border-radius: 4px; padding: 2px 6px; }
+        #ticket-output { display: none; padding: 30px; background: white; color: black; width: 500px; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div id="sidebar-header">
+        <h3 style="margin:0">Route List</h3>
+        <p id="driver-display" style="font-size: 14px; color: #0078ff; font-weight: bold;">Driver: Not Set</p>
+        <p id="stop-count" style="font-size: 12px; color: #aaa;">No route loaded</p>
+        <button class="btn btn-mgr" style="width:100%;" onclick="alert('Manager Menu Access: 5678')">Manager Menu</button>
+    </div>
+    <div id="stop-list"></div>
+</div>
+
+<div id="main-view">
+    <div id="controls">
+        <select id="routeSelector"><option value="">Fetching Routes...</option></select>
+        <button class="btn" onclick="loadSelectedRoute()">Load Route</button>
+        <button id="start-btn" class="btn btn-start" onclick="startDriverSession()">Start Route</button>
+        <div id="status" style="font-size: 13px; color: #aaa;">Status: Ready</div>
+    </div>
+    <div id="current-stop-bar">Current Stop: <span id="active-addr">None</span></div>
+    <div id="map"></div>
+</div>
+
+<div id="ticket-output">
+    <h2 style="text-align:center; color:#0078ff;">Culligan Ticket</h2>
+    <p><strong>Customer:</strong> <span id="t-cust"></span></p>
+    <p><strong>Driver:</strong> <span id="t-driver"></span></p>
+    <p><strong>Date:</strong> <span id="t-date"></span></p>
+    <p><strong>18L Bottles:</strong> <span id="t-inv"></span></p>
+    <p><strong>Notes:</strong> <span id="t-notes"></span></p>
+    <p><strong>Signature:</strong></p>
+    <img id="t-sig" style="width:200px; border-bottom:1px solid #000;">
+</div>
+
+<div id="dataModal">
+    <div class="modal-content">
+        <h3 id="mCustName" style="color:#0078ff; margin-top:0;">Customer</h3>
+        <div class="field-row"><label>18L Bottles Delivered</label><input type="number" id="inv18L" value="0"></div>
+        <div class="field-row"><label>Signature</label><canvas id="sig-canvas"></canvas></div>
+        <div class="field-row"><label>Notes</label><textarea id="driverNotes"></textarea></div>
+        <button class="btn" style="width:100%; margin-bottom:10px;" onclick="processStop('Delivered')">COMPLETE DELIVERY</button>
+        <button class="btn" style="width:100%; background:#444;" onclick="document.getElementById('dataModal').style.display='none'">Cancel</button>
+    </div>
+</div>
+
+<script>
+    const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwt6s3gSl-stP2kSDxsaryhXPZUajyJCTEFjaljSu4Z-IzU055oDADrS7fYxYdM1_EnhA/exec";
+    
+    let map, markerLayer, routeLine, stops = [], activeIndex = -1, canvas, ctx, drawing = false, driverName = "Unknown";
+    const warehouse = { lat: 55.1707, lng: -118.7947 };
+
+    async function fetchRouteList() {
+        try {
+            const res = await fetch(SHEETS_API_URL);
+            const tabs = await res.json();
+            const selector = document.getElementById('routeSelector');
+            selector.innerHTML = "";
+            tabs.filter(t => t !== 'Deliveries').forEach(tabName => {
+                let opt = document.createElement('option'); opt.value = tabName; opt.innerText = tabName; selector.appendChild(opt);
+            });
+        } catch (e) { document.getElementById('status').innerText = "Link Error"; }
     }
 
-    deliverySheet.appendRow([
-      data.Timestamp, data.DriverID, data.Customer, data.Address, data.Status,
-      data.l18, data.r18, data.lSm, data.rSm, data.cs, data.recv,
-      data.Notes, data.RouteName, data.LongDate
-    ]);
-
-    if (data.pdfData) {
-      const pdfBlob = Utilities.newBlob(
-        Utilities.base64Decode(data.pdfData.split(',')[1]), 
-        'application/pdf', 
-        data.FileName
-      );
-
-      // Sends to the OneDrive-mapped email address
-      MailApp.sendEmail({
-        to: "cbwdeliveries@outlook.com",
-        subject: `Delivery Slip: ${data.Customer} - ${data.LongDate}`,
-        body: `Culligan Delivery Log Entry\n\n` +
-              `OneDrive Link: https://1drv.ms/f/c/b07d549f2e7d84b0/IgCJmNKMkKAzRJpPtk1JxN53ATccBNb97HwccTNHzCnxxk0?e=CzbUqh\n` +
-              `Target Directory: deliveries`,
-        attachments: [pdfBlob]
-      });
+    async function loadSelectedRoute() {
+        const tab = document.getElementById('routeSelector').value;
+        if (!tab) return;
+        document.getElementById('status').innerText = "Loading Map...";
+        try {
+            const res = await fetch(`${SHEETS_API_URL}?sheet=${encodeURIComponent(tab)}`);
+            const rows = await res.json();
+            let temp = [];
+            for (let r of rows) {
+                const geo = await geocode(r.Address || r.address);
+                if (geo) temp.push({ company: r.Company || r.Customer, address: r.Address || r.address, ...geo });
+            }
+            stops = temp;
+            render();
+            document.getElementById('status').innerText = "Route Loaded";
+            document.getElementById('start-btn').style.display = "inline-block";
+        } catch (e) { document.getElementById('status').innerText = "Error Loading"; }
     }
 
-    return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
-  } catch (err) {
-    return ContentService.createTextOutput("Error: " + err.toString()).setMimeType(ContentService.MimeType.TEXT);
-  }
-}
+    function startDriverSession() {
+        const nameInput = prompt("Please enter your name to start the route:");
+        if (nameInput && nameInput.trim() !== "") {
+            driverName = nameInput;
+            document.getElementById('driver-display').innerText = `Driver: ${driverName}`;
+            document.getElementById('status').innerText = "Route Active";
+            document.getElementById('start-btn').style.display = "none";
+        } else {
+            alert("A driver name is required.");
+        }
+    }
+
+    async function geocode(addr) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Grande Prairie, AB")}`);
+            const data = await res.json();
+            return data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+        } catch (e) { return null; }
+    }
+
+    function render() {
+        markerLayer.clearLayers();
+        let path = [[warehouse.lat, warehouse.lng]];
+        const list = document.getElementById('stop-list'); list.innerHTML = "";
+        stops.forEach((s, i) => {
+            path.push([s.lat, s.lng]);
+            L.marker([s.lat, s.lng], { icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>` }) }).addTo(markerLayer).bindTooltip(s.address, { className: 'leaflet-tooltip-own' });
+            const card = document.createElement('div'); card.className = "stop-card"; card.innerHTML = `<b>#${i+1} ${s.company}</b><br>${s.address}`;
+            card.onclick = () => {
+                if(driverName === "Unknown") { alert("Please click 'Start Route' first."); return; }
+                activeIndex = i;
+                document.getElementById('mCustName').innerText = s.company;
+                document.getElementById('inv18L').value = 0;
+                document.getElementById('driverNotes').value = "";
+                document.getElementById('dataModal').style.display = "flex";
+                initCanvas();
+            };
+            list.appendChild(card);
+        });
+        routeLine.setLatLngs(path);
+        map.fitBounds(L.polyline(path).getBounds());
+        document.getElementById('stop-count').innerText = `${stops.length} Stops`;
+    }
+
+    async function processStop(status) {
+        const now = new Date();
+        const routeName = document.getElementById('routeSelector').value;
+        const longDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const bottles = document.getElementById('inv18L').value;
+        const notes = document.getElementById('driverNotes').value;
+
+        // Populate PDF template
+        document.getElementById('t-cust').innerText = stops[activeIndex].company;
+        document.getElementById('t-driver').innerText = driverName;
+        document.getElementById('t-date').innerText = longDate;
+        document.getElementById('t-inv').innerText = bottles;
+        document.getElementById('t-notes').innerText = notes;
+        document.getElementById('t-sig').src = canvas.toDataURL();
+        
+        const ticket = document.getElementById('ticket-output');
+        ticket.style.display = "block";
+        
+        html2pdf().from(ticket).outputPdf('datauristring').then(pdfData => {
+            ticket.style.display = "none";
+            const payload = {
+                Timestamp: now.toLocaleString(), 
+                DriverID: driverName, 
+                Customer: stops[activeIndex].company,
+                Address: stops[activeIndex].address, 
+                Status: status, 
+                Notes: notes,
+                Signature: canvas.toDataURL(), 
+                RouteName: routeName, 
+                LongDate: longDate,
+                FileName: `${stops[activeIndex].company} - ${longDate}.pdf`, 
+                pdfData: pdfData
+            };
+            
+            fetch(SHEETS_API_URL, { method: 'POST', body: JSON.stringify(payload) }).then(() => {
+                document.getElementById('dataModal').style.display = 'none';
+                alert("Delivery Saved and PDF Uploaded");
+            });
+        });
+    }
+
+    function initCanvas() {
+        canvas = document.getElementById('sig-canvas');
+        ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth; 
+        canvas.height = 100;
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
+        canvas.onmousemove = (e) => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
+        window.onmouseup = () => drawing = false;
+        
+        // Touch support
+        canvas.ontouchstart = (e) => { 
+            e.preventDefault(); 
+            const t = e.touches[0]; 
+            drawing = true; 
+            ctx.beginPath(); 
+            ctx.moveTo(t.pageX - canvas.offsetLeft, t.pageY - canvas.offsetTop); 
+        };
+    }
+
+    window.onload = () => {
+        const pw = prompt("Enter Password:");
+        if (pw !== "1234") return;
+        
+        map = L.map("map").setView([55.17, -118.79], 12);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+        routeLine = L.polyline([], { color: '#0078ff' }).addTo(map);
+        fetchRouteList();
+    };
+</script>
+</body>
+</html>
