@@ -199,6 +199,9 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
+/** * DEEP SEARCH (COLUMN AGNOSTIC)
+ * Specifically designed for layouts where Company is in 3rd or 4th column.
+ */
 async function runGlobalDeepSearch() {
     const rawTerm = document.getElementById('global-search-input').value.trim();
     const term = rawTerm.toLowerCase();
@@ -238,32 +241,35 @@ async function runGlobalDeepSearch() {
             const text = await res.text();
             const json = JSON.parse(text.substring(47).slice(0, -2));
             
+            if(!json.table || !json.table.rows) continue;
+
             json.table.rows.forEach(row => {
-                let rowMatch = false;
-                let cName = "Unknown";
-                let cAddr = "No Address";
-
-                if (row.c[0] && row.c[0].v) {
-                    cName = row.c[0].v.toString().trim();
-                    if (cName.toLowerCase().includes(term)) rowMatch = true;
-                }
-                if (row.c[1] && row.c[1].v) {
-                    cAddr = row.c[1].v.toString().trim();
-                    if (cAddr.toLowerCase().includes(term)) rowMatch = true;
+                let matchFound = false;
+                let cells = row.c.map(c => (c && c.v) ? c.v.toString().trim() : "");
+                
+                // Combine all cell content for aggressive match
+                if (cells.join(" ").toLowerCase().includes(term)) {
+                    matchFound = true;
                 }
 
-                if (rowMatch) {
+                if (matchFound) {
                     foundCount++;
+                    // Extracting "Company" and "Address" logic based on common patterns
+                    // Usually Company is the first long non-NONE string, Address follows
+                    let meaningfulCells = cells.filter(c => c && c !== "NONE" && c !== "NONENONE");
+                    let displayTitle = meaningfulCells[1] || meaningfulCells[0] || "Found Item";
+                    let displaySub = meaningfulCells[2] || meaningfulCells[1] || "No Details";
+
                     const card = document.createElement('div');
                     card.className = "stop-card";
                     card.style.borderLeftColor = "#28a745";
-                    card.innerHTML = `<b>${cName}</b><br><small>${cAddr}</small><br><span style="color:#0078ff; font-size:10px;">ROUTE: ${routeName}</span>`;
+                    card.innerHTML = `<b>${displayTitle}</b><br><small>${displaySub}</small><br><span style="color:#0078ff; font-size:10px;">FOUND ON: ${routeName}</span>`;
                     
                     card.onclick = async () => {
                         toggleManager(); 
                         document.getElementById('route-select').value = routeName;
                         await loadRoute(); 
-                        const stopIdx = stops.findIndex(s => s.company.trim().toLowerCase() === cName.toLowerCase());
+                        const stopIdx = stops.findIndex(s => s.company.trim().toLowerCase() === displayTitle.toLowerCase());
                         if(stopIdx !== -1) openProfile(stopIdx);
                     };
                     resultsDiv.appendChild(card);
@@ -272,7 +278,7 @@ async function runGlobalDeepSearch() {
         } catch (e) { console.error("Error at " + routeName); }
     }
 
-    progLabel.innerText = `SCAN COMPLETE: ${foundCount} FOUND`;
+    progLabel.innerText = `SCAN COMPLETE: ${foundCount} MATCHES`;
     searchBtn.disabled = false;
     searchBtn.innerText = "SEARCH ALL 25 SHEETS";
     if (foundCount === 0) resultsDiv.innerHTML = "<p style='text-align:center; color:#aaa;'>No matching customers found.</p>";
@@ -305,15 +311,19 @@ async function loadRoute() {
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
         const cols = json.table.cols;
-        const addrIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('addr'));
-        const compIdx = cols.findIndex(c => c.label && (c.label.toLowerCase().includes('comp') || c.label.toLowerCase().includes('cust')));
+        
+        // Dynamic search for Company and Address based on the header text provided
+        const compIdx = json.table.rows[0].c.findIndex(c => c && c.v && c.v.toString().toLowerCase().includes('company'));
+        const addrIdx = json.table.rows[0].c.findIndex(c => c && c.v && c.v.toString().toLowerCase().includes('address'));
         
         stops = [];
         const rows = json.table.rows;
         for (let i = 0; i < rows.length; i++) {
             const rowData = rows[i].c;
-            const address = rowData[addrIdx] ? rowData[addrIdx].v.toString() : "";
-            if (!address || address.includes("http") || address.toLowerCase().includes("address")) continue;
+            const address = (rowData[addrIdx] && rowData[addrIdx].v) ? rowData[addrIdx].v.toString() : "";
+            const company = (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v.toString() : "";
+            
+            if (!address || address.toLowerCase().includes("address") || address === "NONE") continue;
             
             document.getElementById("status").innerText = `Mapping: ${i+1}/${rows.length}`;
             let geo = await geocodeArcGIS(address);
@@ -322,7 +332,7 @@ async function loadRoute() {
             if(!geo) { geo = { lat: warehouse[0], lng: warehouse[1] }; flagged = true; }
 
             stops.push({ 
-                company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v.toString() : "Customer", 
+                company: company || "Customer", 
                 address: address, flagged: flagged, ...geo 
             });
             await new Promise(resolve => setTimeout(resolve, 800));
