@@ -16,10 +16,11 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
 .stop-card:hover { background:#444;}
 #main-view { flex:1; display:flex; flex-direction:column;}
-#controls { background:#222; padding:15px; border-bottom:2px solid #0078ff;}
+#controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
 #map { flex:1; }
 .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
 #status { font-size:13px; color:#aaa; margin-top:8px;}
+#route-selector { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; cursor: pointer; }
 .custom-div-icon { background:transparent; border:none;}
 .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
 </style>
@@ -37,6 +38,10 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 
 <div id="main-view">
 <div id="controls">
+<select id="route-selector">
+    <option value="917509026">Main Route</option>
+    <option value="PASTE_ANOTHER_GID_HERE">Secondary Route</option>
+</select>
 <button class="btn" onclick="loadRoute()">Load Route</button>
 <div id="status">Status: Ready</div>
 </div>
@@ -45,7 +50,6 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-const ROUTE_GID = "917509026"; 
 
 let map, markerLayer, routeLine;
 let stops = [];
@@ -56,7 +60,6 @@ window.onload = () => {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
     routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map);
-
     L.marker([warehouse.lat, warehouse.lng], {
         icon: L.divIcon({
             className:'custom-div-icon',
@@ -66,13 +69,13 @@ window.onload = () => {
 };
 
 async function loadRoute() {
+    const selectedGid = document.getElementById("route-selector").value;
     document.getElementById("status").innerText = "Loading Google Sheet...";
 
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${ROUTE_GID}`;
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
     const res = await fetch(url);
     const text = await res.text();
     const json = JSON.parse(text.substring(47).slice(0, -2));
-
     const rows = json.table.rows.map(r =>
         Object.fromEntries(
             r.c.map((c,i)=>[
@@ -81,18 +84,15 @@ async function loadRoute() {
             ])
         )
     );
-
     const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
     const nameKey = Object.keys(rows[0]).find(k =>
         k.toLowerCase().includes("comp") ||
         k.toLowerCase().includes("cust")
     );
-
     let tempStops = [];
 
     for (let i = 0; i < rows.length; i++) {
         document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
-
         const geo = await geocode(rows[i][addrKey]);
         if (geo) {
             tempStops.push({
@@ -143,7 +143,6 @@ function optimize(list){
 function renderRoute(){
     markerLayer.clearLayers();
     let coords=[[warehouse.lat,warehouse.lng]];
-
     stops.forEach((s,i)=>{
         coords.push([s.lat,s.lng]);
         L.marker([s.lat,s.lng],{
@@ -154,7 +153,6 @@ function renderRoute(){
         }).addTo(markerLayer)
         .bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`);
     });
-
     coords.push([warehouse.lat,warehouse.lng]);
     routeLine.setLatLngs(coords);
     map.fitBounds(coords,{padding:[50,50]});
@@ -164,7 +162,6 @@ function renderSidebar(){
     const list=document.getElementById("stop-list");
     list.innerHTML="";
     document.getElementById("stop-count").innerText=`${stops.length} Stops Found`;
-
     stops.forEach((s,i)=>{
         const card=document.createElement("div");
         card.className="stop-card";
