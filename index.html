@@ -22,7 +22,7 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
 .profile-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
 .section-divider { border-top: 1px solid #444; margin: 15px 0; padding-top: 10px; }
-#sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:150px; touch-action: none; display: block; border: 1px solid #555;}
+#sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:150px; touch-action: none; display: block; border: 2px solid #555;}
 
 /* Buttons */
 .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
@@ -139,30 +139,24 @@ function initSignaturePad() {
     canvas = document.getElementById('sig-canvas');
     if(!canvas) return;
     ctx = canvas.getContext('2d');
-    
-    const resize = () => {
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-    };
-    window.addEventListener('resize', resize);
-    resize();
 
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { x: clientX - rect.left, y: clientY - rect.top };
+        // Use scaling to fix offset issues
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return { 
+            x: (clientX - rect.left) * scaleX, 
+            y: (clientY - rect.top) * scaleY 
+        };
     };
 
     const start = (e) => {
         drawing = true;
         const pos = getPos(e);
         ctx.beginPath();
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#000000';
         ctx.moveTo(pos.x, pos.y);
         if (e.cancelable) e.preventDefault();
     };
@@ -170,6 +164,9 @@ function initSignaturePad() {
     const move = (e) => {
         if (!drawing) return;
         const pos = getPos(e);
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000000';
         ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
         if (e.cancelable) e.preventDefault();
@@ -186,7 +183,10 @@ function initSignaturePad() {
     canvas.addEventListener('touchend', stop);
 }
 
-function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
+function clearSig() { 
+    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+    ctx.beginPath(); 
+}
 
 async function submitLog(status) {
     let reason = "";
@@ -194,12 +194,9 @@ async function submitLog(status) {
         reason = prompt("PLEASE SUPPLY A REASON FOR NOT DELIVERED:");
         if (!reason) return;
     }
-
     const now = new Date();
     const timestamp = now.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'medium' });
-    const logName = `TRIP LOG ${document.getElementById("route-select").selectedOptions[0].text} - ${now.toLocaleDateString('en-US', { dateStyle: 'long' })}`;
-
-    alert(`SAVED TO ${logName}\nSTATUS: ${status} @ ${timestamp}`);
+    alert(`SAVED STATUS: ${status} @ ${timestamp}`);
     closeProfile();
 }
 
@@ -219,23 +216,21 @@ async function loadRoute() {
         
         let tempStops = [];
         for (let i = 0; i < rows.length; i++) {
-            document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
             const geo = await geocode(rows[i][addrKey]);
             if (geo) {
                 tempStops.push({ 
                     company: rows[i][nameKey] || "Stop", 
                     address: rows[i][addrKey], 
-                    phone: rows[i][phoneKey] || "No Phone Found",
+                    phone: rows[i][phoneKey] || "N/A",
                     ...geo 
                 });
             }
-            await new Promise(r => setTimeout(r, 1500));
         }
         stops = optimize(tempStops);
         renderRoute();
         renderSidebar();
         document.getElementById("status").innerText = "Route Ready";
-    } catch (e) { document.getElementById("status").innerText = "Error loading data."; }
+    } catch (e) { document.getElementById("status").innerText = "Error loading."; }
 }
 
 function openProfile(index) {
@@ -245,7 +240,11 @@ function openProfile(index) {
     document.getElementById('prof-name').innerText = stops[index].company;
     document.getElementById('prof-addr').innerText = stops[index].address;
     document.getElementById('prof-phone').innerText = stops[index].phone;
-    document.querySelectorAll('#customer-profile input').forEach(i => i.value = "");
+    
+    // Crucial: Refresh canvas size when opening
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
     clearSig();
 }
 
@@ -286,7 +285,7 @@ function renderRoute(){
     stops.forEach((s,i)=>{
         coords.push([s.lat,s.lng]);
         L.marker([s.lat,s.lng],{ icon:L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) })
-        .addTo(markerLayer).bindPopup(`<b>${i+1}. ${s.company}</b><br>${s.address}`);
+        .addTo(markerLayer).bindPopup(`<b>${i+1}. ${s.company}</b>`);
     });
     routeLine.setLatLngs(coords);
     map.fitBounds(coords,{padding:[50,50]});
@@ -295,7 +294,6 @@ function renderRoute(){
 function renderSidebar(){
     const list=document.getElementById("stop-list");
     list.innerHTML="";
-    document.getElementById("stop-count").innerText=`${stops.length} Stops Found`;
     stops.forEach((s,i)=>{
         const card=document.createElement("div");
         card.className="stop-card";
