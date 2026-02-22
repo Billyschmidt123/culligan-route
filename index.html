@@ -19,13 +19,19 @@
     .stop-card.done { border-left-color: #28a745; opacity: 0.8; }
     .stop-card.failed { border-left-color: #dc3545; opacity: 0.8; }
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
-    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 100;}
+    
+    /* Fixed control layout to ensure all buttons show */
+    #controls { background:#222; padding:10px; border-bottom:2px solid #0078ff; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; z-index: 100; overflow-x: auto;}
+    
     #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; }
     #map { flex:1; z-index: 1;}
-    .btn { padding:12px 20px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-    .btn-scan { background:#0078ff; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-    .btn-mgr { background:#6c757d; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-    #status { font-size:13px; color:#0078ff; font-weight: bold; white-space: nowrap;}
+    
+    .btn-import { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
+    .btn-scan { background:#0078ff; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
+    .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
+    
+    #status { font-size:12px; color:#0078ff; font-weight: bold; white-space: nowrap; margin-left: auto; padding-right: 10px;}
+    
     .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white;}
     .pin-pending { background:#0078ff; }
     .pin-delivered { background:#28a745; }
@@ -71,11 +77,11 @@
 <div id="main-view">
     <div id="controls">
         <button class="btn-scan" onclick="initSheetScanner()">FIND ALL TABS</button>
-        <select id="route-select" style="padding:10px; min-width:150px; background:#333; color:white; border-radius:4px;">
-            <option value="">-- Select Route --</option>
+        <select id="route-select" style="padding:10px; min-width:140px; background:#333; color:white; border:1px solid #444; border-radius:4px;">
+            <option value="">-- Choose Week --</option>
         </select>
-        <button class="btn" id="load-btn" onclick="loadRoute()">IMPORT ROUTE</button>
-        <button class="btn-mgr" onclick="toggleManager()">MANAGER PANEL</button>
+        <button class="btn-import" id="load-btn" onclick="loadRoute()">IMPORT ROUTE</button>
+        <button class="btn-mgr" onclick="toggleManager()">MANAGER</button>
         <div id="status">STATUS: READY</div>
     </div>
     
@@ -90,7 +96,7 @@
         <div style="padding:20px;">
             <button onclick="toggleManager()" style="float:right; color:red; background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
             <h3 style="color:#0078ff;">MANAGER MAINTENANCE</h3>
-            <p>Database synchronization active.</p>
+            <p>Ready for system sync.</p>
         </div>
     </div>
 </div>
@@ -106,23 +112,17 @@ markerLayer = L.layerGroup().addTo(map);
 
 async function initSheetScanner() {
     const statusDiv = document.getElementById("status");
-    statusDiv.innerText = "SCANNING TABS...";
+    statusDiv.innerText = "SCANNING...";
     try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&t=${Date.now()}`;
-        const res = await fetch(url);
-        const text = await res.text();
-        // Extract tab info from the JSON response
-        const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
-        
-        // This method fetches the sheet names from the visualization API metadata
         const urlMeta = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`;
         const resMeta = await fetch(urlMeta);
         const html = await resMeta.text();
         const regex = /"name":"([^"]+)"/g;
         let matches, names = [];
         while ((matches = regex.exec(html)) !== null) {
-            if (!names.includes(matches[1]) && !matches[1].includes("Sheet") && matches[1] !== "Template") {
-                names.push(matches[1]);
+            const tab = matches[1];
+            if (!names.includes(tab) && !tab.includes("Sheet") && tab !== "Template" && !tab.includes("copy")) {
+                names.push(tab);
             }
         }
 
@@ -134,9 +134,9 @@ async function initSheetScanner() {
             opt.text = name;
             select.appendChild(opt);
         });
-        statusDiv.innerText = "STATUS: TABS LOADED";
+        statusDiv.innerText = "TABS READY";
     } catch (e) {
-        statusDiv.innerText = "STATUS: SCAN ERROR";
+        statusDiv.innerText = "SCAN ERROR";
         console.error(e);
     }
 }
@@ -181,9 +181,15 @@ async function loadRoute() {
         }
         renderSidebar(); 
         updateMapVisuals();
-        statusDiv.innerText = "STATUS: IMPORT COMPLETE";
+        statusDiv.innerText = "DONE";
+        
+        // Auto-zoom to the imported route
+        if(stops.length > 0) {
+            const group = new L.featureGroup(markerLayer.getLayers());
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
     } catch (e) { 
-        statusDiv.innerText = "STATUS: IMPORT ERROR"; 
+        statusDiv.innerText = "ERROR"; 
     } finally { 
         loadBtn.disabled = false; 
     }
