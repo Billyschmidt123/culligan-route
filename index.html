@@ -55,19 +55,10 @@
     .mgr-content { padding: 20px; display: none; overflow-y: auto; height: calc(100% - 150px); color: white;}
     .mgr-content.active { display: block; }
     .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
-
-    #lock-screen { position:fixed; inset:0; background:#111; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;}
-    #pass-input { padding:15px; font-size:20px; text-align:center; border-radius:8px; border:none; margin-bottom:10px;}
 </style>
 </head>
 
 <body>
-
-<div id="lock-screen">
-    <h2 style="color:#0078ff;">CULLIGAN ACCESS</h2>
-    <input type="password" id="pass-input" placeholder="Enter PIN">
-    <button class="btn" onclick="checkUnlock()" style="width:200px; padding:15px;">UNLOCK</button>
-</div>
 
 <div id="sidebar">
     <div id="list-view">
@@ -137,8 +128,8 @@
         </select>
         <button class="btn" style="background:#0078ff;" onclick="loadRoute()">Load Route</button>
         <button id="start-btn" class="btn" style="background:#28a745; display:none;" onclick="startRoute()">START ROUTE</button>
-        <button class="btn-mgr" onclick="mgrUnlock()">Manager Panel</button>
-        <div id="status">Status: Locked</div>
+        <button class="btn-mgr" onclick="toggleManager()">Manager Panel</button>
+        <div id="status">Status: Ready</div>
     </div>
     <div id="map"></div>
     <button id="lost-btn" onclick="openGoogleMaps()">📍 I'M LOST</button>
@@ -180,18 +171,7 @@ window.onload = () => {
     initSignaturePad();
 };
 
-function checkUnlock() {
-    if (document.getElementById('pass-input').value === "1234") {
-        document.getElementById('lock-screen').style.display = 'none';
-        document.getElementById('status').innerText = "Ready";
-    } else alert("Incorrect PIN");
-}
-
-function mgrUnlock() {
-    if (prompt("Enter Manager PIN:") === "5678") toggleManager();
-    else alert("Access Denied");
-}
-
+// Security prompts removed, functions toggle directly
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
 
 function startRoute() {
