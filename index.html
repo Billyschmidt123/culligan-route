@@ -4,30 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Culligan Driver Portal</title>
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <style>
         body { margin: 0; height: 100vh; display: flex; flex-direction: row; font-family: 'Segoe UI', sans-serif; background: #111; color: white; overflow: hidden; }
-        
-        /* RESTORED: Factory Sidebar */
         #sidebar { width: 320px; background: #222; border-right: 2px solid #0078ff; display: flex; flex-direction: column; flex-shrink: 0; }
         #sidebar-header { padding: 15px; border-bottom: 1px solid #444; }
         #stop-list { flex: 1; overflow-y: auto; padding: 10px; }
-        
-        /* RESTORED: Driver Stop Cards */
-        .stop-card { background: #333; padding: 12px; margin-bottom: 10px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 13px; cursor: pointer; transition: 0.2s; }
+        .stop-card { background: #333; padding: 12px; margin-bottom: 10px; border-radius: 4px; border-left: 4px solid #0078ff; font-size: 13px; cursor: pointer; }
         .stop-card:hover { background: #444; }
-        .stop-card.active { background: #0078ff; border-left-color: #fff; }
-
         #main-view { flex: 1; display: flex; flex-direction: column; }
-        #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 10px; align-items: center; }
+        #controls { background: #222; padding: 12px; border-bottom: 2px solid #0078ff; display: flex; gap: 10px; align-items: center; }
         #map { flex: 1; width: 100%; }
-        
-        select { padding: 10px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 200px; font-size: 14px; }
-        .btn-blue { padding: 10px 20px; background: #0078ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        
+        select { padding: 10px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 220px; }
+        .btn-blue { padding: 10px 15px; background: #0078ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
     </style>
 </head>
@@ -36,7 +26,7 @@
 <div id="sidebar">
     <div id="sidebar-header">
         <h3 style="margin:0">CULLIGAN ROUTES</h3>
-        <p id="stop-count" style="font-size: 12px; color: #aaa;">Select a route to begin</p>
+        <p id="stop-count" style="font-size: 12px; color: #aaa;">Ready</p>
     </div>
     <div id="stop-list"></div>
 </div>
@@ -44,111 +34,80 @@
 <div id="main-view">
     <div id="controls">
         <select id="routeSelect" onchange="loadRouteData(this.value)">
-            <option value="">Loading Spreadsheet...</option>
+            <option value="">Fetching Routes...</option>
         </select>
         <button class="btn-blue" onclick="optimizeRoute()">Optimize Path</button>
-        <div id="status" style="font-size: 13px; color: #aaa; margin-left: auto;">Status: Connected</div>
+        <div id="status" style="font-size: 12px; color: #888; margin-left: auto;">Connected</div>
     </div>
     <div id="map"></div>
 </div>
 
 <script>
-    const API_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL"; // REPLACE WITH YOUR DEPLOYED URL
+    // FIXED: Your Specific Web App URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
+    
     let map, markerLayer, routeLine, stops = [];
-    const baseLocation = { lat: 55.1707, lng: -118.7947 };
+    const base = { lat: 55.1707, lng: -118.7947 };
 
     window.onload = () => {
-        map = L.map("map").setView([baseLocation.lat, baseLocation.lng], 12);
+        map = L.map("map").setView([base.lat, base.lng], 12);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
         markerLayer = L.layerGroup().addTo(map);
         routeLine = L.polyline([], { color: '#0078ff', weight: 4, opacity: 0.8 }).addTo(map);
-        fetchRouteTabs();
+        fetchTabs();
     };
 
-    // RESTORED: Fetch all tabs from the Bottle-water sheet
-    async function fetchRouteTabs() {
+    async function fetchTabs() {
         try {
             const res = await fetch(API_URL);
             const tabs = await res.json();
-            const selector = document.getElementById('routeSelect');
-            selector.innerHTML = `<option value="">Select Route</option>` + 
-                tabs.filter(t => t !== 'Deliveries').map(t => `<option value="${t}">${t}</option>`).join('');
-        } catch (e) { 
-            document.getElementById('status').innerText = "Sync Error"; 
-        }
+            const sel = document.getElementById('routeSelect');
+            sel.innerHTML = `<option value="">Select Route</option>` + tabs.map(t => `<option value="${t}">${t}</option>`).join('');
+        } catch (e) { document.getElementById('status').innerText = "Sync Error"; }
     }
 
-    // RESTORED: Load Route and Auto-Optimize
     async function loadRouteData(name) {
         if (!name) return;
-        document.getElementById('status').innerText = "Downloading Route...";
-        try {
-            const res = await fetch(`${API_URL}?sheet=${encodeURIComponent(name)}`);
-            stops = await res.json();
-            optimizeRoute(); // Triggering optimization immediately on load
-        } catch (e) { 
-            document.getElementById('status').innerText = "Data Error"; 
-        }
+        document.getElementById('status').innerText = "Loading Route...";
+        const res = await fetch(`${API_URL}?sheet=${encodeURIComponent(name)}`);
+        stops = await res.json();
+        optimizeRoute();
     }
 
-    // RESTORED: Route Optimization Logic
     function optimizeRoute() {
-        if (stops.length < 2) { renderUI(); return; }
-        document.getElementById('status').innerText = "Optimizing Path...";
-        
-        let unvisited = [...stops];
-        let ordered = [];
-        let currentPos = baseLocation;
-
+        if (stops.length < 1) return;
+        let unvisited = [...stops], ordered = [], current = base;
         while (unvisited.length > 0) {
-            unvisited.sort((a, b) => {
-                const distA = Math.hypot(parseFloat(a.lat) - currentPos.lat, parseFloat(a.lng) - currentPos.lng);
-                const distB = Math.hypot(parseFloat(b.lat) - currentPos.lat, parseFloat(b.lng) - currentPos.lng);
-                return distA - distB;
-            });
-            let closest = unvisited.shift();
-            ordered.push(closest);
-            currentPos = { lat: parseFloat(closest.lat), lng: parseFloat(closest.lng) };
+            unvisited.sort((a, b) => Math.hypot(a.lat - current.lat, a.lng - current.lng) - Math.hypot(b.lat - current.lat, b.lng - current.lng));
+            let next = unvisited.shift();
+            ordered.push(next);
+            current = { lat: next.lat, lng: next.lng };
         }
         stops = ordered;
-        renderUI();
-        document.getElementById('status').innerText = "Route Optimized";
+        render();
     }
 
-    // RESTORED: Driver Stop Cards and Map Pins
-    function renderUI() {
+    function render() {
         markerLayer.clearLayers();
         const list = document.getElementById('stop-list');
         list.innerHTML = "";
-        let path = [[baseLocation.lat, baseLocation.lng]];
+        let path = [[base.lat, base.lng]];
 
         stops.forEach((s, i) => {
-            const lat = parseFloat(s.lat);
-            const lng = parseFloat(s.lng);
-            if (isNaN(lat) || isNaN(lng)) return;
-
-            path.push([lat, lng]);
-
-            // Map Markers
-            L.marker([lat, lng], { 
-                icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>`, className: '' }) 
-            }).addTo(markerLayer);
-
-            // STOP CARDS
+            const pos = [parseFloat(s.lat), parseFloat(s.lng)];
+            path.push(pos);
+            L.marker(pos, { icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>`, className: '' }) }).addTo(markerLayer);
+            
             const card = document.createElement('div');
             card.className = "stop-card";
             card.innerHTML = `<b>#${i+1} ${s.Customer || s.Company}</b><br><small>${s.Address}</small>`;
-            card.onclick = () => {
-                document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-                map.flyTo([lat, lng], 15);
-            };
+            card.onclick = () => map.flyTo(pos, 15);
             list.appendChild(card);
         });
-
         routeLine.setLatLngs(path);
-        if (path.length > 0) map.fitBounds(L.polyline(path).getBounds(), { padding: [40, 40] });
-        document.getElementById('stop-count').innerText = `${stops.length} Deliveries Found`;
+        map.fitBounds(L.polyline(path).getBounds(), { padding: [40, 40] });
+        document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
+        document.getElementById('status').innerText = "Route Optimized";
     }
 </script>
 </body>
