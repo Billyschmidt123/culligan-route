@@ -37,9 +37,9 @@
     #route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; }
     .custom-div-icon { background:transparent; border:none;}
     .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
-    .rush-pin { background:#a335ee; border-color: white;}
+    .rush-pin { background:#a335ee !important; border-color: white !important;}
 
-    /* Manager Panel Overlay */
+    /* Manager Panel */
     #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
     #manager-panel.open { bottom: 0; }
     .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; }
@@ -49,11 +49,11 @@
     .mgr-content.active { display: block; }
     .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
 
-    /* Search Results Area */
+    /* Search Results Container */
     #search-results-area { margin-top: 15px; max-height: 300px; overflow-y: auto; border: 1px solid #444; background: #111; padding: 10px; border-radius: 4px; }
     .tab-badge { position: absolute; top: 5px; right: 5px; font-size: 10px; background: #0078ff; color: white; padding: 2px 6px; border-radius: 4px; }
 
-    /* Modal Styling */
+    /* Modals */
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; }
     .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #a335ee; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; box-shadow: 0 0 20px rgba(163, 53, 238, 0.5); max-height: 90vh; overflow-y: auto;}
 
@@ -107,6 +107,24 @@
             <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
             <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
             <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
+            <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
+            <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
+            <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
+            <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
+            <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
+            <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
+            <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
+            <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
+            <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
+            <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
+            <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
+            <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
+            <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
+            <option value="WEEK 4 THURSDAY">WEEK 4 THURSDAY</option>
+            <option value="WEEK 4 FRIDAY">WEEK 4 FRIDAY</option>
+            <option value="VALLEY VIEW">VALLEY VIEW</option>
+            <option value="NORTH">NORTH</option>
+            <option value="DAWSON CREEK">DAWSON CREEK</option>
             <option value="SALT">SALT</option>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
@@ -133,7 +151,7 @@
             </div>
             
             <div id="search-results-area">
-                <div style="text-align:center; color:#777; padding:20px;">Use search to find or add customers</div>
+                <div style="text-align:center; color:#777; padding:20px;">Search results will appear here</div>
             </div>
         </div>
         
@@ -162,7 +180,6 @@
 <div class="modal-overlay" id="rush-modal-overlay" onclick="closeRushModal()"></div>
 <div id="rush-modal" class="edit-modal">
     <h3 id="rush-title" style="color:#a335ee; margin-top:0;">Rush Order Details</h3>
-    
     <div class="profile-group"><label>CUSTOMER NAME</label><input type="text" id="r-cust-name"></div>
     <div class="profile-group"><label>ADDRESS</label><input type="text" id="r-cust-addr"></div>
     <div class="profile-group"><label>EMAIL</label><input type="email" id="r-cust-email"></div>
@@ -209,14 +226,11 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-/** RUSH WORKFLOW LOGIC **/
+/** RUSH WORKFLOW **/
 async function triggerRushWorkflow() {
     const term = document.getElementById('global-search-input').value.trim();
-    if (!term) {
-        alert("Please enter a name in the search box first to check if they exist.");
-        return;
-    }
-    await performGlobalSearch(true); // Search and auto-load if found
+    if (!term) { alert("Enter a name in the search box first."); return; }
+    await performGlobalSearch(true); 
 }
 
 async function performGlobalSearch(isRush = false) {
@@ -234,7 +248,7 @@ async function performGlobalSearch(isRush = false) {
                 json.table.rows.forEach(row => {
                     const rowData = row.c.map(cell => cell ? String(cell.v) : "");
                     if (rowData.join(" ").toLowerCase().includes(term)) {
-                        foundItems.push({ company: rowData[2] || rowData[1], address: rowData[3], notes: rowData[10], email: rowData[15], phone: rowData[16] });
+                        foundItems.push({ company: rowData[2] || rowData[1], address: rowData[3], notes: rowData[10], email: rowData[15], phone: rowData[16], tab: tab });
                     }
                 });
             }
@@ -246,13 +260,14 @@ async function performGlobalSearch(isRush = false) {
         foundItems.forEach(item => {
             const div = document.createElement("div");
             div.className = "stop-card";
-            div.innerHTML = `<b>${item.company}</b><br><small>${item.address}</small>`;
+            div.style.borderLeft = "4px solid #0078ff";
+            div.innerHTML = `<span class="tab-badge">${item.tab}</span><b>${item.company}</b><br><small>${item.address}</small>`;
             div.onclick = () => openRushModal(item);
             list.appendChild(div);
         });
-        if (isRush) openRushModal(foundItems[0]); // Auto-load first match for rush
+        if (isRush) openRushModal(foundItems[0]); 
     } else {
-        list.innerHTML = `<div style="padding:10px; color:#ffc107;">Customer not found. Opening New Customer form...</div>`;
+        list.innerHTML = `<div style="padding:10px; color:#ffc107; text-align:center;">Customer not found. Start typing below to add them.</div>`;
         if (isRush) openRushModal({ company: term, address: "", notes: "", email: "", phone: "" });
     }
 }
@@ -280,67 +295,39 @@ async function saveAndAlertDriver() {
         isRush: true
     };
 
-    // Geocode and Add to active route immediately
     const geo = await geocodeArcGIS(rushData.address);
     const newStop = { ...rushData, lat: geo ? geo.lat : warehouse[0], lng: geo ? geo.lng : warehouse[1], flagged: !geo };
     
-    // Inject into current route at the next position
-    stops.splice(currentStopIndex === null ? 0 : currentStopIndex + 1, 0, newStop);
+    // Inject after current stop or at start
+    const index = currentStopIndex === null ? 0 : currentStopIndex + 1;
+    stops.splice(index, 0, newStop);
     
-    // Set Pending Alert for Tablet
-    pendingAlert = `RUSH ORDER ADDED: ${rushData.company} at ${rushData.address}. Please check your map for the purple stop.`;
+    pendingAlert = `RUSH ORDER ADDED: ${rushData.company} at ${rushData.address}. Check purple map pin.`;
     
     renderSidebar();
     renderRoute();
-    alert("Alert Sent! Driver will receive the notification upon completing their current stop.");
+    alert("Alert Sent to Driver.");
     closeRushModal();
     toggleManager();
 }
 
-/** DRIVER SIDE LOGIC (MODIFIED SUBMIT) **/
+/** DRIVER SIDE ALERT **/
 async function submitLog(status) {
     const now = new Date();
     const entry = { customer: stops[currentStopIndex].company, status: status, time: now.toLocaleTimeString() };
-    
     deliveryLog.push(entry);
     updateReports();
     closeProfile();
 
-    // The Alert Intercept
     if (pendingAlert) {
         setTimeout(() => {
             alert("⚠️ SYSTEM ALERT: " + pendingAlert);
             pendingAlert = null;
-        }, 500);
+        }, 600);
     }
 }
 
-function renderRoute() {
-    markerLayer.clearLayers();
-    stops.forEach((s, i) => {
-        const isRush = s.isRush;
-        L.marker([s.lat, s.lng], { 
-            icon: L.divIcon({ 
-                className:'custom-div-icon', 
-                html:`<div class="number-pin ${isRush ? 'rush-pin' : ''}">${i+1}</div>` 
-            }) 
-        }).addTo(markerLayer);
-    });
-}
-
-function renderSidebar() {
-    const list = document.getElementById("stop-list");
-    list.innerHTML = "";
-    stops.forEach((s, i) => {
-        const div = document.createElement("div");
-        div.className = `stop-card ${s.flagged ? 'flagged' : ''} ${s.isRush ? 'rush-order' : ''}`;
-        div.innerHTML = `<b>${i+1}. ${s.company}</b> ${s.isRush ? '<small>(RUSH)</small>' : ''}<br><small>${s.address}</small>`;
-        div.onclick = () => { map.setView([s.lat, s.lng], 16); openProfile(i); };
-        list.appendChild(div);
-    });
-}
-
-// (Original functions: loadRoute, geocodeArcGIS, initSignaturePad, updateReports, executeEOD remain unchanged)
+/** CORE FUNCTIONS **/
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
     document.getElementById("status").innerText = "Reading Sheet...";
@@ -360,7 +347,10 @@ async function loadRoute() {
             const address = rowData[addrIdx] ? rowData[addrIdx].v.toString() : "";
             if (!address || address.includes("http") || address.toLowerCase().includes("address")) continue;
             let geo = await geocodeArcGIS(address);
-            stops.push({ company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v : "Customer", address: address, flagged: !geo, lat: geo?geo.lat:warehouse[0], lng: geo?geo.lng:warehouse[1] });
+            stops.push({ 
+                company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v : "Customer", 
+                address: address, flagged: !geo, lat: geo?geo.lat:warehouse[0], lng: geo?geo.lng:warehouse[1] 
+            });
         }
         renderRoute(); renderSidebar();
         document.getElementById("status").innerText = "Route Ready";
@@ -374,6 +364,30 @@ async function geocodeArcGIS(addr) {
         const data = await res.json();
         return data.candidates.length ? { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x } : null;
     } catch (e) { return null; }
+}
+
+function renderRoute() {
+    markerLayer.clearLayers();
+    stops.forEach((s, i) => {
+        L.marker([s.lat, s.lng], { 
+            icon: L.divIcon({ 
+                className:'custom-div-icon', 
+                html:`<div class="number-pin ${s.isRush ? 'rush-pin' : ''}">${i+1}</div>` 
+            }) 
+        }).addTo(markerLayer);
+    });
+}
+
+function renderSidebar() {
+    const list = document.getElementById("stop-list");
+    list.innerHTML = "";
+    stops.forEach((s, i) => {
+        const div = document.createElement("div");
+        div.className = `stop-card ${s.flagged ? 'flagged' : ''} ${s.isRush ? 'rush-order' : ''}`;
+        div.innerHTML = `<b>${i+1}. ${s.company}</b> ${s.isRush ? '(RUSH)' : ''}<br><small>${s.address}</small>`;
+        div.onclick = () => { map.setView([s.lat, s.lng], 16); openProfile(i); };
+        list.appendChild(div);
+    });
 }
 
 function initSignaturePad() {
