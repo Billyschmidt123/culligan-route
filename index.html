@@ -52,11 +52,11 @@
     .mgr-footer { padding: 20px; background: #222; border-top: 1px solid #444; position: sticky; bottom: 0; }
     .btn-eod { background: #ffc107; color: black; width: 100%; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 4px; font-weight: bold; border: none;}
 
-    /* Progress Tracker Styles */
-    #search-progress-area { margin-top: 15px; display: none; background: #222; padding: 10px; border-radius: 4px; border: 1px solid #444; }
-    #progress-label { font-size: 11px; color: #0078ff; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
-    #progress-bar-bg { width: 100%; background: #111; height: 12px; border-radius: 6px; overflow: hidden; }
-    #progress-bar-fill { width: 0%; height: 100%; background: #0078ff; transition: width 0.2s ease; }
+    /* NEW Search Tool UI Styles */
+    #search-progress-area { margin-top: 15px; display: none; background: #222; padding: 12px; border-radius: 4px; border: 1px solid #444; }
+    #progress-label { font-size: 11px; color: #0078ff; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;}
+    #progress-bar-bg { width: 100%; background: #111; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #333;}
+    #progress-bar-fill { width: 0%; height: 100%; background: #0078ff; transition: width 0.2s ease; box-shadow: 0 0 10px rgba(0,120,255,0.5);}
 </style>
 </head>
 
@@ -133,7 +133,7 @@
         <div class="mgr-tabs">
             <button class="mgr-tab-btn active" onclick="switchTab('reports')">DAILY SUMMARY</button>
             <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
-            <button class="mgr-tab-btn" onclick="switchTab('cust-maint')">CUSTOMER SEARCH</button>
+            <button class="mgr-tab-btn" onclick="switchTab('cust-maint')">CUSTOMER MAINT.</button>
         </div>
         
         <div id="reports" class="mgr-content active">
@@ -155,19 +155,20 @@
         <div id="cust-maint" class="mgr-content">
             <h2 style="color:#0078ff;">GLOBAL CUSTOMER SEARCH</h2>
             <div class="profile-group">
-                <label>Customer or Company Name</label>
-                <input type="text" id="search-input" placeholder="Type name to search 25 files...">
+                <label>Enter Name / Company</label>
+                <input type="text" id="deep-search-input" placeholder="Scanning all 25 files...">
             </div>
-            <button class="btn" onclick="runGlobalSearch()" style="width:100%; height: 50px; font-size: 16px;">START DEEP SCAN</button>
 
             <div id="search-progress-area">
-                <div id="progress-label">Initializing Scan...</div>
+                <div id="progress-label">Preparing Deep Scan...</div>
                 <div id="progress-bar-bg">
                     <div id="progress-bar-fill"></div>
                 </div>
             </div>
 
-            <div id="search-results-area" style="margin-top: 20px;"></div>
+            <button class="btn" onclick="runGlobalSearch()" style="width:100%; margin-top:20px; height: 50px; font-size: 16px;">START DEEP SCAN</button>
+
+            <div id="search-results-display" style="margin-top: 25px;"></div>
         </div>
 
         <div class="mgr-footer">
@@ -177,6 +178,7 @@
 </div>
 
 <script>
+// CONFIG
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
 
@@ -201,17 +203,17 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-// THE NEW SEARCH FUNCTION
+// SEARCH TOOL LOGIC
 async function runGlobalSearch() {
-    const term = document.getElementById('search-input').value.trim();
+    const term = document.getElementById('deep-search-input').value.trim();
     const progArea = document.getElementById('search-progress-area');
     const progLabel = document.getElementById('progress-label');
     const progFill = document.getElementById('progress-bar-fill');
-    const resultsDiv = document.getElementById('search-results-area');
+    const display = document.getElementById('search-results-display');
     
     if(!term) return alert("Please enter a customer name.");
     
-    resultsDiv.innerHTML = "";
+    display.innerHTML = "";
     progArea.style.display = "block";
     progFill.style.width = "0%";
     
@@ -223,12 +225,10 @@ async function runGlobalSearch() {
         "VALLEY VIEW", "NORTH", "DAWSON CREEK", "SALT"
     ];
 
-    let found = [];
+    let foundItems = [];
 
     for (let i = 0; i < allRoutes.length; i++) {
         const routeName = allRoutes[i];
-        
-        // Update Progress UI
         const percent = Math.round(((i + 1) / allRoutes.length) * 100);
         progFill.style.width = percent + "%";
         progLabel.innerText = `SCANNING: ${routeName} (${i+1}/24)`;
@@ -242,26 +242,24 @@ async function runGlobalSearch() {
             json.table.rows.forEach(row => {
                 const company = row.c[0] ? row.c[0].v.toString() : "";
                 const address = row.c[1] ? row.c[1].v.toString() : "";
-                
                 if (company.toLowerCase().includes(term.toLowerCase())) {
-                    found.push({ company, address, routeName });
+                    foundItems.push({ company, address, routeName });
                 }
             });
         } catch (e) { console.error("Error at " + routeName); }
     }
 
-    progLabel.innerText = "SEARCH COMPLETE";
+    progLabel.innerText = "SCAN COMPLETE";
     
-    if (found.length === 0) {
-        resultsDiv.innerHTML = `<div style="color:red; padding:10px;">No matches found for "${term}".</div>`;
+    if (foundItems.length === 0) {
+        display.innerHTML = `<div style="color:#ffc107; padding:10px;">No results for "${term}".</div>`;
     } else {
-        found.forEach(item => {
+        foundItems.forEach(item => {
             const card = document.createElement('div');
             card.className = "stop-card";
             card.innerHTML = `
-                <b>${item.company}</b><br>
-                <small>${item.address}</small><br>
-                <span style="color:#0078ff; font-size:10px; font-weight:bold;">ROUTE: ${item.routeName}</span>
+                <b>${item.company}</b><br><small>${item.address}</small><br>
+                <span style="color:#0078ff; font-size:10px; font-weight:bold;">FILE: ${item.routeName}</span>
             `;
             card.onclick = async () => {
                 toggleManager();
@@ -273,7 +271,7 @@ async function runGlobalSearch() {
                     openProfile(stopIdx);
                 }
             };
-            resultsDiv.appendChild(card);
+            display.appendChild(card);
         });
     }
 }
