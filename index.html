@@ -46,8 +46,8 @@
     .mgr-content.active { display: block; }
     .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
     
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-    th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+    th, td { border: 1px solid #444; padding: 6px; text-align: left; }
     th { background: #333; color: #0078ff; }
     .mgr-footer { padding: 20px; background: #222; border-top: 1px solid #444; position: sticky; bottom: 0; }
     .btn-eod { background: #ffc107; color: black; width: 100%; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 4px; font-weight: bold; border: none;}
@@ -138,7 +138,18 @@
             <h3>LIVE REPORT (ACTIVE TRACKING)</h3>
             <table id="live-table">
                 <thead>
-                    <tr><th>Customer</th><th>Status</th><th>18L</th><th>Small</th><th>Cases</th><th>Ret 18L</th><th>Ret Small</th><th>Time</th></tr>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Status</th>
+                        <th>18L</th>
+                        <th>Small</th>
+                        <th>Cases</th>
+                        <th>Ret 18L</th>
+                        <th>Ret Sm</th>
+                        <th>Reason</th>
+                        <th>Notes</th>
+                        <th>Time</th>
+                    </tr>
                 </thead>
                 <tbody id="live-body"></tbody>
             </table>
@@ -341,7 +352,16 @@ function updateReports() {
             </div>`;
 
         liveBody.innerHTML += `<tr>
-            <td>${log.customer}</td><td>${log.status}</td><td>${log.v18l}</td><td>${log.vSmall}</td><td>${log.vCases}</td><td>${log.r18l}</td><td>${log.rSmall}</td><td>${log.time}</td>
+            <td>${log.customer}</td>
+            <td>${log.status}</td>
+            <td>${log.v18l}</td>
+            <td>${log.vSmall}</td>
+            <td>${log.vCases}</td>
+            <td>${log.r18l}</td>
+            <td>${log.rSmall}</td>
+            <td style="color:#ffc107">${log.reason}</td>
+            <td style="font-style:italic; color:#aaa">${log.notes}</td>
+            <td>${log.time}</td>
         </tr>`;
     });
 
