@@ -84,30 +84,30 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 <div id="main-view">
     <div id="controls">
         <select id="route-select">
-            <option value="917509026">WEEK 1 MONDAY</option>
-            <option value="GID_HERE">WEEK 1 TUESDAY</option>
-            <option value="GID_HERE">WEEK 1 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 1 THURSDAY</option>
-            <option value="GID_HERE">WEEK 1 FRIDAY</option>
-            <option value="GID_HERE">WEEK 2 MONDAY</option>
-            <option value="GID_HERE">WEEK 2 TUESDAY</option>
-            <option value="GID_HERE">WEEK 2 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 2 THURSDAY</option>
-            <option value="GID_HERE">WEEK 2 FRIDAY</option>
-            <option value="GID_HERE">WEEK 3 MONDAY</option>
-            <option value="GID_HERE">WEEK 3 TUESDAY</option>
-            <option value="GID_HERE">WEEK 3 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 3 THURSDAY</option>
-            <option value="GID_HERE">WEEK 3 FRIDAY</option>
-            <option value="GID_HERE">WEEK 4 MONDAY</option>
-            <option value="GID_HERE">WEEK 4 TUESDAY</option>
-            <option value="GID_HERE">WEEK 4 WEDNESDAY</option>
-            <option value="GID_HERE">WEEK 4 THURSDAY</option>
-            <option value="GID_HERE">WEEK 4 FRIDAY</option>
-            <option value="GID_HERE">VALLEY VIEW</option>
-            <option value="GID_HERE">NORTH</option>
-            <option value="GID_HERE">DAWSON CREEK</option>
-            <option value="GID_HERE">SALT</option>
+            <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
+            <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
+            <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
+            <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
+            <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
+            <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
+            <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
+            <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
+            <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
+            <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
+            <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
+            <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
+            <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
+            <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
+            <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
+            <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
+            <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
+            <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
+            <option value="WEEK 4 THURSDAY">WEEK 4 THURSDAY</option>
+            <option value="WEEK 4 FRIDAY">WEEK 4 FRIDAY</option>
+            <option value="VALLEY VIEW">VALLEY VIEW</option>
+            <option value="NORTH">NORTH</option>
+            <option value="DAWSON CREEK">DAWSON CREEK</option>
+            <option value="SALT">SALT</option>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
         <div id="status">Status: Ready</div>
@@ -194,30 +194,57 @@ async function submitLog(status) {
 }
 
 async function loadRoute() {
-    const gid = document.getElementById("route-select").value;
+    const sheetName = document.getElementById("route-select").value;
     document.getElementById("status").innerText = "Loading Stops...";
     try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}`;
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
-        const rows = json.table.rows.map(r => Object.fromEntries(r.c.map((c,i)=>[json.table.cols[i].label, c ? c.v : ""])));
         
+        // Match columns by label
+        const cols = json.table.cols;
+        const addrIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('addr'));
+        const compIdx = cols.findIndex(c => c.label && (c.label.toLowerCase().includes('comp') || c.label.toLowerCase().includes('cust')));
+        const phoneIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('phone'));
+
         stops = [];
-        for (let r of rows) {
-            const geo = await geocode(r["Address"]);
-            if(geo) stops.push({ company: r["Company"]||"Customer", address: r["Address"], phone: r["Phone"]||"N/A", ...geo });
+        const rows = json.table.rows;
+        
+        for (let i = 0; i < rows.length; i++) {
+            const rowData = rows[i].c;
+            const address = rowData[addrIdx] ? rowData[addrIdx].v : "";
+            
+            if (address && address.toString().trim() !== "" && address !== "undefined") {
+                const geo = await geocode(address);
+                if(geo) {
+                    stops.push({ 
+                        company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v : "Customer", 
+                        address: address, 
+                        phone: (rowData[phoneIdx] && rowData[phoneIdx].v) ? rowData[phoneIdx].v : "N/A", 
+                        ...geo 
+                    });
+                }
+                // Optional: add a small 200ms delay if you find it still hits rate limits
+            }
         }
+        
         renderRoute();
         renderSidebar();
         document.getElementById("status").innerText = "Route Ready";
-    } catch (e) { alert("Error loading Sheet data."); }
+        document.getElementById("stop-count").innerText = `${stops.length} Stops Found`;
+    } catch (e) { 
+        console.error(e);
+        alert("Error loading Sheet data. Ensure tab names match exactly."); 
+    }
 }
 
 async function geocode(addr) {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Grande Prairie, AB")}`);
-    const data = await res.json();
-    return data.length ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Grande Prairie, AB")}`);
+        const data = await res.json();
+        return data.length ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+    } catch (e) { return null; }
 }
 
 function renderRoute() {
