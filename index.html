@@ -18,7 +18,6 @@
         .stop-card.active-card { background: #444; border-left-color: #e74c3c; }
         .card-label { color: #0078ff; font-weight: bold; font-size: 11px; text-transform: uppercase; display: block; margin-top: 4px; }
         .card-val { color: #eee; display: block; margin-bottom: 2px; }
-        .inv-grid-sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; border-top: 1px solid #444; padding-top: 5px; }
         #main-view { flex: 1; display: flex; flex-direction: column; }
         #controls { background: #222; padding: 15px; border-bottom: 2px solid #0078ff; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         #current-stop-bar { background: #0078ff; color: white; padding: 10px; font-weight: bold; text-align: center; font-size: 16px; display: none; }
@@ -33,20 +32,15 @@
         .field-row { margin-bottom: 12px; }
         .field-row label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
         .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; border-radius: 4px; }
-        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         #sig-canvas { background: white; border-radius: 4px; cursor: crosshair; width: 100%; height: 100px; }
-        .nav-container { display: flex; justify-content: space-between; padding: 10px; background: #222; border-top: 1px solid #444; }
         
         .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; font-size: 13px; }
         .active-pin { background: #e74c3c !important; scale: 1.2; box-shadow: 0 0 10px #e74c3c; }
         .warehouse-pin { background: #222 !important; border-color: #f39c12 !important; color: #f39c12 !important; }
         .leaflet-tooltip-own { background: rgba(0,0,0,0.7); border: 1px solid #0078ff; color: white; font-weight: bold; border-radius: 4px; padding: 2px 6px; }
 
-        #ticket-output { display: none; padding: 30px; background: white; color: black; width: 500px; border-radius: 15px; border: 2px solid #0078ff; }
-        .ticket-header { border-bottom: 4px solid #0078ff; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
-        .ticket-footer { border-top: 4px solid #0078ff; padding-top: 10px; margin-top: 20px; text-align: center; font-style: italic; }
-        .ticket-body { margin-bottom: 20px; }
-        .ticket-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; }
+        /* Hidden Template for PDF */
+        #ticket-output { display: none; padding: 30px; background: white; color: black; width: 500px; }
     </style>
 </head>
 <body>
@@ -54,12 +48,12 @@
 <div id="sidebar">
     <div id="sidebar-header">
         <h3 style="margin:0">Route List</h3>
-        <p id="driver-display" style="font-size: 14px; color: #0078ff; margin: 5px 0 5px 0; font-weight: bold;"></p>
-        <p id="stop-count" style="font-size: 12px; color: #aaa; margin: 0 0 10px 0;">No route loaded</p>
+        <p id="driver-display" style="font-size: 14px; color: #0078ff; margin: 5px 0; font-weight: bold;"></p>
+        <p id="stop-count" style="font-size: 12px; color: #aaa; margin-bottom: 10px;">No route loaded</p>
         <button class="btn btn-mgr" style="width:100%;" onclick="openManagerMenu()">Manager Menu</button>
     </div>
     <div id="stop-list"></div>
-    <div class="nav-container">
+    <div style="display: flex; justify-content: space-between; padding: 10px; background: #222;">
         <button class="btn btn-nav" onclick="prevStop()">⬅ Previous</button>
         <button class="btn btn-nav" onclick="nextStop()">Next ➡</button>
     </div>
@@ -67,7 +61,7 @@
 
 <div id="main-view">
     <div id="controls">
-        <select id="routeSelector"><option value="">Fetch Routes...</option></select>
+        <select id="routeSelector"><option value="">Fetching...</option></select>
         <button class="btn" onclick="loadSelectedRoute()">Load Route</button>
         <div id="status" style="font-size: 13px; color: #aaa;">Status: Ready</div>
     </div>
@@ -76,62 +70,38 @@
 </div>
 
 <div id="ticket-output">
-    <div class="ticket-header">
-        <h2 style="color:#0078ff; margin:0;">Culligan Bottle Water</h2>
-        <p style="margin:5px 0;">12001 99 Ave, Grande Prairie, AB T8W 0J7</p>
-        <p style="margin:0;">780-532-8584</p>
-        <p style="font-weight:bold; margin-top:10px;">DELIVERY SLIP #<span id="t-slip"></span></p>
+    <div style="text-align: center; border-bottom: 2px solid #0078ff;">
+        <h2>Culligan Bottle Water</h2>
+        <p>Delivery Ticket #<span id="t-slip"></span></p>
     </div>
-    <div class="ticket-body">
-        <p><strong>Customer:</strong> <span id="t-cust"></span></p>
-        <p><strong>Address:</strong> <span id="t-addr"></span></p>
-        <p><strong>Driver:</strong> <span id="t-driver"></span></p>
-        <div style="background:#f9f9f9; padding:10px; border-radius:8px;">
-            <div class="ticket-row"><span>18L Bottles</span><strong id="t-18l"></strong></div>
-            <div class="ticket-row"><span>Small Bottles</span><strong id="t-small"></strong></div>
-            <div class="ticket-row"><span>Cases</span><strong id="t-cases"></strong></div>
-            <div class="ticket-row"><span>18L Return</span><strong id="t-r18l"></strong></div>
-            <div class="ticket-row"><span>Small Return</span><strong id="t-rsmall"></strong></div>
-        </div>
-        <p style="margin-top:15px;"><strong>Received By:</strong> <span id="t-rec"></span></p>
-        <p><strong>Signature:</strong></p>
-        <img id="t-sig" style="width:200px; border-bottom:1px solid #000;">
-    </div>
-    <div class="ticket-footer">
-        <p>Thanks for your business!</p>
-        <p>An invoice will follow shortly.</p>
-    </div>
+    <p><strong>Customer:</strong> <span id="t-cust"></span></p>
+    <p><strong>Driver:</strong> <span id="t-driver"></span></p>
+    <p><strong>Items:</strong> 18L: <span id="t-18l"></span> | Cases: <span id="t-cases"></span></p>
+    <p><strong>Signature:</strong></p>
+    <img id="t-sig" style="width:200px; border-bottom:1px solid #000;">
 </div>
 
 <div id="dataModal">
     <div class="modal-content">
         <h3 id="mCustName" style="color:#0078ff; margin-top:0;">Customer</h3>
-        <p id="mCustAddr" style="color:#aaa; font-size:13px; margin-bottom:15px;"></p>
-        <div class="inv-grid">
-            <div class="field-row"><label>18L Bottles</label><input type="number" id="inv18L"></div>
-            <div class="field-row"><label>Small Bottles</label><input type="number" id="invSmall"></div>
-            <div class="field-row"><label>Cases</label><input type="number" id="invCases"></div>
-            <div class="field-row"><label>18L Return</label><input type="number" id="ret18L"></div>
-            <div class="field-row"><label>Small Return</label><input type="number" id="retSmall"></div>
-            <div class="field-row"><label>Received By</label><input type="text" id="receivedBy"></div>
-        </div>
-        <div class="field-row"><label>Signature</label><canvas id="sig-canvas"></canvas><button class="btn btn-nav" style="width:100%; margin-top:5px;" onclick="clearSig()">Clear Signature</button></div>
-        <div class="field-row"><label>Notes / Skip Reason</label><textarea id="driverNotes" rows="2"></textarea></div>
-        <button class="btn" style="width:100%; background:#0078ff; margin-bottom:10px;" onclick="openGoogleMaps()">Google Maps</button>
-        <div style="display:flex; gap:10px;">
-            <button class="btn" style="flex:1;" onclick="processStop('Delivered')">DELIVERED</button>
-            <button class="btn" style="flex:1; background:#dc3545;" onclick="processStop('Not Delivered')">SKIPPED</button>
-        </div>
-        <button class="btn" style="width:100%; background:#444; margin-top:10px;" onclick="closeModal()">Close</button>
+        <div class="field-row"><label>18L Bottles</label><input type="number" id="inv18L"></div>
+        <div class="field-row"><label>Cases</label><input type="number" id="invCases"></div>
+        <div class="field-row"><label>Signature</label><canvas id="sig-canvas"></canvas></div>
+        <div class="field-row"><label>Notes</label><textarea id="driverNotes"></textarea></div>
+        <button class="btn" style="width:100%; margin-bottom:10px;" onclick="processStop('Delivered')">DELIVERED</button>
+        <button class="btn" style="width:100%; background:#444;" onclick="closeModal()">Close</button>
     </div>
 </div>
 
 <script>
-    const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbyECaDUnW3yvG5J8dWmT1a-5YTykHuwDxEiAgByH91A5zAwIzONqV64_r9olmyd07MSMA/exec";
+    // REPLACE WITH YOUR DEPLOYED URL
+    const SHEETS_API_URL = "REPLACE_WITH_YOUR_NEW_WEB_APP_URL";
+    
     let map, markerLayer, routeLine, stops = [], markers = [], activeIndex = -1, canvas, ctx, drawing = false;
-    let driverName = "Unknown Driver";
+    let driverName = "Unknown";
     const warehouse = { lat: 55.1707, lng: -118.7947 };
 
+    // 1. Fetch the Route Names for Dropdown
     async function fetchRouteList() {
         try {
             const res = await fetch(SHEETS_API_URL);
@@ -141,9 +111,10 @@
             tabs.filter(t => t !== 'Deliveries').forEach(tabName => {
                 let opt = document.createElement('option'); opt.value = tabName; opt.innerHTML = tabName; selector.appendChild(opt);
             });
-        } catch (e) { console.log(e); }
+        } catch (e) { document.getElementById('status').textContent = "CORS Error: Check Script URL"; }
     }
 
+    // 2. Load and Map the Stops
     async function loadSelectedRoute() {
         const selectedTab = document.getElementById('routeSelector').value;
         if (!selectedTab) return;
@@ -151,175 +122,124 @@
         try {
             const dataRes = await fetch(`${SHEETS_API_URL}?sheet=${encodeURIComponent(selectedTab)}`);
             const rows = await dataRes.json();
-            const h = Object.keys(rows[0]);
-            const addrKey = h.find(k => k.toLowerCase().includes("addr"));
-            const nameKey = h.find(k => k.toLowerCase().includes("comp") || k.toLowerCase().includes("cust"));
-            const key18L = h.find(k => k.includes("18 l bottles") || k.includes("18L"));
-            const keySmall = h.find(k => k.includes("small bottles"));
-            const keyCases = h.find(k => k.includes("cases"));
-
+            
             let tempStops = [];
             for (let i = 0; i < rows.length; i++) {
-                document.getElementById('status').textContent = `Mapping ${i + 1}/${rows.length}...`;
-                const geo = await geocodeAddress(rows[i][addrKey]);
-                if (geo) tempStops.push({ 
-                    company: rows[i][nameKey] || "Stop", address: rows[i][addrKey], 
-                    inv18L: rows[i][key18L] || 0, invSmall: rows[i][keySmall] || 0, invCases: rows[i][keyCases] || 0,
-                    fullData: rows[i], ...geo 
-                });
-                await new Promise(r => setTimeout(r, 1200));
+                const addr = rows[i]["Address"] || rows[i]["address"];
+                const geo = await geocodeAddress(addr);
+                if (geo) tempStops.push({ company: rows[i]["Company"] || rows[i]["Customer"], address: addr, ...geo, fullData: rows[i] });
             }
-            stops = optimizeRoute(tempStops);
-            renderRoute(); updateSidebar();
+            stops = tempStops; // Add optimization if needed
+            renderRoute();
+            updateSidebar();
             document.getElementById('status').textContent = "Ready.";
-        } catch (e) { document.getElementById('status').textContent = "Failed."; }
+        } catch (e) { document.getElementById('status').textContent = "Load Failed."; }
     }
 
     async function geocodeAddress(address) {
         try {
-            const query = encodeURIComponent(address + ", Grande Prairie, AB");
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Grande Prairie, AB")}`);
             const data = await res.json();
             return data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
         } catch (e) { return null; }
     }
 
-    function optimizeRoute(rawList) {
-        let unvisited = [...rawList], ordered = [], currentPos = warehouse;
-        while (unvisited.length > 0) {
-            unvisited.sort((a, b) => getDistance(currentPos, a) - getDistance(currentPos, b));
-            let closest = unvisited.shift(); ordered.push(closest); currentPos = closest;
-        }
-        return ordered;
-    }
-
-    function getDistance(p1, p2) {
-        const R = 6371;
-        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
-        const dLon = (p2.lng - p1.lng) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
     function renderRoute() {
-        markerLayer.clearLayers(); markers = [];
-        let pathCoords = [[warehouse.lat, warehouse.lng]];
+        markerLayer.clearLayers();
+        let path = [[warehouse.lat, warehouse.lng]];
         stops.forEach((s, i) => {
-            pathCoords.push([s.lat, s.lng]);
+            path.push([s.lat, s.lng]);
             const m = L.marker([s.lat, s.lng], {
-                icon: L.divIcon({ className: 'custom-div-icon', html: `<div id="pin-${i}" class="number-pin">${i + 1}</div>`, iconSize: [30, 42], iconAnchor: [15, 21] })
+                icon: L.divIcon({ className: '', html: `<div id="pin-${i}" class="number-pin">${i+1}</div>`, iconSize:[30,30] })
             }).addTo(markerLayer);
-            m.bindTooltip(s.address, { permanent: true, direction: 'right', className: 'leaflet-tooltip-own', offset: [15, -15] });
-            markers.push(m);
+            m.bindTooltip(s.address, { className: 'leaflet-tooltip-own' });
         });
-        routeLine.setLatLngs(pathCoords);
-        if (stops.length > 0) map.fitBounds(L.latLngBounds(pathCoords), { padding: [80, 80] });
+        routeLine.setLatLngs(path);
+        map.fitBounds(L.polyline(path).getBounds());
     }
 
     function updateSidebar() {
-        const listDiv = document.getElementById('stop-list'); listDiv.innerHTML = '';
-        document.getElementById('stop-count').innerText = `${stops.length} Stops`;
+        const list = document.getElementById('stop-list');
+        list.innerHTML = "";
         stops.forEach((s, i) => {
             const card = document.createElement('div');
-            card.className = `stop-card ${i === activeIndex ? 'active-card' : ''}`;
-            card.innerHTML = `<b style="font-size:15px;">#${i + 1} ${s.company}</b><span class="card-val">${s.address}</span>`;
+            card.className = "stop-card";
+            card.innerHTML = `<b>#${i+1} ${s.company}</b><br>${s.address}`;
             card.onclick = () => selectStop(i);
-            listDiv.appendChild(card);
+            list.appendChild(card);
         });
+        document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
     }
 
     function selectStop(index) {
-        if (index < 0 || index >= stops.length) return;
-        if (activeIndex !== -1) {
-            const prevPin = document.getElementById(`pin-${activeIndex}`);
-            if (prevPin) prevPin.classList.remove('active-pin');
-        }
         activeIndex = index;
         const s = stops[index];
-        const currPin = document.getElementById(`pin-${index}`);
-        if (currPin) currPin.classList.add('active-pin');
-        document.getElementById('current-stop-bar').style.display = 'block';
         document.getElementById('active-addr').innerText = s.address;
-        map.setView([s.lat, s.lng], 16);
-        updateSidebar();
-        openEntryModal(s);
+        document.getElementById('current-stop-bar').style.display = "block";
+        document.getElementById('mCustName').innerText = s.company;
+        document.getElementById('dataModal').style.display = "flex";
+        initCanvas();
     }
 
-    function openEntryModal(s) {
-        document.getElementById('mCustName').innerText = s.company;
-        document.getElementById('mCustAddr').innerText = s.address;
-        document.getElementById('inv18L').value = s.inv18L;
-        document.getElementById('invSmall').value = s.invSmall;
-        document.getElementById('invCases').value = s.invCases;
-        document.getElementById('dataModal').style.display = 'flex';
-        initCanvas();
+    // 3. Process Stop (PDF + Trip Log + Sheet)
+    async function processStop(status) {
+        const now = new Date();
+        const routeName = document.getElementById('routeSelector').value;
+        const slipNum = now.getTime().toString().slice(-6);
+        const longDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const fileName = `${stops[activeIndex].company} - ${routeName} - ${slipNum} - ${longDate}.pdf`;
+
+        // Update Ticket UI
+        document.getElementById('t-slip').innerText = slipNum;
+        document.getElementById('t-cust').innerText = stops[activeIndex].company;
+        document.getElementById('t-driver').innerText = driverName;
+        document.getElementById('t-sig').src = canvas.toDataURL();
+
+        const ticket = document.getElementById('ticket-output');
+        ticket.style.display = "block";
+
+        html2pdf().from(ticket).outputPdf('datauristring').then(pdfBase64 => {
+            ticket.style.display = "none";
+            const payload = {
+                Timestamp: now.toLocaleString(),
+                DriverID: driverName,
+                Customer: stops[activeIndex].company,
+                Address: stops[activeIndex].address,
+                Status: status,
+                Notes: document.getElementById('driverNotes').value,
+                Slip: slipNum,
+                Signature: canvas.toDataURL(),
+                RouteName: routeName,
+                LongDate: longDate,
+                FileName: fileName,
+                pdfData: pdfBase64
+            };
+
+            fetch(SHEETS_API_URL, { method: 'POST', body: JSON.stringify(payload) })
+                .then(() => { closeModal(); alert("Saved!"); });
+        });
     }
 
     function initCanvas() {
         canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-        ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
+        canvas.width = canvas.offsetWidth; canvas.height = 100;
         canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
         canvas.onmousemove = (e) => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
-        window.onmouseup = () => { drawing = false; };
-    }
-    function clearSig() { if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); }
-
-    async function processStop(status) {
-        const notes = document.getElementById('driverNotes').value;
-        const receiver = document.getElementById('receivedBy').value;
-        const now = new Date();
-        const routeName = document.getElementById('routeSelector').value;
-        const slipNum = now.toISOString().replace(/[-:T.Z]/g, "").slice(0, 12);
-        const longDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        
-        // Fill Ticket
-        document.getElementById('t-slip').innerText = slipNum;
-        document.getElementById('t-cust').innerText = stops[activeIndex].company;
-        document.getElementById('t-addr').innerText = stops[activeIndex].address;
-        document.getElementById('t-driver').innerText = driverName;
-        document.getElementById('t-18l').innerText = document.getElementById('inv18L').value;
-        document.getElementById('t-small').innerText = document.getElementById('invSmall').value;
-        document.getElementById('t-cases').innerText = document.getElementById('invCases').value;
-        document.getElementById('t-r18l').innerText = document.getElementById('ret18L').value || "0";
-        document.getElementById('t-rsmall').innerText = document.getElementById('retSmall').value || "0";
-        document.getElementById('t-rec').innerText = receiver;
-        document.getElementById('t-sig').src = canvas.toDataURL();
-
-        const element = document.getElementById('ticket-output');
-        element.style.display = 'block';
-        const fileName = `${stops[activeIndex].company} - ${routeName} - ${slipNum} - ${longDate}.pdf`;
-
-        html2pdf().from(element).outputPdf('datauristring').then(pdfBase64 => {
-            element.style.display = 'none';
-            let formData = { 
-                Customer: stops[activeIndex].company, Address: stops[activeIndex].address, Status: status, 
-                Timestamp: now.toLocaleString(), Notes: notes, ReceivedBy: receiver, Slip: slipNum, 
-                DriverID: driverName, FileName: fileName, pdfData: pdfBase64 
-            };
-            fetch(SHEETS_API_URL, { method: 'POST', body: JSON.stringify(formData) }).then(() => { 
-                closeModal(); alert(`Saved for ${driverName}`); 
-            });
-        });
+        window.onmouseup = () => drawing = false;
     }
 
-    function closeModal() { document.getElementById("dataModal").style.display = "none"; }
-    function openGoogleMaps() { window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(stops[activeIndex].address + ", Grande Prairie, AB")}`, '_blank'); }
+    function closeModal() { document.getElementById('dataModal').style.display = "none"; }
 
-    window.onload = async () => {
-        const pw = prompt("Driver access code:");
-        if (pw !== "1234") { document.body.innerHTML = "<h1>Access Denied</h1>"; return; }
-        
-        // Driver Sign-In
-        driverName = prompt("Please enter your Name:");
-        if (!driverName) driverName = "Unknown Driver";
+    window.onload = () => {
+        const pw = prompt("Code:");
+        if (pw !== "1234") return;
+        driverName = prompt("Name:");
         document.getElementById('driver-display').innerText = `Driver: ${driverName}`;
 
-        map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
+        map = L.map("map").setView([55.17, -118.79], 12);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
         markerLayer = L.layerGroup().addTo(map);
-        routeLine = L.polyline([], { color: '#0078ff', weight: 5, opacity: 0.7 }).addTo(map);
-        L.marker([warehouse.lat, warehouse.lng], { icon: L.divIcon({ className: 'custom-div-icon', html: `<div class="number-pin warehouse-pin">W</div>`, iconSize: [30, 42], iconAnchor: [15, 21] }) }).addTo(map);
+        routeLine = L.polyline([], { color: '#0078ff' }).addTo(map);
         fetchRouteList();
     };
 </script>
