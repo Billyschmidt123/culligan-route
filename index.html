@@ -3,40 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan Route - Delivery Card</title>
+<title>Culligan Route - ArcGIS Powered</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
-#sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
-#sidebar-header { padding:15px; border-bottom:1px solid #444;}
-#stop-list { flex:1; overflow-y:auto; padding:10px;}
-.stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
-.stop-card:hover { background:#444;}
-
-#customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
-.profile-group { margin-bottom:12px; }
-.profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
-.profile-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
-.section-divider { border-top: 1px solid #444; margin: 15px 0; padding-top: 10px; }
-#sig-canvas { background:white; border-radius:4px; cursor:crosshair; width:100%; height:150px; touch-action: none; display: block; border: 2px solid #555;}
-
-.form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
-.btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; text-transform: uppercase;}
-.btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold; text-transform: uppercase;}
-.back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold; text-transform: uppercase;}
-
-#main-view { flex:1; display:flex; flex-direction:column;}
-#controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
-#map { flex:1; }
-.btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-#status { font-size:13px; color:#0078ff; font-weight: bold;}
-#route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; cursor: pointer; }
-.custom-div-icon { background:transparent; border:none;}
-.number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
+    body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
+    #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
+    #sidebar-header { padding:15px; border-bottom:1px solid #444;}
+    #stop-list { flex:1; overflow-y:auto; padding:10px;}
+    .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
+    .stop-card:hover { background:#444;}
+    #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
+    .profile-group { margin-bottom:12px; }
+    .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
+    .profile-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+    #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555;}
+    .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
+    .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
+    .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
+    .back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold;}
+    #main-view { flex:1; display:flex; flex-direction:column;}
+    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
+    #map { flex:1; }
+    .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
+    #status { font-size:13px; color:#0078ff; font-weight: bold;}
+    #route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; }
+    .custom-div-icon { background:transparent; border:none;}
+    .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
 </style>
 </head>
 
@@ -53,22 +49,17 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 
     <div id="customer-profile">
         <button class="back-btn" onclick="closeProfile()">← BACK TO LIST</button>
-        <h3 id="prof-name" style="margin:0 0 5px 0">Customer Name</h3>
-        <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:2px;">Address</p>
-        <p id="prof-phone" style="font-size:13px; color:#0078ff; margin-bottom:15px; font-weight: bold;">Phone: N/A</p>
+        <h3 id="prof-name">Customer Name</h3>
+        <p id="prof-addr" style="font-size:12px; color:#aaa;"></p>
         
         <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l" value="0"></div>
         <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div>
-        <div class="section-divider"></div>
-        <div class="profile-group"><label>18 L RETURNS</label><input type="number" id="p-18l-ret" value="0"></div>
+        <div class="profile-group"><label>18L RETURNS</label><input type="number" id="p-18l-ret" value="0"></div>
         <div class="profile-group"><label>CASES</label><input type="number" id="p-cases" value="0"></div>
-        <div class="profile-group"><label>SMALL BOTTLES RETURNED</label><input type="number" id="p-small-ret" value="0"></div>
-        <div class="section-divider"></div>
         <div class="profile-group"><label>RECEIVED BY</label><input type="text" id="p-rec-by" placeholder="Name"></div>
         
         <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
-        <button onclick="clearSig()" style="font-size:10px; background:none; border:none; color:#dc3545; cursor:pointer; margin-top:5px; font-weight:bold;">CLEAR SIGNATURE</button>
 
         <div class="form-btns">
             <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
@@ -136,7 +127,7 @@ function initSignaturePad() {
         return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
     };
     const start = (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); };
-    const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.lineWidth=3; ctx.strokeStyle="#000"; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
+    const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.lineWidth=3; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
     canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', () => drawing=false);
     canvas.addEventListener('touchstart', start, {passive:false}); canvas.addEventListener('touchmove', move, {passive:false}); canvas.addEventListener('touchend', () => drawing=false);
 }
@@ -145,7 +136,7 @@ function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
-    document.getElementById("status").innerText = "Connecting to Sheet...";
+    document.getElementById("status").innerText = "Reading Sheet...";
     
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
@@ -156,73 +147,65 @@ async function loadRoute() {
         const cols = json.table.cols;
         const addrIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('addr'));
         const compIdx = cols.findIndex(c => c.label && (c.label.toLowerCase().includes('comp') || c.label.toLowerCase().includes('cust')));
-        const phoneIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('phone'));
-
-        if (addrIdx === -1) {
-            alert("Error: Could not find 'Address' column in this tab.");
-            return;
-        }
 
         stops = [];
         const rows = json.table.rows;
         
         for (let i = 0; i < rows.length; i++) {
-            const raw = rows[i].c;
-            const rawAddr = (raw[addrIdx] && raw[addrIdx].v) ? raw[addrIdx].v.toString() : "";
+            const rowData = rows[i].c;
+            const address = rowData[addrIdx] ? rowData[addrIdx].v.toString() : "";
             
-            // Clean out headers or empty rows
-            if (!rawAddr || rawAddr.toLowerCase() === "address" || rawAddr.includes("http")) continue;
+            // IGNORE BLANKS, HEADERS, OR LINKS
+            if (!address || address.includes("http") || address.toLowerCase().includes("address")) continue;
 
-            document.getElementById("status").innerText = `Mapping Stop ${i+1}/${rows.length}...`;
+            document.getElementById("status").innerText = `ArcGIS Mapping: ${i+1}/${rows.length}`;
             
-            const geo = await geocode(rawAddr);
-            if (geo) {
-                stops.push({
-                    company: (raw[compIdx] && raw[compIdx].v) ? raw[compIdx].v : "Customer",
-                    address: rawAddr,
-                    phone: (raw[phoneIdx] && raw[phoneIdx].v) ? raw[phoneIdx].v : "N/A",
-                    ...geo
+            const geo = await geocodeArcGIS(address);
+            if(geo) {
+                stops.push({ 
+                    company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v : "Customer", 
+                    address: address, 
+                    ...geo 
                 });
             }
-            // CRITICAL: Wait 1.2 seconds between stops for Nominatim API
-            await new Promise(r => setTimeout(r, 1200));
+            // Small buffer to prevent browser lag
+            await new Promise(resolve => setTimeout(resolve, 800));
         }
-
+        
         renderRoute();
         renderSidebar();
         document.getElementById("status").innerText = "Route Ready";
-        document.getElementById("stop-count").innerText = `${stops.length} Stops Found`;
-
-    } catch (e) {
-        document.getElementById("status").innerText = "Error Loading Data";
-        console.error(e);
+    } catch (e) { 
+        document.getElementById("status").innerText = "Error Loading Route.";
     }
 }
 
-async function geocode(addr) {
-    // Clean building numbers/units for better mapping results
-    let cleanAddr = addr.split('#')[0].split('Unit')[0].trim();
-    const query = encodeURIComponent(cleanAddr + ", Grande Prairie, AB");
+async function geocodeArcGIS(addr) {
+    // ArcGIS is very good with "Address, City, Province" format
+    const query = encodeURIComponent(addr + ", Grande Prairie, AB");
+    const url = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${query}&maxLocations=1`;
     
     try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
-        if (res.status === 429) {
-            document.getElementById("status").innerText = "Throttled... waiting...";
-            await new Promise(r => setTimeout(r, 3000));
-            return null;
-        }
+        const res = await fetch(url);
         const data = await res.json();
-        return data.length ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
-    } catch (e) { return null; }
+        if (data.candidates && data.candidates.length > 0) {
+            return { 
+                lat: data.candidates[0].location.y, 
+                lng: data.candidates[0].location.x 
+            };
+        }
+        return null;
+    } catch (e) { 
+        console.error("Geocode error", e);
+        return null; 
+    }
 }
 
 function renderRoute() {
     markerLayer.clearLayers();
     const coords = stops.map(s => [s.lat, s.lng]);
     stops.forEach((s, i) => {
-        L.marker([s.lat, s.lng], { 
-            icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) 
-        }).addTo(markerLayer);
+        L.marker([s.lat, s.lng], { icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) }).addTo(markerLayer);
     });
     if (coords.length > 0) map.fitBounds(coords, {padding: [50, 50]});
 }
@@ -245,7 +228,6 @@ function openProfile(i) {
     document.getElementById('customer-profile').style.display = 'block';
     document.getElementById('prof-name').innerText = stops[i].company;
     document.getElementById('prof-addr').innerText = stops[i].address;
-    document.getElementById('prof-phone').innerText = "Phone: " + stops[i].phone;
     canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
     clearSig();
 }
@@ -256,15 +238,12 @@ function closeProfile() {
 }
 
 async function submitLog(status) {
-    document.getElementById('status').innerText = "Saving PDF...";
+    document.getElementById('status').innerText = "Uploading PDF...";
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.text(`Customer: ${stops[currentStopIndex].company}`, 20, 40);
-    doc.text(`Address: ${stops[currentStopIndex].address}`, 20, 50);
-    doc.text(`18L: ${document.getElementById('p-18l').value}`, 20, 60);
-    
     const sigData = canvas.toDataURL("image/png");
-    doc.addImage(sigData, 'PNG', 20, 100, 60, 30);
+    doc.addImage(sigData, 'PNG', 20, 80, 50, 25);
     const pdfBase64 = doc.output('datauristring').split(',')[1];
     
     const payload = { 
