@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Culligan Route - Hardwired List</title>
+<title>Culligan Route - Valley View Fixed</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -16,18 +16,18 @@
     .nav-btn { flex: 1; padding: 8px; background: #444; border: 1px solid #555; color: white; cursor: pointer; font-weight: bold; border-radius: 4px; }
     #stop-list { flex:1; overflow-y:auto; padding:10px;}
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
-    .stop-card.done { border-left-color: #28a745; opacity: 0.8; }
+    .stop-card.done { border-left-color: #28a745; opacity: 0.5; }
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
-    #controls { background:#222; padding:10px; border-bottom:2px solid #0078ff; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; z-index: 100;}
+    #controls { background:#222; padding:10px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 100;}
     #map { flex:1; z-index: 1;}
-    .btn-import { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; white-space: nowrap;}
+    .btn-import { padding:10px 20px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
     #status { font-size:12px; color:#0078ff; font-weight: bold; margin-left: auto; padding-right: 10px;}
     .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white; background:#0078ff;}
     #customer-profile { display:none; padding:15px; background:#222; height: 100%; overflow-y: auto;}
 </style>
 </head>
 
-<body onload="populateDropdown()">
+<body>
 
 <div id="sidebar">
     <div class="nav-ctrls">
@@ -37,7 +37,7 @@
     <div id="list-view">
         <div id="sidebar-header">
             <h3 style="margin:0">Route Stops</h3>
-            <p id="stop-count" style="font-size:12px; color:#aaa;">Ready</p>
+            <p id="stop-count" style="font-size:12px; color:#aaa;">Select Route and Click Import</p>
         </div>
         <div id="stop-list"></div>
     </div>
@@ -45,14 +45,13 @@
         <button onclick="closeProfile()" style="background:none; border:none; color:#0078ff; cursor:pointer; margin-bottom:10px;">← BACK TO LIST</button>
         <h3 id="prof-name"></h3>
         <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:15px;"></p>
-        <button onclick="markStop('delivered')" style="background:#28a745; color:white; padding:12px; border:none; border-radius:4px; cursor:pointer; width:100%;">COMPLETE STOP</button>
+        <button onclick="markStop('delivered')" style="background:#28a745; color:white; padding:15px; border:none; border-radius:4px; cursor:pointer; width:100%; font-weight:bold;">COMPLETE STOP</button>
     </div>
 </div>
 
 <div id="main-view">
     <div id="controls">
-        <select id="route-select" style="padding:10px; min-width:220px; background:#333; color:white; border:1px solid #444; border-radius:4px;">
-            <option value="">-- CHOOSE ROUTE --</option>
+        <select id="route-select" style="padding:10px; min-width:250px; background:#333; color:white; border:1px solid #444; border-radius:4px; font-weight:bold;">
             <option value="600570743">VALLEY VIEW</option>
             <option value="423376712">NORTH</option>
             <option value="567832101">DAWSON CREEK</option>
@@ -61,44 +60,31 @@
             <option value="1547432021">WEEK 1 WEDNESDAY</option>
             <option value="1211029272">WEEK 1 THURSDAY</option>
             <option value="1144026362">WEEK 1 FRIDAY</option>
-            <option value="1090629633">WEEK 2 MONDAY</option>
-            <option value="1855644723">WEEK 2 TUESDAY</option>
-            <option value="103991206">WEEK 2 WEDNESDAY</option>
-            <option value="1750530747">WEEK 2 THURSDAY</option>
-            <option value="1561081699">WEEK 2 FRIDAY</option>
-            <option value="1173641214">WEEK 3 MONDAY</option>
-            <option value="1382442220">WEEK 3 TUESDAY</option>
-            <option value="1410444322">WEEK 3 WEDNESDAY</option>
-            <option value="1119420011">WEEK 3 THURSDAY</option>
-            <option value="1904422332">WEEK 3 FRIDAY</option>
-            <option value="1122334455">WEEK 4 MONDAY</option>
-            <option value="1122334466">WEEK 4 TUESDAY</option>
-            <option value="1122334477">WEEK 4 WEDNESDAY</option>
-            <option value="1122334488">WEEK 4 THURSDAY</option>
-            <option value="1122334499">WEEK 4 FRIDAY</option>
         </select>
         <button class="btn-import" onclick="loadData()">IMPORT ROUTE</button>
-        <div id="status">STATUS: READY</div>
+        <div id="status">READY</div>
     </div>
     <div id="map"></div>
 </div>
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-let map = L.map("map").setView([55.1707, -118.7947], 11);
+let map = L.map("map").setView([55.1707, -118.7947], 9);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 let markerLayer = L.layerGroup().addTo(map);
 let stops = [], currentIdx = null;
 
 async function loadData() {
     const gid = document.getElementById("route-select").value;
-    if(!gid) { alert("Please select a route name from the box."); return; }
+    const statusDiv = document.getElementById("status");
+    statusDiv.innerText = "IMPORTING...";
     
-    document.getElementById("status").innerText = "IMPORTING...";
-    stops = []; markerLayer.clearLayers();
+    stops = []; 
+    markerLayer.clearLayers();
     document.getElementById('stop-list').innerHTML = "";
 
     try {
+        // We are using GID directly to force Google to give us the right tab
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}&t=${Date.now()}`;
         const res = await fetch(url);
         const text = await res.text();
@@ -107,20 +93,33 @@ async function loadData() {
         
         for (let i = 0; i < rows.length; i++) {
             const cols = rows[i].c;
+            // Column 2 = Company Name, Column 3 = Address
             if (cols && cols[3] && cols[3].v) {
-                const geo = await geocodeArcGIS(cols[3].v);
+                const companyName = cols[2] ? cols[2].v : "Unknown";
+                const address = cols[3].v;
+                
+                const geo = await geocodeArcGIS(address);
                 stops.push({
-                    company: cols[2] ? cols[2].v : "Customer", 
-                    address: cols[3].v, 
+                    company: companyName, 
+                    address: address, 
                     lat: geo ? geo.lat : 55.1707, 
                     lng: geo ? geo.lng : -118.7947,
                     status: 'pending'
                 });
             }
         }
-        renderSidebar(); updateMapVisuals();
-        document.getElementById("status").innerText = "SUCCESS";
-    } catch (e) { document.getElementById("status").innerText = "ERROR LOADING SHEET"; }
+        renderSidebar(); 
+        updateMapVisuals();
+        
+        if (stops.length > 0) {
+            const group = new L.featureGroup(markerLayer.getLayers());
+            map.fitBounds(group.getBounds().pad(0.1));
+            statusDiv.innerText = "LOADED: " + stops.length + " STOPS";
+        }
+    } catch (e) { 
+        statusDiv.innerText = "IMPORT ERROR";
+        console.error(e);
+    }
 }
 
 async function geocodeArcGIS(addr) {
@@ -144,11 +143,10 @@ function updateMapVisuals() {
 function renderSidebar() {
     const list = document.getElementById("stop-list");
     list.innerHTML = "";
-    document.getElementById("stop-count").innerText = `${stops.length} Stops`;
+    document.getElementById("stop-count").innerText = `${stops.length} Stops Found`;
     stops.forEach((s, i) => {
         const div = document.createElement("div");
         div.className = `stop-card ${s.status === 'delivered' ? 'done' : ''}`;
-        div.style.opacity = s.status === 'delivered' ? '0.5' : '1';
         div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
         div.onclick = () => openProfile(i);
         list.appendChild(div);
@@ -161,7 +159,7 @@ function openProfile(i) {
     document.getElementById('customer-profile').style.display = 'block';
     document.getElementById('prof-name').innerText = s.company;
     document.getElementById('prof-addr').innerText = s.address;
-    map.setView([s.lat, s.lng], 15);
+    map.setView([s.lat, s.lng], 14);
 }
 
 function closeProfile() {
@@ -171,7 +169,9 @@ function closeProfile() {
 
 function markStop(status) {
     stops[currentIdx].status = 'delivered';
-    renderSidebar(); updateMapVisuals(); closeProfile();
+    renderSidebar(); 
+    updateMapVisuals(); 
+    closeProfile();
 }
 
 function navStop(dir) {
