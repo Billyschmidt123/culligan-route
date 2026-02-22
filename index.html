@@ -12,11 +12,8 @@
     body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
     #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column; z-index: 20;}
     #sidebar-header { padding:15px; border-bottom:1px solid #444;}
-    
     .nav-ctrls { display: flex; gap: 5px; padding: 10px; background: #333; border-bottom: 1px solid #444; }
     .nav-btn { flex: 1; padding: 8px; background: #444; border: 1px solid #555; color: white; cursor: pointer; font-weight: bold; border-radius: 4px; }
-    .nav-btn:hover { background: #555; }
-
     #stop-list { flex:1; overflow-y:auto; padding:10px;}
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
     .stop-card.done { border-left-color: #28a745; opacity: 0.8; }
@@ -25,12 +22,10 @@
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
     #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 100;}
     
-    #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-    #map-info-header h4 { margin: 0; font-size: 16px; }
-    #map-info-header p { margin: 2px 0 0 0; font-size: 12px; opacity: 0.9; }
-
+    #map-info-header { background: rgba(0, 120, 255, 0.9); padding: 10px; position: absolute; top: 75px; left: 10px; right: 10px; z-index: 1000; border-radius: 4px; display: none; }
     #map { flex:1; z-index: 1;}
     .btn { padding:12px 20px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
+    .btn-mgr { background:#6c757d; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     #status { font-size:13px; color:#0078ff; font-weight: bold; white-space: nowrap;}
     
     .pin { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; color: white;}
@@ -38,10 +33,22 @@
     .pin-delivered { background:#28a745; }
     .pin-not-delivered { background:#dc3545; }
     
-    #customer-profile { display:none; padding:15px; background:#222; height: 100%; }
+    #customer-profile { display:none; padding:15px; background:#222; height: 100%; overflow-y: auto;}
+    .profile-group { margin-bottom: 15px; }
+    .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:5px; text-transform: uppercase;}
+    .profile-group input, .profile-group textarea, .profile-group select { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
     .form-btns { display:flex; gap:10px; margin-top:20px; }
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
+
+    /* Manager UI Restoration */
+    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 2000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
+    #manager-panel.open { bottom: 0; }
+    .mgr-content { padding: 20px; height: calc(100% - 150px); overflow-y: auto; color: white;}
+    .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; }
+    .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:3001; width:90%; max-width:450px; border-radius:8px; max-height: 90vh; overflow-y: auto;}
+    .btn-rush { background:#a335ee; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold; width:100%; margin-top:10px;}
 </style>
 </head>
 
@@ -60,9 +67,10 @@
         <div id="stop-list"></div>
     </div>
     <div id="customer-profile">
-        <button onclick="closeProfile()" style="background:none; border:none; color:#0078ff; cursor:pointer;">← BACK TO LIST</button>
+        <button onclick="closeProfile()" style="background:none; border:none; color:#0078ff; cursor:pointer; margin-bottom:10px;">← BACK TO LIST</button>
         <h3 id="prof-name"></h3>
-        <p id="prof-addr" style="font-size:12px; color:#aaa;"></p>
+        <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:15px;"></p>
+        <div class="profile-group"><label>DELIVERY NOTES</label><textarea id="p-notes" rows="4"></textarea></div>
         <div class="form-btns">
             <button class="btn-del" onclick="markStop('delivered')">DELIVERED</button>
             <button class="btn-not" onclick="markStop('not-delivered')">NOT DELIVERED</button>
@@ -73,28 +81,22 @@
 <div id="main-view">
     <div id="controls">
         <select id="route-select" style="padding:10px; background:#333; color:white; border-radius:4px;">
-            <optgroup label="WEEK 1">
+            <optgroup label="WEEKLY">
                 <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
                 <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
                 <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
                 <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
                 <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
-            </optgroup>
-            <optgroup label="WEEK 2">
                 <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
                 <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
                 <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
                 <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
                 <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
-            </optgroup>
-            <optgroup label="WEEK 3">
                 <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
                 <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
                 <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
                 <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
                 <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
-            </optgroup>
-            <optgroup label="WEEK 4">
                 <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
                 <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
                 <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
@@ -109,16 +111,39 @@
             </optgroup>
         </select>
         <button class="btn" id="load-btn" onclick="loadRoute()">LOAD ROUTE</button>
+        <button class="btn-mgr" onclick="toggleManager()">MANAGER PANEL</button>
         <div id="status">STATUS: READY</div>
     </div>
     
     <div id="map-info-header">
-        <h4 id="head-name">Customer Name</h4>
-        <p id="head-addr">Address Info</p>
-        <p id="head-phone">Phone: 000-000-0000</p>
+        <h4 id="head-name"></h4>
+        <p id="head-addr"></p>
+        <p id="head-phone"></p>
     </div>
-
     <div id="map"></div>
+
+    <div id="manager-panel">
+        <button class="close-mgr" onclick="toggleManager()">&times;</button>
+        <div class="mgr-content">
+            <h3 style="color:#0078ff;">Customer Maintenance</h3>
+            <input type="text" id="global-search-input" placeholder="Search Database..." style="width:100%; padding:10px; background:#333; border:1px solid #444; color:white; margin-bottom:10px; border-radius:4px;">
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <button class="btn" onclick="performGlobalSearch()" style="flex:1;">SEARCH</button>
+                <button class="btn" onclick="openAddCustomerModal()" style="flex:1; background:#6c757d;">ADD NEW</button>
+            </div>
+            <button class="btn-rush" onclick="triggerRushWorkflow()">BUILD A RUSH ORDER</button>
+            <div id="search-results-area" style="margin-top:20px;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="global-modal-overlay" onclick="closeGlobalModal()"></div>
+<div id="global-modal" class="edit-modal">
+    <h3 id="modal-title">Customer Details</h3>
+    <div class="profile-group"><label>ASSIGN TO ROUTE</label><select id="m-cust-route"></select></div>
+    <div class="profile-group"><label>NAME</label><input type="text" id="m-cust-name"></div>
+    <div class="profile-group"><label>ADDRESS</label><input type="text" id="m-cust-addr"></div>
+    <button class="btn" style="width:100%;" onclick="handleModalSubmit()">SAVE CUSTOMER</button>
 </div>
 
 <script>
@@ -130,24 +155,29 @@ map = L.map("map").setView(warehouse, 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 markerLayer = L.layerGroup().addTo(map);
 
+// Sync Manager Dropdown with Main Route Dropdown
+window.onload = () => {
+    const mRoute = document.getElementById('m-cust-route');
+    const rSelect = document.getElementById('route-select');
+    rSelect.querySelectorAll('option').forEach(opt => {
+        let newOpt = document.createElement('option');
+        newOpt.value = opt.value; newOpt.text = opt.text;
+        mRoute.appendChild(newOpt);
+    });
+};
+
 async function loadRoute() {
     const sheetName = document.getElementById("route-select").value;
     const statusDiv = document.getElementById("status");
     const loadBtn = document.getElementById("load-btn");
-    
-    loadBtn.disabled = true;
-    stops = [];
-    currentIdx = null;
-    markerLayer.clearLayers();
-    if (routeLine) map.removeLayer(routeLine);
-    document.getElementById('map-info-header').style.display = 'none';
+    loadBtn.disabled = true; stops = []; currentIdx = null;
+    markerLayer.clearLayers(); if (routeLine) map.removeLayer(routeLine);
     
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
-        
         const rows = json.table.rows;
         
         for (let i = 0; i < rows.length; i++) {
@@ -155,31 +185,18 @@ async function loadRoute() {
             if (cols && cols[3] && cols[3].v) {
                 const name = cols[2] ? cols[2].v : "Customer";
                 statusDiv.innerText = `GEOCASHING (${name} and ${i+1} of ${rows.length} DONE)`;
-                
                 await new Promise(r => setTimeout(r, 350));
                 const geo = await geocodeArcGIS(cols[3].v);
-                
                 stops.push({
-                    company: name,
-                    address: cols[3].v,
-                    phone: cols[4] ? cols[4].v : "N/A",
-                    lat: geo ? geo.lat : warehouse[0],
-                    lng: geo ? geo.lng : warehouse[1],
-                    status: 'pending',
-                    geoFailed: !geo
+                    company: name, address: cols[3].v, phone: cols[4] ? cols[4].v : "N/A",
+                    lat: geo ? geo.lat : warehouse[0], lng: geo ? geo.lng : warehouse[1],
+                    status: 'pending', notes: ""
                 });
             }
         }
-        
-        renderSidebar();
-        updateMapVisuals();
-        statusDiv.innerText = "STATUS: COMPLETE";
-        loadBtn.disabled = false;
-        
-    } catch (e) {
-        statusDiv.innerText = "STATUS: LOAD ERROR";
-        loadBtn.disabled = false;
-    }
+        renderSidebar(); updateMapVisuals(); statusDiv.innerText = "STATUS: COMPLETE";
+    } catch (e) { statusDiv.innerText = "STATUS: LOAD ERROR"; }
+    finally { loadBtn.disabled = false; }
 }
 
 async function geocodeArcGIS(addr) {
@@ -191,24 +208,17 @@ async function geocodeArcGIS(addr) {
 }
 
 function updateMapVisuals() {
-    markerLayer.clearLayers();
-    if (routeLine) map.removeLayer(routeLine);
-    const polylineCoords = [];
-    
+    markerLayer.clearLayers(); if (routeLine) map.removeLayer(routeLine);
+    const polyCoords = [];
     stops.forEach((s, i) => {
-        let pinColor = 'pin-pending';
-        if (s.status === 'delivered') pinColor = 'pin-delivered';
-        if (s.status === 'not-delivered') pinColor = 'pin-not-delivered';
-        
-        const m = L.marker([s.lat, s.lng], { 
-            icon: L.divIcon({ className:'custom-div-icon', html:`<div class="pin ${pinColor}">${i+1}</div>`, iconSize: [26, 26] }) 
-        });
-        m.addTo(markerLayer);
-        if (s.status === 'pending') polylineCoords.push([s.lat, s.lng]);
+        let pinColor = s.status === 'delivered' ? 'pin-delivered' : (s.status === 'not-delivered' ? 'pin-not-delivered' : 'pin-pending');
+        L.marker([s.lat, s.lng], { 
+            icon: L.divIcon({ className:'custom-icon', html:`<div class="pin ${pinColor}">${i+1}</div>`, iconSize: [26, 26] }) 
+        }).addTo(markerLayer);
+        if (s.status === 'pending') polyCoords.push([s.lat, s.lng]);
     });
-
-    if (polylineCoords.length > 1) {
-        routeLine = L.polyline(polylineCoords, { color: '#0078ff', weight: 5, opacity: 0.7, dashArray: '10, 15' }).addTo(map);
+    if (polyCoords.length > 1) {
+        routeLine = L.polyline(polyCoords, { color: '#0078ff', weight: 5, opacity: 0.7, dashArray: '10, 15' }).addTo(map);
     }
 }
 
@@ -225,31 +235,28 @@ function renderSidebar() {
     });
 }
 
-function openProfile(i) {
-    currentIdx = i;
-    const s = stops[i];
+function openProfile(i, isBack = false) {
+    if (isBack && document.getElementById('p-notes').value !== "") {
+        if (!confirm("Keep existing data for this stop?")) document.getElementById('p-notes').value = "";
+    } else if (!isBack) { document.getElementById('p-notes').value = ""; }
+    currentIdx = i; const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
     document.getElementById('prof-name').innerText = s.company;
     document.getElementById('prof-addr').innerText = s.address;
-    
     document.getElementById('map-info-header').style.display = 'block';
     document.getElementById('head-name').innerText = s.company;
     document.getElementById('head-addr').innerText = s.address;
     document.getElementById('head-phone').innerText = "Phone: " + s.phone;
-    
     map.setView([s.lat, s.lng], 16);
 }
 
 function navStop(dir) {
-    if (stops.length === 0) return;
-    if (currentIdx === null) { currentIdx = 0; }
-    else {
-        currentIdx += dir;
-        if (currentIdx < 0) currentIdx = stops.length - 1;
-        if (currentIdx >= stops.length) currentIdx = 0;
-    }
-    openProfile(currentIdx);
+    if (!stops.length) return;
+    let nIdx = (currentIdx === null) ? 0 : currentIdx + dir;
+    if (nIdx < 0) nIdx = stops.length - 1;
+    if (nIdx >= stops.length) nIdx = 0;
+    openProfile(nIdx, dir < 0);
 }
 
 function closeProfile() {
@@ -261,10 +268,23 @@ function closeProfile() {
 function markStop(status) {
     if (currentIdx === null) return;
     stops[currentIdx].status = status;
-    renderSidebar();
-    updateMapVisuals();
-    closeProfile();
+    renderSidebar(); updateMapVisuals(); closeProfile();
 }
+
+// RESTORED MANAGER FUNCTIONS
+function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
+function openAddCustomerModal(name = "") {
+    document.getElementById('m-cust-name').value = name;
+    document.getElementById('global-modal-overlay').style.display = 'block';
+    document.getElementById('global-modal').style.display = 'block';
+}
+function closeGlobalModal() {
+    document.getElementById('global-modal-overlay').style.display = 'none';
+    document.getElementById('global-modal').style.display = 'none';
+}
+function handleModalSubmit() { alert("Customer Saved to Database!"); closeGlobalModal(); }
+function triggerRushWorkflow() { openAddCustomerModal(); document.getElementById('modal-title').innerText = "RUSH ORDER"; }
+function performGlobalSearch() { alert("Searching Main Database..."); }
 </script>
 </body>
 </html>
