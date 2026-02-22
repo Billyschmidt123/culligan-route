@@ -7,189 +7,198 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --culligan-blue: #0078ff; }
-        body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f4f7f6; }
+        :root { --culligan-blue: #0078ff; --sidebar-width: 280px; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; background: #f0f2f5; }
         
-        /* Correct Header Format */
-        header { background: var(--culligan-blue); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000; }
+        /* SIDEBAR RESTORED */
+        #sidebar { width: var(--sidebar-width); background: #1e1e2d; color: white; display: flex; flex-direction: column; transition: 0.3s; z-index: 1001; }
+        .sidebar-header { padding: 20px; background: #1a1a27; text-align: center; border-bottom: 1px solid #333; }
+        .menu-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #2d2d3f; transition: 0.2s; }
+        .menu-item:hover { background: var(--culligan-blue); }
         
-        /* Map & Sidebar Layout */
-        #map { height: 350px; width: 100%; border-bottom: 3px solid var(--culligan-blue); }
-        .stop-list { flex: 1; overflow-y: auto; padding: 15px; }
+        /* MAIN AREA */
+        #main { flex: 1; display: flex; flex-direction: column; position: relative; }
+        header { background: var(--culligan-blue); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Correct Card Format */
-        .stop-card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 8px; border-left: 6px solid var(--culligan-blue); box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; }
-        .stop-card b { display: block; font-size: 1.1em; color: #333; margin-bottom: 4px; }
-        .stop-card span { color: #666; font-size: 0.9em; }
-
-        /* Correct Modal Design */
-        #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal-box { background: #1a1a1a; width: 90%; max-width: 420px; padding: 25px; border-radius: 12px; color: white; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #map { flex: 1; width: 100%; }
+        #stop-list { height: 250px; overflow-y: auto; padding: 15px; background: white; border-top: 2px solid #ddd; }
         
-        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
-        input, textarea, select { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #333; background: #2a2a2a; color: white; box-sizing: border-box; }
+        /* CARDS */
+        .stop-card { background: white; border-left: 5px solid var(--culligan-blue); padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
         
-        /* Signature Area */
-        #sig-canvas { background: white; border-radius: 6px; margin: 10px 0; touch-action: none; width: 100%; height: 140px; }
+        /* MODALS (Password & Manager) */
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; color: white; }
+        .modal-box { background: #fff; color: #333; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px; }
         
-        /* Pin Design */
-        .number-pin { background: var(--culligan-blue); color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        /* DATA INPUT GRID */
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        input, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         
-        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
-        .btn { flex: 1; padding: 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .btn-save { background: #28a745; color: white; }
-        .btn-cancel { background: #dc3545; color: white; }
+        /* MAP PIN */
+        .number-pin { background: var(--culligan-blue); color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; }
         
-        #ticket-output { display: none; width: 600px; padding: 40px; background: white; color: black; }
+        /* SIGNATURE */
+        #sig-canvas { border: 1px solid #000; background: #fff; width: 100%; height: 120px; touch-action: none; }
+        
+        .btn { padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        .btn-blue { background: var(--culligan-blue); color: white; }
+        
+        @media (max-width: 768px) { #sidebar { display: none; } }
     </style>
 </head>
 <body>
 
-<header>
-    <div style="font-weight: bold; font-size: 1.1em;">CULLIGAN DELIVERY</div>
-    <select id="routeSelector" style="width: auto; padding: 4px; background: white; color: black; border: none; font-size: 0.9em;">
-        <option>City Route A</option>
-        <option>Rural Route B</option>
-    </select>
-    <div id="stop-count">0 Stops</div>
-</header>
+<div id="sidebar">
+    <div class="sidebar-header">
+        <h2 style="margin:0;">CULLIGAN</h2>
+    </div>
+    <div class="menu-item" onclick="showManager()">Manager Menu</div>
+    <div class="menu-item">Driver Logs</div>
+    <div class="menu-item">Active Routes</div>
+    <div class="menu-item" style="margin-top:auto; background:#dc3545;">Logout</div>
+</div>
 
-<div id="map"></div>
-<div class="stop-list" id="stop-list"></div>
+<div id="main">
+    <header>
+        <span onclick="toggleSidebar()" style="cursor:pointer; font-size:20px;">☰</span>
+        <div id="current-route">Select Route</div>
+        <div id="stop-count">0 Stops</div>
+    </header>
 
-<div id="dataModal">
+    <div id="map"></div>
+    <div id="stop-list"></div>
+</div>
+
+<div id="dataModal" class="overlay">
     <div class="modal-box">
-        <h2 id="mCustName" style="margin: 0 0 15px 0; color: var(--culligan-blue);">Customer</h2>
+        <h2 id="mCustName" style="color:var(--culligan-blue); margin-top:0;">Customer</h2>
         <div class="input-grid">
-            <input type="number" id="inv18L" placeholder="18L Del">
-            <input type="number" id="ret18L" placeholder="18L Ret">
+            <input type="number" id="inv18" placeholder="18L Del">
+            <input type="number" id="ret18" placeholder="18L Ret">
             <input type="number" id="invSm" placeholder="Sm Del">
             <input type="number" id="retSm" placeholder="Sm Ret">
             <input type="number" id="cases" placeholder="Cases">
-            <input type="text" id="recvBy" placeholder="Received By">
+            <input type="text" id="recv" placeholder="Recv By">
         </div>
-        <textarea id="driverNotes" rows="2" placeholder="Notes..."></textarea>
-        <p style="margin: 10px 0 5px 0; font-size: 0.8em; color: #888;">SIGN BELOW:</p>
+        <textarea id="notes" placeholder="Notes"></textarea>
+        <p>Signature:</p>
         <canvas id="sig-canvas"></canvas>
-        <div class="btn-row">
-            <button class="btn btn-save" onclick="processStop('Delivered')">Submit</button>
-            <button class="btn btn-cancel" onclick="closeModal()">Back</button>
-        </div>
+        <button class="btn btn-blue" onclick="submitData()">SUBMIT DELIVERY</button>
+        <button class="btn" style="background:#eee;" onclick="closeModals()">CANCEL</button>
     </div>
 </div>
 
-<div id="ticket-output">
-    <div style="text-align: center; border-bottom: 2px solid #0078ff; padding-bottom: 15px;">
-        <h1 style="color: #0078ff; margin: 0;">CULLIGAN WATER</h1>
-        <p style="margin: 0;">Delivery Confirmation</p>
+<div id="passModal" class="overlay">
+    <div class="modal-box">
+        <h3>Manager Access</h3>
+        <input type="password" id="managerPass" placeholder="Enter Password">
+        <button class="btn btn-blue" onclick="checkPass()">Unlock</button>
+        <button class="btn" onclick="closeModals()">Cancel</button>
     </div>
-    <div style="padding: 20px 0;">
-        <p><b>Customer:</b> <span id="t-cust"></span></p>
-        <p><b>Address:</b> <span id="t-addr"></span></p>
-        <p><b>Date:</b> <span id="t-date"></span></p>
-        <hr>
-        <p>18L Delivered: <span id="t-l18"></span> | 18L Returned: <span id="t-r18"></span></p>
-        <p>Small Delivered: <span id="t-lSm"></span> | Small Returned: <span id="t-rSm"></span></p>
-        <p><b>Received By:</b> <span id="t-recv"></span></p>
-        <p><b>Notes:</b> <span id="t-notes"></span></p>
+</div>
+
+<div id="ticket-output" style="display:none; width:600px; padding:40px; background:white; color:black;">
+    <h1 style="color:#0078ff;">CULLIGAN DELIVERY RECEIPT</h1>
+    <hr>
+    <p><b>Customer:</b> <span id="t-cust"></span></p>
+    <p><b>Date:</b> <span id="t-date"></span></p>
+    <div class="input-grid">
+        <p>18L Delivered: <span id="t-l18"></span></p>
+        <p>18L Returned: <span id="t-r18"></span></p>
     </div>
-    <div style="margin-top: 20px;">
-        <p><b>Signature:</b></p>
-        <img id="t-sig" style="width: 100%; max-height: 150px; object-fit: contain;">
-    </div>
+    <p><b>Received By:</b> <span id="t-recv"></span></p>
+    <img id="t-sig" style="width:100%; border-bottom:1px solid #000;">
 </div>
 
 <script>
-    const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
-    let map, markerLayer, activeIndex, canvas, ctx, drawing = false;
+    const API = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
+    let map, activeIdx, canvas, ctx, drawing = false;
     let stops = [
         { company: "TEST_UFA_FARM", address: "123 Farm Road", lat: 55.17, lng: -118.79 },
         { company: "Culligan Main", address: "Warehouse", lat: 55.18, lng: -118.80 }
     ];
 
-    async function processStop(status) {
+    function showManager() { document.getElementById('passModal').style.display = 'flex'; }
+    
+    function checkPass() {
+        if(document.getElementById('managerPass').value === "1234") {
+            alert("Manager Menu Unlocked");
+            closeModals();
+        } else {
+            alert("Wrong Password");
+        }
+    }
+
+    async function submitData() {
         const now = new Date();
         const longDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         
-        const payload = {
-            Timestamp: now.toLocaleString(),
-            DriverID: "Driver_1",
-            Customer: stops[activeIndex].company,
-            Address: stops[activeIndex].address,
-            Status: status,
-            l18: document.getElementById('inv18L').value || 0,
-            r18: document.getElementById('ret18L').value || 0,
-            lSm: document.getElementById('invSm').value || 0,
-            rSm: document.getElementById('retSm').value || 0,
-            cs: document.getElementById('cases').value || 0,
-            recv: document.getElementById('recvBy').value || "",
-            Notes: document.getElementById('driverNotes').value,
-            RouteName: document.getElementById('routeSelector').value,
-            LongDate: longDate,
-            FileName: `${stops[activeIndex].company} - ${longDate}.pdf`
-        };
-
-        document.getElementById('t-cust').innerText = payload.Customer;
-        document.getElementById('t-addr').innerText = payload.Address;
+        // Populate PDF template
+        document.getElementById('t-cust').innerText = stops[activeIdx].company;
         document.getElementById('t-date').innerText = longDate;
-        document.getElementById('t-l18').innerText = payload.l18;
-        document.getElementById('t-r18').innerText = payload.r18;
-        document.getElementById('t-lSm').innerText = payload.lSm;
-        document.getElementById('t-rSm').innerText = payload.rSm;
-        document.getElementById('t-recv').innerText = payload.recv;
-        document.getElementById('t-notes').innerText = payload.Notes;
+        document.getElementById('t-l18').innerText = document.getElementById('inv18').value;
+        document.getElementById('t-r18').innerText = document.getElementById('ret18').value;
+        document.getElementById('t-recv').innerText = document.getElementById('recv').value;
         document.getElementById('t-sig').src = canvas.toDataURL();
 
         const ticket = document.getElementById('ticket-output');
-        ticket.style.display = "block";
+        ticket.style.display = 'block';
 
-        html2pdf().from(ticket).outputPdf('datauristring').then(pdfData => {
-            ticket.style.display = "none";
-            payload.pdfData = pdfData;
-            fetch(SHEETS_API_URL, { method: 'POST', body: JSON.stringify(payload) })
-            .then(() => { alert("Saved!"); closeModal(); });
+        html2pdf().from(ticket).outputPdf('datauristring').then(pdf => {
+            ticket.style.display = 'none';
+            const payload = {
+                Customer: stops[activeIdx].company,
+                Address: stops[activeIdx].address,
+                DriverID: "Driver_1",
+                l18: document.getElementById('inv18').value,
+                r18: document.getElementById('ret18').value,
+                recv: document.getElementById('recv').value,
+                Notes: document.getElementById('notes').value,
+                pdfData: pdf,
+                LongDate: longDate,
+                FileName: `${stops[activeIdx].company} - ${longDate}.pdf`
+            };
+
+            fetch(API, { method: 'POST', body: JSON.stringify(payload) })
+            .then(() => { alert("Saved!"); closeModals(); });
         });
     }
 
     function initCanvas() {
-        canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth; canvas.height = 140;
-        ctx.strokeStyle = "#000"; ctx.lineWidth = 3;
-        const getXY = (e) => { 
-            const r = canvas.getBoundingClientRect(); 
-            const x = (e.clientX || (e.touches ? e.touches[0].clientX : 0)) - r.left;
-            const y = (e.clientY || (e.touches ? e.touches[0].clientY : 0)) - r.top;
-            return {x,y};
-        };
-        canvas.onmousedown = (e) => { drawing = true; const p = getXY(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-        canvas.onmousemove = (e) => { if(drawing) { const p = getXY(e); ctx.lineTo(p.x, p.y); ctx.stroke(); } };
+        canvas = document.getElementById('sig-canvas');
+        ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
+        canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
+        canvas.onmousemove = (e) => { if(drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
         window.onmouseup = () => drawing = false;
-        canvas.ontouchstart = (e) => { drawing = true; const p = getXY(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-        canvas.ontouchmove = (e) => { if(drawing) { e.preventDefault(); const p = getXY(e); ctx.lineTo(p.x, p.y); ctx.stroke(); } };
+        canvas.ontouchstart = (e) => { drawing = true; ctx.beginPath(); let t = e.touches[0]; ctx.moveTo(t.clientX - canvas.getBoundingClientRect().left, t.clientY - canvas.getBoundingClientRect().top); };
+        canvas.ontouchmove = (e) => { if(drawing) { let t = e.touches[0]; ctx.lineTo(t.clientX - canvas.getBoundingClientRect().left, t.clientY - canvas.getBoundingClientRect().top); ctx.stroke(); } };
     }
 
-    function closeModal() { document.getElementById('dataModal').style.display = 'none'; }
+    function closeModals() {
+        document.querySelectorAll('.overlay').forEach(m => m.style.display = 'none');
+    }
 
     window.onload = () => {
-        map = L.map("map").setView([55.17, -118.79], 12);
+        map = L.map("map").setView([55.17, -118.79], 13);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-        markerLayer = L.layerGroup().addTo(map);
         
         const list = document.getElementById('stop-list');
         stops.forEach((s, i) => {
             const card = document.createElement('div');
             card.className = "stop-card";
-            card.innerHTML = `<b>#${i+1} ${s.company}</b><span>${s.address}</span>`;
+            card.innerHTML = `<b>#${i+1} ${s.company}</b><br><small>${s.address}</small>`;
             card.onclick = () => {
-                activeIndex = i;
+                activeIdx = i;
                 document.getElementById('mCustName').innerText = s.company;
                 document.getElementById('dataModal').style.display = 'flex';
-                setTimeout(initCanvas, 100);
+                initCanvas();
             };
             list.appendChild(card);
             L.marker([s.lat, s.lng], { 
                 icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>`, className: '' }) 
-            }).addTo(markerLayer);
+            }).addTo(map);
         });
         document.getElementById('stop-count').innerText = stops.length + " Stops";
     };
