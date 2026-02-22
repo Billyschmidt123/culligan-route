@@ -155,40 +155,22 @@ async function submitLog(status) {
         reason = prompt("REASON FOR NOT DELIVERED:");
         if (!reason) return;
     }
-
     document.getElementById('status').innerText = "Uploading to DeliverySlip Folder...";
-    
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.setFontSize(22);
-    doc.text("Culligan Delivery Receipt", 20, 20);
-    doc.setFontSize(12);
+    doc.text("Delivery Receipt", 20, 20);
     doc.text(`Customer: ${stops[currentStopIndex].company}`, 20, 40);
     doc.text(`Address: ${stops[currentStopIndex].address}`, 20, 50);
     doc.text(`Status: ${status}`, 20, 60);
     doc.text(`18L Bottles: ${document.getElementById('p-18l').value}`, 20, 70);
-    doc.text(`Small Bottles: ${document.getElementById('p-small').value}`, 20, 80);
-    doc.text(`18L Returns: ${document.getElementById('p-18l-ret').value}`, 20, 90);
-    doc.text(`Cases: ${document.getElementById('p-cases').value}`, 20, 100);
-    doc.text(`Small Returns: ${document.getElementById('p-small-ret').value}`, 20, 110);
-    doc.text(`Received By: ${document.getElementById('p-rec-by').value}`, 20, 120);
-    if(reason) doc.text(`Reason: ${reason}`, 20, 130);
-    
     const sigData = canvas.toDataURL("image/png");
     doc.addImage(sigData, 'PNG', 20, 140, 60, 30);
-
     const pdfBase64 = doc.output('datauristring').split(',')[1];
-    const filename = `Culligan_${stops[currentStopIndex].company.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
-
-    const payload = { filename: filename, pdfData: pdfBase64, customer: stops[currentStopIndex].company, status: status };
-
+    const payload = { filename: `Culligan_${stops[currentStopIndex].company}.pdf`, pdfData: pdfBase64, customer: stops[currentStopIndex].company, status: status };
     try {
         await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-        alert("SUCCESS: PDF Saved to DeliverySlip Folder");
-    } catch (e) {
-        alert("UPLOAD ERROR");
-    }
-
+        alert("SUCCESS: PDF Saved");
+    } catch (e) { alert("UPLOAD ERROR"); }
     document.getElementById('status').innerText = "Ready";
     closeProfile();
 }
@@ -201,23 +183,45 @@ async function loadRoute() {
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
-        const rows = json.table.rows.map(r => Object.fromEntries(r.c.map((c,i)=>[json.table.cols[i].label, c ? c.v : ""])));
         
+        // Find column indexes automatically
+        const cols = json.table.cols;
+        const addrIdx = cols.findIndex(c => c.label.toLowerCase().includes('addr'));
+        const compIdx = cols.findIndex(c => c.label.toLowerCase().includes('comp') || c.label.toLowerCase().includes('cust'));
+        const phoneIdx = cols.findIndex(c => c.label.toLowerCase().includes('phone'));
+
         stops = [];
-        for (let r of rows) {
-            const geo = await geocode(r["Address"]);
-            if(geo) stops.push({ company: r["Company"]||"Customer", address: r["Address"], phone: r["Phone"]||"N/A", ...geo });
+        for (let r of json.table.rows) {
+            const addr = r.c[addrIdx] ? r.c[addrIdx].v : null;
+            if (!addr) continue; // Skip blank rows
+            
+            const geo = await geocode(addr);
+            if(geo) {
+                stops.push({ 
+                    company: r.c[compIdx] ? r.c[compIdx].v : "Customer", 
+                    address: addr, 
+                    phone: r.c[phoneIdx] ? r.c[phoneIdx].v : "N/A", 
+                    ...geo 
+                });
+            }
+            // Small delay to prevent OSM CORS blocking
+            await new Promise(r => setTimeout(r, 200)); 
         }
         renderRoute();
         renderSidebar();
         document.getElementById("status").innerText = "Route Ready";
-    } catch (e) { alert("Error loading Sheet data."); }
+    } catch (e) { 
+        console.error(e);
+        document.getElementById("status").innerText = "Error Loading Route."; 
+    }
 }
 
 async function geocode(addr) {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Grande Prairie, AB")}`);
-    const data = await res.json();
-    return data.length ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Grande Prairie, AB")}`);
+        const data = await res.json();
+        return data.length ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+    } catch (e) { return null; }
 }
 
 function renderRoute() {
