@@ -107,6 +107,7 @@
 
 <script>
     const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwt6s3gSl-stP2kSDxsaryhXPZUajyJCTEFjaljSu4Z-IzU055oDADrS7fYxYdM1_EnhA/exec";
+    const CLOUD_TARGET = "cbwdeliveries@outlook.com";
     
     let map, markerLayer, routeLine, stops = [], activeIndex = -1, canvas, ctx, drawing = false, driverName = "Unknown";
     const warehouse = { lat: 55.1707, lng: -118.7947 };
@@ -239,12 +240,13 @@
                 LongDate: longDate,
                 l18: counts.l18, r18: counts.r18, lSm: counts.lSm, rSm: counts.rSm, cs: counts.cs, recv: counts.recv,
                 FileName: `${stops[activeIndex].company} - ${longDate}.pdf`, 
-                pdfData: pdfData
+                pdfData: pdfData,
+                OneDriveTarget: CLOUD_TARGET
             };
             
             fetch(SHEETS_API_URL, { method: 'POST', body: JSON.stringify(payload) }).then(() => {
                 document.getElementById('dataModal').style.display = 'none';
-                alert("Delivery Saved and PDF Uploaded");
+                alert("Saved to Trip Log and Uploaded to OneDrive");
             });
         });
     }
