@@ -15,11 +15,12 @@
     #sidebar-header { padding:15px; border-bottom:1px solid #444;}
     #stop-list { flex:1; overflow-y:auto; padding:10px;}
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
+    .stop-card.flagged { border-left-color: #ffc107; background: #443c20; }
     .stop-card:hover { background:#444;}
     #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
     .profile-group { margin-bottom:12px; }
     .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
-    .profile-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+    .profile-group input, .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
     #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555;}
     .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
@@ -35,15 +36,21 @@
     .custom-div-icon { background:transparent; border:none;}
     .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
 
-    /* Manager Panel Styles */
-    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 50%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
+    /* Manager Panel Overlay */
+    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
     #manager-panel.open { bottom: 0; }
     .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; }
     .mgr-tab-btn { padding: 15px 25px; border: none; background: none; color: #aaa; cursor: pointer; font-weight: bold; }
     .mgr-tab-btn.active { color: #0078ff; border-bottom: 2px solid #0078ff; background: #2a2a2a; }
-    .mgr-content { padding: 20px; display: none; overflow-y: auto; height: calc(100% - 60px); }
+    .mgr-content { padding: 20px; display: none; overflow-y: auto; height: calc(100% - 150px); color: white;}
     .mgr-content.active { display: block; }
     .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+    th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+    th { background: #333; color: #0078ff; }
+    .mgr-footer { padding: 20px; background: #222; border-top: 1px solid #444; position: sticky; bottom: 0; }
+    .btn-eod { background: #ffc107; color: black; width: 100%; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 4px; font-weight: bold; border: none;}
 </style>
 </head>
 
@@ -67,7 +74,9 @@
         <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div>
         <div class="profile-group"><label>18L RETURNS</label><input type="number" id="p-18l-ret" value="0"></div>
         <div class="profile-group"><label>CASES</label><input type="number" id="p-cases" value="0"></div>
+        <div class="profile-group"><label>SMALL BOTTLES RETURNED</label><input type="number" id="p-small-ret" value="0"></div>
         <div class="profile-group"><label>RECEIVED BY</label><input type="text" id="p-rec-by" placeholder="Name"></div>
+        <div class="profile-group"><label>NOTES / INSTRUCTIONS</label><textarea id="p-notes" rows="3"></textarea></div>
         
         <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
@@ -116,16 +125,28 @@
     <div id="manager-panel">
         <button class="close-mgr" onclick="toggleManager()">&times;</button>
         <div class="mgr-tabs">
-            <button class="mgr-tab-btn active" onclick="switchTab('reports')">REPORTS</button>
-            <button class="mgr-tab-btn" onclick="switchTab('cust-mgmt')">CUSTOMER MANAGEMENT</button>
+            <button class="mgr-tab-btn active" onclick="switchTab('reports')">DAILY SUMMARY</button>
+            <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
         </div>
+        
         <div id="reports" class="mgr-content active">
-            <h3>Delivery Reports</h3>
-            <p>Access your delivery data logs here.</p>
+            <h2 style="color:#0078ff; text-align:center;">DAILY SUMMARY CULLIGAN BOTTLE WATER</h2>
+            <div id="summary-data"></div>
         </div>
-        <div id="cust-mgmt" class="mgr-content">
-            <h3>Customer Management</h3>
-            <p>Manage customer lists and route details.</p>
+        
+        <div id="live-report" class="mgr-content">
+            <h3>LIVE REPORT (ACTIVE TRACKING)</h3>
+            <table id="live-table">
+                <thead>
+                    <tr><th>Customer</th><th>Status</th><th>18L</th><th>Small</th><th>Cases</th><th>Ret 18L</th><th>Ret Small</th><th>Time</th></tr>
+                </thead>
+                <tbody id="live-body"></tbody>
+            </table>
+            <div id="live-totals" style="margin-top:20px; background:#222; padding:15px; border:1px solid #444;"></div>
+        </div>
+
+        <div class="mgr-footer">
+            <button class="btn-eod" onclick="executeEOD()">END OF DAY</button>
         </div>
     </div>
 </div>
@@ -136,19 +157,18 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVF
 
 let map, markerLayer, canvas, ctx, drawing = false;
 let stops = [];
+let deliveryLog = [];
 let currentStopIndex = null;
+const warehouse = [55.1707, -118.7947];
 
 window.onload = () => {
-    map = L.map("map").setView([55.1707, -118.7947], 11);
+    map = L.map("map").setView(warehouse, 11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
     initSignaturePad();
 };
 
-function toggleManager() {
-    document.getElementById('manager-panel').classList.toggle('open');
-}
-
+function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
 function switchTab(tabId) {
     document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
@@ -167,8 +187,9 @@ function initSignaturePad() {
     };
     const start = (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); };
     const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.lineWidth=3; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
-    canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', () => drawing=false);
-    canvas.addEventListener('touchstart', start, {passive:false}); canvas.addEventListener('touchmove', move, {passive:false}); canvas.addEventListener('touchend', () => drawing=false);
+    canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('touchstart', start, {passive:false}); canvas.addEventListener('touchmove', move, {passive:false});
+    window.addEventListener('mouseup', () => drawing=false); window.addEventListener('touchend', () => drawing=false);
 }
 
 function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
@@ -184,17 +205,24 @@ async function loadRoute() {
         const cols = json.table.cols;
         const addrIdx = cols.findIndex(c => c.label && c.label.toLowerCase().includes('addr'));
         const compIdx = cols.findIndex(c => c.label && (c.label.toLowerCase().includes('comp') || c.label.toLowerCase().includes('cust')));
+        
         stops = [];
         const rows = json.table.rows;
         for (let i = 0; i < rows.length; i++) {
             const rowData = rows[i].c;
             const address = rowData[addrIdx] ? rowData[addrIdx].v.toString() : "";
             if (!address || address.includes("http") || address.toLowerCase().includes("address")) continue;
-            document.getElementById("status").innerText = `ArcGIS Mapping: ${i+1}/${rows.length}`;
-            const geo = await geocodeArcGIS(address);
-            if(geo) {
-                stops.push({ company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v : "Customer", address: address, ...geo });
-            }
+            
+            document.getElementById("status").innerText = `Mapping: ${i+1}/${rows.length}`;
+            let geo = await geocodeArcGIS(address);
+            let flagged = false;
+            
+            if(!geo) { geo = { lat: warehouse[0], lng: warehouse[1] }; flagged = true; }
+
+            stops.push({ 
+                company: (rowData[compIdx] && rowData[compIdx].v) ? rowData[compIdx].v : "Customer", 
+                address: address, flagged: flagged, ...geo 
+            });
             await new Promise(resolve => setTimeout(resolve, 800));
         }
         renderRoute();
@@ -205,24 +233,20 @@ async function loadRoute() {
 
 async function geocodeArcGIS(addr) {
     const query = encodeURIComponent(addr + ", Grande Prairie, AB");
-    const url = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${query}&maxLocations=1`;
     try {
-        const res = await fetch(url);
+        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${query}&maxLocations=1`);
         const data = await res.json();
-        if (data.candidates && data.candidates.length > 0) {
-            return { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x };
-        }
-        return null;
+        return data.candidates.length ? { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x } : null;
     } catch (e) { return null; }
 }
 
 function renderRoute() {
     markerLayer.clearLayers();
-    const coords = stops.map(s => [s.lat, s.lng]);
     stops.forEach((s, i) => {
-        L.marker([s.lat, s.lng], { icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">${i+1}</div>` }) }).addTo(markerLayer);
+        L.marker([s.lat, s.lng], { 
+            icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin" style="${s.flagged ? 'background:#ffc107; color:black' : ''}">${i+1}</div>` }) 
+        }).addTo(markerLayer);
     });
-    if (coords.length > 0) map.fitBounds(coords, {padding: [50, 50]});
 }
 
 function renderSidebar() {
@@ -230,8 +254,8 @@ function renderSidebar() {
     list.innerHTML = "";
     stops.forEach((s, i) => {
         const div = document.createElement("div");
-        div.className = "stop-card";
-        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
+        div.className = `stop-card ${s.flagged ? 'flagged' : ''}`;
+        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>${s.flagged ? '<br><b style="color:#ffc107">⚠️ CHECK ADDRESS</b>' : ''}`;
         div.onclick = () => { map.setView([s.lat, s.lng], 16); openProfile(i); };
         list.appendChild(div);
     });
@@ -243,7 +267,6 @@ function openProfile(i) {
     document.getElementById('customer-profile').style.display = 'block';
     document.getElementById('prof-name').innerText = stops[i].company;
     document.getElementById('prof-addr').innerText = stops[i].address;
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
     clearSig();
 }
 
@@ -253,43 +276,101 @@ function closeProfile() {
 }
 
 async function submitLog(status) {
-    let payload = { 
-        customer: stops[currentStopIndex].company, 
-        status: status 
+    const now = new Date();
+    const entry = {
+        customer: stops[currentStopIndex].company,
+        status: status,
+        time: now.toLocaleTimeString(),
+        date: now.toLocaleDateString(),
+        v18l: document.getElementById('p-18l').value || 0,
+        vSmall: document.getElementById('p-small').value || 0,
+        vCases: document.getElementById('p-cases').value || 0,
+        r18l: document.getElementById('p-18l-ret').value || 0,
+        rSmall: document.getElementById('p-small-ret').value || 0,
+        receivedBy: document.getElementById('p-rec-by').value || "None",
+        notes: document.getElementById('p-notes').value || "",
+        reason: ""
     };
 
     if (status === 'NOT DELIVERED') {
-        const reason = prompt("Enter reason for NOT DELIVERED:");
-        if (!reason) return;
-        payload.reason = reason;
-        document.getElementById('status').innerText = "Logging skip...";
+        entry.reason = prompt("Reason for Not Delivered:");
+        if(!entry.reason) return;
     } else {
-        document.getElementById('status').innerText = "Uploading PDF...";
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.text(`Culligan Delivery Receipt`, 20, 20);
-        doc.text(`Customer: ${stops[currentStopIndex].company}`, 20, 40);
-        doc.text(`Address: ${stops[currentStopIndex].address}`, 20, 50);
-        doc.text(`18L: ${document.getElementById('p-18l').value}`, 20, 60);
-        doc.text(`Small: ${document.getElementById('p-small').value}`, 20, 70);
-        doc.text(`Returns: ${document.getElementById('p-18l-ret').value}`, 20, 80);
-        doc.text(`Cases: ${document.getElementById('p-cases').value}`, 20, 90);
-        doc.text(`Received By: ${document.getElementById('p-rec-by').value}`, 20, 100);
-        
+        doc.text("Culligan Receipt", 20, 20);
+        doc.text(`Customer: ${entry.customer}`, 20, 40);
+        doc.text(`18L: ${entry.v18l} | Small: ${entry.vSmall}`, 20, 50);
         const sigData = canvas.toDataURL("image/png");
-        doc.addImage(sigData, 'PNG', 20, 110, 50, 25);
-        
-        payload.filename = `Culligan_${stops[currentStopIndex].company.replace(/\s+/g, '_')}.pdf`;
-        payload.pdfData = doc.output('datauristring').split(',')[1];
+        doc.addImage(sigData, 'PNG', 20, 70, 50, 25);
+        entry.pdfData = doc.output('datauristring').split(',')[1];
+        entry.filename = `Culligan_${entry.customer}_${now.getTime()}.pdf`;
     }
 
+    deliveryLog.push(entry);
+    updateReports();
+
     try {
-        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(entry) });
         alert(status === 'NOT DELIVERED' ? "Skip Logged" : "Delivery Slip Saved");
-    } catch (e) { alert("ERROR"); }
+    } catch (e) { alert("NETWORK ERROR"); }
     
-    document.getElementById('status').innerText = "Ready";
     closeProfile();
+}
+
+function updateReports() {
+    const summaryDiv = document.getElementById('summary-data');
+    const liveBody = document.getElementById('live-body');
+    const liveTotals = document.getElementById('live-totals');
+    
+    summaryDiv.innerHTML = "";
+    liveBody.innerHTML = "";
+    
+    let t18 = 0, tSm = 0, tCs = 0, r18 = 0, rSm = 0;
+
+    deliveryLog.forEach(log => {
+        t18 += Number(log.v18l); tSm += Number(log.vSmall); tCs += Number(log.vCases);
+        r18 += Number(log.r18l); rSm += Number(log.rSmall);
+
+        summaryDiv.innerHTML += `
+            <div style="border-bottom:1px solid #444; padding:10px;">
+                <b>${log.date} - ${log.customer}</b> [${log.status}] @ ${log.time}<br>
+                DEL: 18L(${log.v18l}) Small(${log.vSmall}) Cases(${log.vCases})<br>
+                RET: 18L(${log.r18l}) Small(${log.rSmall})<br>
+                NOTES: ${log.notes} ${log.reason ? '| REASON: ' + log.reason : ''}
+            </div>`;
+
+        liveBody.innerHTML += `<tr>
+            <td>${log.customer}</td><td>${log.status}</td><td>${log.v18l}</td><td>${log.vSmall}</td><td>${log.vCases}</td><td>${log.r18l}</td><td>${log.rSmall}</td><td>${log.time}</td>
+        </tr>`;
+    });
+
+    liveTotals.innerHTML = `
+        <h3 style="margin:0 0 10px 0; color:#0078ff">LIVE TOTALS</h3>
+        <p style="margin:5px 0"><b>Delivered:</b> 18L: ${t18} | Small: ${tSm} | Cases: ${tCs}</p>
+        <p style="margin:5px 0"><b>Returned:</b> 18L: ${r18} | Small: ${rSm}</p>
+    `;
+}
+
+async function executeEOD() {
+    if(!confirm("Execute End of Day?")) return;
+    const route = document.getElementById("route-select").value;
+    const longDate = new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    
+    const eodPayload = {
+        action: "EOD",
+        route: route,
+        longDate: longDate,
+        summary: document.getElementById('summary-data').innerText,
+        log: deliveryLog
+    };
+
+    document.getElementById('status').innerText = "Running EOD...";
+    try {
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(eodPayload) });
+        alert("EOD Success: PDFs zipped and Summary saved.");
+    } catch(e) { alert("EOD Error"); }
+    document.getElementById('status').innerText = "Ready";
 }
 </script>
 </body>
