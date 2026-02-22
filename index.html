@@ -2,93 +2,127 @@
 <html>
 <head>
     <title>Culligan Route Manager</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
-        body { font-family: sans-serif; margin: 0; background: #f0f2f5; }
-        #map { height: 350px; width: 100%; border-bottom: 2px solid #ccc; }
-        .stop-list { padding: 15px; }
-        .stop-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
-        #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 20px; overflow-y: auto; }
-        #sig-canvas { background: white; border-radius: 5px; margin: 10px 0; touch-action: none; width: 100%; max-width: 400px; height: 120px; }
-        #ticket-output { display: none; width: 500px; padding: 40px; background: white; color: black; }
-        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; max-width: 400px; }
-        input, textarea, select { padding: 10px; border-radius: 5px; border: none; font-size: 14px; width: 100%; box-sizing: border-box; }
-        .btn-row { display: flex; width: 90%; max-width: 400px; justify-content: space-between; margin-top: 15px; }
-        .btn { padding: 12px; border: none; border-radius: 5px; font-weight: bold; width: 48%; cursor: pointer; }
+        :root { --culligan-blue: #0078ff; --dark-bg: #1a1a1a; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f0f2f5; }
+        
+        /* Header Styling */
+        header { background: var(--culligan-blue); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000; }
+        
+        /* Map and List Container */
+        #main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #map { flex: 2; width: 100%; border-bottom: 3px solid var(--culligan-blue); }
+        
+        /* Stop List Styling */
+        .stop-list { flex: 1; overflow-y: auto; padding: 15px; background: white; }
+        .stop-card { background: #fff; border-left: 5px solid var(--culligan-blue); padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; }
+        .stop-card:active { transform: scale(0.98); background: #f9f9f9; }
+        .stop-card b { font-size: 1.1em; color: #333; }
+        
+        /* Modal Overlay */
+        #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: flex-start; color: white; padding-top: 40px; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--dark-bg); width: 90%; max-width: 450px; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        /* Grid Input Styling */
+        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+        input, textarea, select { padding: 12px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: white; font-size: 16px; width: 100%; box-sizing: border-box; }
+        input::placeholder { color: #888; }
+        
+        /* Signature Canvas */
+        #sig-canvas { background: white; border-radius: 8px; margin: 15px 0; touch-action: none; width: 100%; height: 150px; }
+        
+        /* Buttons */
+        .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; text-transform: uppercase; }
         .btn-save { background: #28a745; color: white; }
         .btn-cancel { background: #dc3545; color: white; }
+        
+        /* PDF Template (Hidden) */
+        #ticket-output { display: none; width: 600px; padding: 40px; background: white; color: black; }
+        .number-pin { background: var(--culligan-blue); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; }
     </style>
 </head>
 <body>
 
-<div style="background:#0078ff; color:white; padding:10px; text-align:center;">
-    <select id="routeSelector" style="width:auto; background:white; color:black;">
+<header>
+    <div style="font-weight: bold; font-size: 1.2em;">CULLIGAN ROUTE</div>
+    <select id="routeSelector" style="width: auto; padding: 5px; background: white; color: black; border: none;">
         <option>City Route A</option>
         <option>Rural Route B</option>
     </select>
-    <span id="stop-count">0 Stops</span>
+    <div id="stop-count">0 Stops</div>
+</header>
+
+<div id="main-container">
+    <div id="map"></div>
+    <div class="stop-list" id="stop-list"></div>
 </div>
-<div id="map"></div>
-<div class="stop-list" id="stop-list"></div>
 
 <div id="dataModal">
-    <h3 id="mCustName" style="margin-top:0;">Customer</h3>
-    <div class="grid-inputs">
-        <input type="number" id="inv18L" placeholder="18L Del.">
-        <input type="number" id="ret18L" placeholder="18L Ret.">
-        <input type="number" id="invSm" placeholder="Sm Del.">
-        <input type="number" id="retSm" placeholder="Sm Ret.">
-        <input type="number" id="cases" placeholder="Cases">
-        <input type="text" id="recvBy" placeholder="Received By">
-    </div>
-    <textarea id="driverNotes" rows="2" placeholder="Driver Notes" style="margin-top:10px; width:90%; max-width:400px;"></textarea>
-    <p style="margin:5px 0;">Signature:</p>
-    <canvas id="sig-canvas"></canvas>
-    <div class="btn-row">
-        <button class="btn btn-save" onclick="processStop('Delivered')">SUBMIT</button>
-        <button class="btn btn-cancel" onclick="closeModal()">CANCEL</button>
+    <div class="modal-content">
+        <h2 id="mCustName" style="margin-top: 0; color: var(--culligan-blue);">Customer Name</h2>
+        <div class="grid-inputs">
+            <div><label>18L Del.</label><input type="number" id="inv18L" value="0"></div>
+            <div><label>18L Ret.</label><input type="number" id="ret18L" value="0"></div>
+            <div><label>Sm Del.</label><input type="number" id="invSm" value="0"></div>
+            <div><label>Sm Ret.</label><input type="number" id="retSm" value="0"></div>
+            <div style="grid-column: span 2;"><input type="text" id="recvBy" placeholder="Received By"></div>
+        </div>
+        <textarea id="driverNotes" rows="2" placeholder="Add notes here..."></textarea>
+        <p style="margin: 10px 0 5px 0; font-size: 0.9em; color: #aaa;">Authorized Signature:</p>
+        <canvas id="sig-canvas"></canvas>
+        <div class="btn-row">
+            <button class="btn btn-save" onclick="processStop('Delivered')">Submit</button>
+            <button class="btn btn-cancel" onclick="closeModal()">Back</button>
+        </div>
     </div>
 </div>
 
 <div id="ticket-output">
-    <div style="text-align:center; border-bottom:2px solid #0078ff;">
-        <h1 style="color:#0078ff; margin:0;">CULLIGAN WATER</h1>
-        <p>Delivery Receipt</p>
+    <div style="text-align: center; border-bottom: 2px solid #0078ff; padding-bottom: 10px;">
+        <h1 style="color: #0078ff; margin: 0;">CULLIGAN WATER</h1>
+        <p style="margin: 0;">Official Delivery Confirmation</p>
     </div>
-    <p><b>Customer:</b> <span id="t-cust"></span></p>
-    <p><b>Address:</b> <span id="t-addr"></span></p>
-    <p><b>Date:</b> <span id="t-date"></span></p>
-    <div style="display:grid; grid-template-columns: 1fr 1fr;">
-        <p>18L Delivered: <span id="t-l18"></span></p>
-        <p>18L Returned: <span id="t-r18"></span></p>
-        <p>Small Delivered: <span id="t-lSm"></span></p>
-        <p>Small Returned: <span id="t-rSm"></span></p>
+    <div style="margin-top: 20px; font-size: 1.2em;">
+        <p><b>Customer:</b> <span id="t-cust"></span></p>
+        <p><b>Address:</b> <span id="t-addr"></span></p>
+        <p><b>Date:</b> <span id="t-date"></span></p>
+        <hr>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <p>18L Delivered: <span id="t-l18"></span></p>
+            <p>18L Returned: <span id="t-r18"></span></p>
+            <p>Small Delivered: <span id="t-lSm"></span></p>
+            <p>Small Returned: <span id="t-rSm"></span></p>
+        </div>
+        <p><b>Notes:</b> <span id="t-notes"></span></p>
+        <p><b>Received By:</b> <span id="t-recv"></span></p>
     </div>
-    <p><b>Notes:</b> <span id="t-notes"></span></p>
-    <p><b>Signature:</b></p>
-    <img id="t-sig" style="width:100%; border:1px solid #eee;">
+    <div style="margin-top: 40px; border-top: 1px solid #ccc; padding-top: 10px;">
+        <p><b>Signature:</b></p>
+        <img id="t-sig" style="width: 100%; max-height: 150px; object-fit: contain;">
+    </div>
 </div>
 
 <script>
     const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbzMfGuDRFTGBWyrG2CVFVOBSUzyORpxd4aTVZaStpuF54zkryeKdFU0PLIIaIgk-w0M/exec";
-    let map, activeIndex, canvas, ctx, drawing = false;
-    let driverName = "Driver_1";
+    let map, markerLayer, activeIndex, canvas, ctx, drawing = false;
     let stops = [
-        { company: "TEST_UFA_FARM", address: "123 Farm Road", lat: 55.17, lng: -118.79 },
-        { company: "Culligan Warehouse", address: "101 Main St", lat: 55.18, lng: -118.80 }
+        { company: "TEST_UFA_FARM", address: "123 Farm Road", lat: 55.1700, lng: -118.7900 },
+        { company: "Culligan Main", address: "Warehouse", lat: 55.1800, lng: -118.8000 }
     ];
 
     async function processStop(status) {
         const now = new Date();
         const longDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         
-        // RESTORED: All inventory fields
         const payload = {
             Timestamp: now.toLocaleString(),
-            DriverID: driverName,
+            DriverID: "Driver_1",
             Customer: stops[activeIndex].company,
             Address: stops[activeIndex].address,
             Status: status,
@@ -96,7 +130,6 @@
             r18: document.getElementById('ret18L').value,
             lSm: document.getElementById('invSm').value,
             rSm: document.getElementById('retSm').value,
-            cs: document.getElementById('cases').value,
             recv: document.getElementById('recvBy').value,
             Notes: document.getElementById('driverNotes').value,
             RouteName: document.getElementById('routeSelector').value,
@@ -104,7 +137,7 @@
             FileName: `${stops[activeIndex].company} - ${longDate}.pdf`
         };
 
-        // Update Ticket Template
+        // Fill PDF
         document.getElementById('t-cust').innerText = payload.Customer;
         document.getElementById('t-addr').innerText = payload.Address;
         document.getElementById('t-date').innerText = longDate;
@@ -113,6 +146,7 @@
         document.getElementById('t-lSm').innerText = payload.lSm;
         document.getElementById('t-rSm').innerText = payload.rSm;
         document.getElementById('t-notes').innerText = payload.Notes;
+        document.getElementById('t-recv').innerText = payload.recv;
         document.getElementById('t-sig').src = canvas.toDataURL();
 
         const ticket = document.getElementById('ticket-output');
@@ -123,18 +157,21 @@
             payload.pdfData = pdfData;
 
             fetch(SHEETS_API_URL, { method: 'POST', body: JSON.stringify(payload) })
-            .then(() => { alert("Delivery Complete"); closeModal(); });
+            .then(() => { 
+                alert("SUCCESS: Delivery Recorded & PDF Sent.");
+                closeModal();
+            });
         });
     }
 
     function initCanvas() {
         canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth; canvas.height = 120;
+        canvas.width = canvas.offsetWidth; canvas.height = 150;
         ctx.strokeStyle = "#000"; ctx.lineWidth = 3;
         const getXY = (e) => { 
             const r = canvas.getBoundingClientRect(); 
-            const x = (e.clientX || e.touches[0].clientX) - r.left;
-            const y = (e.clientY || e.touches[0].clientY) - r.top;
+            const x = (e.clientX || (e.touches ? e.touches[0].clientX : 0)) - r.left;
+            const y = (e.clientY || (e.touches ? e.touches[0].clientY : 0)) - r.top;
             return {x,y};
         };
         canvas.onmousedown = (e) => { drawing = true; const p = getXY(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
@@ -147,13 +184,15 @@
     function closeModal() { document.getElementById('dataModal').style.display = 'none'; }
 
     window.onload = () => {
-        map = L.map("map").setView([55.17, -118.79], 13);
+        map = L.map("map").setView([55.17, -118.79], 12);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+        
         const list = document.getElementById('stop-list');
         stops.forEach((s, i) => {
             const card = document.createElement('div');
             card.className = "stop-card";
-            card.innerHTML = `<b>${s.company}</b><br>${s.address}`;
+            card.innerHTML = `<b>#${i+1} ${s.company}</b><br><small>${s.address}</small>`;
             card.onclick = () => {
                 activeIndex = i;
                 document.getElementById('mCustName').innerText = s.company;
@@ -161,7 +200,9 @@
                 setTimeout(initCanvas, 100);
             };
             list.appendChild(card);
-            L.marker([s.lat, s.lng]).addTo(map);
+            L.marker([s.lat, s.lng], { 
+                icon: L.divIcon({ html: `<div class="number-pin">${i+1}</div>`, className: '' }) 
+            }).addTo(markerLayer);
         });
         document.getElementById('stop-count').innerText = stops.length + " Stops";
     };
