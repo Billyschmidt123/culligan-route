@@ -102,8 +102,8 @@
             <option value="SALT">SALT</option>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
-        <button class="btn-mgr" onclick="toggleManager()">Manager Panel</button>
         <div id="status">Status: Ready</div>
+        <button class="btn-mgr" onclick="toggleManager()" style="margin-left: auto;">Manager Panel</button>
     </div>
     <div id="map"></div>
 
@@ -197,18 +197,20 @@ window.onload = () => {
 async function loadRoute() {
     const selectedTab = document.getElementById('route-select').value;
     const statusDiv = document.getElementById('status');
-    statusDiv.innerText = "Status: Loading...";
+    statusDiv.innerText = "Status: Connecting...";
     
     stops = [];
     markerLayer.clearLayers();
     document.getElementById('stop-list').innerHTML = "";
 
     try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(selectedTab)}`;
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(selectedTab)}&t=${Date.now()}`;
         const res = await fetch(url);
         const text = await res.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
+        const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
         const rows = json.table.rows;
+
+        statusDiv.innerText = "Status: Mapping Locations...";
 
         for (let row of rows) {
             const r = row.c;
@@ -231,14 +233,14 @@ async function loadRoute() {
         if (stops.length > 0) {
             const group = new L.featureGroup(markerLayer.getLayers());
             map.fitBounds(group.getBounds().pad(0.1));
-            statusDiv.innerText = `Status: ${stops.length} Stops Loaded`;
-            document.getElementById('stop-count').innerText = `${stops.length} Stops`;
+            statusDiv.innerText = `Status: Success (${stops.length} Stops)`;
+            document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
         } else {
-            statusDiv.innerText = "Status: No Data Found";
+            statusDiv.innerText = "Status: Empty Sheet";
         }
     } catch (e) {
         console.error(e);
-        statusDiv.innerText = "Status: Error Loading";
+        statusDiv.innerText = "Status: Error Loading Tab";
     }
 }
 
@@ -301,7 +303,8 @@ async function performGlobalSearch(isRush = false) {
         try {
             const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tab)}`;
             const res = await fetch(url);
-            const json = JSON.parse((await res.text()).substring(47).slice(0, -2));
+            const text = await res.text();
+            const json = JSON.parse(text.substring(text.indexOf("(") + 1, text.lastIndexOf(")")));
             json.table.rows.forEach(row => {
                 const r = row.c.map(c => c ? String(c.v) : "");
                 if (r.join(" ").toLowerCase().includes(term.toLowerCase())) 
