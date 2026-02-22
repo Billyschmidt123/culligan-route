@@ -17,8 +17,6 @@
     .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
     .stop-card.flagged { border-left-color: #ffc107; background: #443c20; }
     .stop-card:hover { background:#444;}
-    
-    /* Profile View */
     #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
     .profile-group { margin-bottom:12px; }
     .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
@@ -28,33 +26,20 @@
     .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .back-btn { background:none; border:none; color:#0078ff; cursor:pointer; padding:0; margin-bottom:10px; font-weight: bold;}
-
-    /* Main View & Restored Top Controls */
+    
     #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
-    #map { flex:1; z-index: 1;}
-    
-    #top-restored-controls { 
-        position: absolute; 
-        top: 20px; 
-        left: 50%; 
-        transform: translateX(-50%); 
-        z-index: 1000; 
-        display: flex; 
-        gap: 10px; 
-        background: rgba(34, 34, 34, 0.9); 
-        padding: 10px; 
-        border-radius: 8px; 
-        border: 2px solid #0078ff;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    }
-
+    /* RESTORED HEADER CONTROLS */
+    #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px; z-index: 5;}
+    #map { flex:1; }
     .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-    .btn-nav { background:#0078ff; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
     .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
-    #status { font-size:13px; color:#0078ff; font-weight: bold; align-self: center; margin-left: 10px;}
+    #status { font-size:13px; color:#0078ff; font-weight: bold;}
     
+    /* ROUTE SELECTOR STYLING */
+    #route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; }
+
     /* Manager Panel Overlay */
-    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 2000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
+    #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
     #manager-panel.open { bottom: 0; }
     .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; }
     .mgr-tab-btn { padding: 15px 25px; border: none; background: none; color: #aaa; cursor: pointer; font-weight: bold; }
@@ -63,14 +48,12 @@
     .mgr-content.active { display: block; }
     .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
     
-    #route-select { width: 100%; padding: 12px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; margin-top: 10px; font-size: 16px;}
-    
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
     th, td { border: 1px solid #444; padding: 8px; text-align: left; }
     th { background: #333; color: #0078ff; }
     .mgr-footer { padding: 20px; background: #222; border-top: 1px solid #444; position: sticky; bottom: 0; }
     .btn-eod { background: #ffc107; color: black; width: 100%; padding: 15px; font-size: 18px; cursor: pointer; border-radius: 4px; font-weight: bold; border: none;}
-    
+
     .custom-div-icon { background:transparent; border:none;}
     .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
 </style>
@@ -111,58 +94,57 @@
 </div>
 
 <div id="main-view">
-    <div id="top-restored-controls">
-        <button class="btn-nav" onclick="prevStop()">< BACK</button>
-        <button class="btn" onclick="loadRoute()">LOAD ROUTE</button>
-        <button class="btn-nav" onclick="nextStop()">NEXT ></button>
-        <button class="btn-mgr" onclick="toggleManager()">MANAGER MENU</button>
+    <div id="controls">
+        <select id="route-select">
+            <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
+            <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
+            <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
+            <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
+            <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
+            <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
+            <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
+            <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
+            <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
+            <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
+            <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
+            <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
+            <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
+            <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
+            <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
+            <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
+            <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
+            <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
+            <option value="WEEK 4 THURSDAY">WEEK 4 THURSDAY</option>
+            <option value="WEEK 4 FRIDAY">WEEK 4 FRIDAY</option>
+            <option value="VALLEY VIEW">VALLEY VIEW</option>
+            <option value="NORTH">NORTH</option>
+            <option value="DAWSON CREEK">DAWSON CREEK</option>
+            <option value="SALT">SALT</option>
+        </select>
+        <button class="btn" onclick="loadRoute()">Load Route</button>
+        <button class="btn-mgr" onclick="toggleManager()">Manager Panel</button>
         <div id="status">Status: Ready</div>
     </div>
-
     <div id="map"></div>
 
     <div id="manager-panel">
         <button class="close-mgr" onclick="toggleManager()">&times;</button>
         <div class="mgr-tabs">
-            <button class="mgr-tab-btn active" onclick="switchTab('customer-area')">CUSTOMER AREA (SEARCH)</button>
+            <button class="mgr-tab-btn active" onclick="switchTab('customer-area')">CUSTOMER AREA</button>
             <button class="mgr-tab-btn" onclick="switchTab('reports')">DAILY SUMMARY</button>
             <button class="mgr-tab-btn" onclick="switchTab('live-report')">LIVE REPORT</button>
         </div>
-        
+
         <div id="customer-area" class="mgr-content active">
-            <h3 style="color:#0078ff;">SELECT ROUTE / SEARCH</h3>
-            <p>Select the active route from the list below:</p>
-            <select id="route-select">
-                <option value="WEEK 1 MONDAY">WEEK 1 MONDAY</option>
-                <option value="WEEK 1 TUESDAY">WEEK 1 TUESDAY</option>
-                <option value="WEEK 1 WEDNESDAY">WEEK 1 WEDNESDAY</option>
-                <option value="WEEK 1 THURSDAY">WEEK 1 THURSDAY</option>
-                <option value="WEEK 1 FRIDAY">WEEK 1 FRIDAY</option>
-                <option value="WEEK 2 MONDAY">WEEK 2 MONDAY</option>
-                <option value="WEEK 2 TUESDAY">WEEK 2 TUESDAY</option>
-                <option value="WEEK 2 WEDNESDAY">WEEK 2 WEDNESDAY</option>
-                <option value="WEEK 2 THURSDAY">WEEK 2 THURSDAY</option>
-                <option value="WEEK 2 FRIDAY">WEEK 2 FRIDAY</option>
-                <option value="WEEK 3 MONDAY">WEEK 3 MONDAY</option>
-                <option value="WEEK 3 TUESDAY">WEEK 3 TUESDAY</option>
-                <option value="WEEK 3 WEDNESDAY">WEEK 3 WEDNESDAY</option>
-                <option value="WEEK 3 THURSDAY">WEEK 3 THURSDAY</option>
-                <option value="WEEK 3 FRIDAY">WEEK 3 FRIDAY</option>
-                <option value="WEEK 4 MONDAY">WEEK 4 MONDAY</option>
-                <option value="WEEK 4 TUESDAY">WEEK 4 TUESDAY</option>
-                <option value="WEEK 4 WEDNESDAY">WEEK 4 WEDNESDAY</option>
-                <option value="WEEK 4 THURSDAY">WEEK 4 THURSDAY</option>
-                <option value="WEEK 4 FRIDAY">WEEK 4 FRIDAY</option>
-                <option value="VALLEY VIEW">VALLEY VIEW</option>
-                <option value="NORTH">NORTH</option>
-                <option value="DAWSON CREEK">DAWSON CREEK</option>
-                <option value="SALT">SALT</option>
-            </select>
-            <div style="margin-top: 20px; padding: 15px; background: #222; border-radius: 4px;">
-                <p style="color: #aaa; font-size: 13px;">After selecting a route, close this menu and click <b>LOAD ROUTE</b> at the top of the map.</p>
+            <h3 style="color:#0078ff;">Customer Maintenance & Search</h3>
+            <p>Search/Search functions located here. The primary route selector is also available on the main map header.</p>
+            <div id="customer-search-container" style="margin-top:20px; background:#222; padding:15px; border:1px solid #444;">
+                <label style="display:block; margin-bottom:10px; font-weight:bold; color:#0078ff;">SEARCH CUSTOMER DATABASE</label>
+                <input type="text" id="cust-search-input" placeholder="Enter Customer Name or Address..." style="width:100%; padding:10px; background:#333; border:1px solid #444; color:white; border-radius:4px;">
+                <button class="btn" style="margin-top:10px; width:100%;" onclick="alert('Search Database Functionality Ready')">SEARCH</button>
             </div>
         </div>
-
+        
         <div id="reports" class="mgr-content">
             <h2 style="color:#0078ff; text-align:center;">DAILY SUMMARY CULLIGAN BOTTLE WATER</h2>
             <div id="summary-data"></div>
@@ -208,25 +190,6 @@ function switchTab(tabId) {
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     event.currentTarget.classList.add('active');
-}
-
-// Navigation Functions
-function nextStop() {
-    if (stops.length === 0) return;
-    let next = (currentStopIndex === null) ? 0 : currentStopIndex + 1;
-    if (next < stops.length) {
-        map.setView([stops[next].lat, stops[next].lng], 16);
-        openProfile(next);
-    }
-}
-
-function prevStop() {
-    if (stops.length === 0 || currentStopIndex === null) return;
-    let prev = currentStopIndex - 1;
-    if (prev >= 0) {
-        map.setView([stops[prev].lat, stops[prev].lng], 16);
-        openProfile(prev);
-    }
 }
 
 function initSignaturePad() {
@@ -312,7 +275,6 @@ function renderSidebar() {
         div.onclick = () => { map.setView([s.lat, s.lng], 16); openProfile(i); };
         list.appendChild(div);
     });
-    document.getElementById('stop-count').innerText = `${stops.length} Stops Loaded`;
 }
 
 function openProfile(i) {
