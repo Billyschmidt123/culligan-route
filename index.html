@@ -22,7 +22,7 @@
         #map { flex: 1; width: 100%; }
         .btn { padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-mgr { background: #f39c12; }
-        .btn-start { background: #0078ff; display: none; } /* Hidden by default */
+        .btn-start { background: #0078ff; display: none; } 
         select { padding: 9px; background: #333; color: white; border: 1px solid #444; border-radius: 4px; width: 160px; }
         #dataModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; align-items:center; justify-content:center; }
         .modal-content { background:#222; padding:20px; border-radius:8px; width:400px; border:1px solid #444; }
@@ -31,7 +31,6 @@
         .field-row input, .field-row textarea { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; box-sizing: border-box; }
         #sig-canvas { background: white; border-radius: 4px; width: 100%; height: 100px; cursor: crosshair; }
         .number-pin { background: #0078ff; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; }
-        .leaflet-tooltip-own { background: rgba(0,0,0,0.7); border: 1px solid #0078ff; color: white; border-radius: 4px; padding: 2px 6px; }
         #ticket-output { display: none; padding: 30px; background: white; color: black; width: 500px; }
     </style>
 </head>
@@ -78,7 +77,8 @@
 </div>
 
 <script>
-    const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbyECaDUnW3yvG5J8dWmT1a-5YTykHuwDxEiAgByH91A5zAwIzONqV64_r9olmyd07MSMA/exec";
+    // Updated to your newest deployment URL
+    const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwt6s3gSl-stP2kSDxsaryhXPZUajyJCTEFjaljSu4Z-IzU055oDADrS7fYxYdM1_EnhA/exec";
     
     let map, markerLayer, routeLine, stops = [], activeIndex = -1, canvas, ctx, drawing = false, driverName = "Unknown";
     const warehouse = { lat: 55.1707, lng: -118.7947 };
@@ -110,10 +110,12 @@
             stops = temp;
             render();
             document.getElementById('status').innerText = "Route Loaded";
+            // Show the start button after data is confirmed 
             document.getElementById('start-btn').style.display = "inline-block";
         } catch (e) { document.getElementById('status').innerText = "Error Loading"; }
     }
 
+    // Function for the new "Start Route" button workflow
     function startDriverSession() {
         const nameInput = prompt("Please enter your name to start the route:");
         if (nameInput && nameInput.trim() !== "") {
