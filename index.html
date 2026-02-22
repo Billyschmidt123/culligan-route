@@ -16,11 +16,11 @@ body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; 
 .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer;}
 .stop-card:hover { background:#444;}
 #main-view { flex:1; display:flex; flex-direction:column;}
-#controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display:flex; align-items:center; gap:10px;}
+#controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
 #map { flex:1; }
 .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-#status { font-size:13px; color:#aaa; margin-left:10px;}
-select { padding:10px; background:#333; color:white; border:1px solid #0078ff; border-radius:4px; cursor:pointer; min-width: 150px;}
+#status { font-size:13px; color:#aaa;}
+#route-select { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; cursor: pointer; }
 .custom-div-icon { background:transparent; border:none;}
 .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
 </style>
@@ -38,8 +38,27 @@ select { padding:10px; background:#333; color:white; border:1px solid #0078ff; b
 
 <div id="main-view">
 <div id="controls">
-<select id="route-selector">
-    <option value="">Loading Tabs...</option>
+<select id="route-select">
+    <option value="917509026">Monday Route</option>
+    <option value="GID_HERE">Tuesday Route</option>
+    <option value="GID_HERE">Wednesday Route</option>
+    <option value="GID_HERE">Thursday Route</option>
+    <option value="GID_HERE">Friday Route</option>
+    <option value="GID_HERE">Route 6</option>
+    <option value="GID_HERE">Route 7</option>
+    <option value="GID_HERE">Route 8</option>
+    <option value="GID_HERE">Route 9</option>
+    <option value="GID_HERE">Route 10</option>
+    <option value="GID_HERE">Route 11</option>
+    <option value="GID_HERE">Route 12</option>
+    <option value="GID_HERE">Route 13</option>
+    <option value="GID_HERE">Route 14</option>
+    <option value="GID_HERE">Route 15</option>
+    <option value="GID_HERE">Route 16</option>
+    <option value="GID_HERE">Route 17</option>
+    <option value="GID_HERE">Route 18</option>
+    <option value="GID_HERE">Route 19</option>
+    <option value="GID_HERE">Route 20</option>
 </select>
 <button class="btn" onclick="loadRoute()">Load Route</button>
 <div id="status">Status: Ready</div>
@@ -54,57 +73,21 @@ let map, markerLayer, routeLine;
 let stops = [];
 const warehouse = { lat: 55.1707, lng: -118.7947 };
 
-window.onload = async () => {
-    // Initialize Map
+window.onload = () => {
     map = L.map("map").setView([warehouse.lat, warehouse.lng], 11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
     routeLine = L.polyline([], { color:'#0078ff', weight:5 }).addTo(map);
     L.marker([warehouse.lat, warehouse.lng], {
-        icon: L.divIcon({ className:'custom-div-icon', html:`<div class="number-pin">W</div>` })
+        icon: L.divIcon({
+            className:'custom-div-icon',
+            html:`<div class="number-pin">W</div>`
+        })
     }).addTo(map).bindPopup("<b>Warehouse</b>");
-
-    // Auto-fetch all Sheet Tabs
-    await fetchSheetTabs();
 };
 
-async function fetchSheetTabs() {
-    try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
-        const res = await fetch(url);
-        const text = await res.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        
-        const selector = document.getElementById("route-selector");
-        selector.innerHTML = ""; // Clear "Loading" message
-
-        // Note: The visualization API doesn't easily expose GIDs for all tabs 
-        // in one simple fetch without an API key, so we use a fallback if 
-        // you haven't manually listed them. 
-        // If your tabs are named consistently, we can map them here.
-        // For now, I've kept the manual list structure for stability:
-        const availableRoutes = [
-            { name: "Route 1", gid: "917509026" },
-            { name: "Route 2", gid: "SECOND_GID" }, 
-            { name: "Route 3", gid: "THIRD_GID" }
-            // Add your specific GIDs here from the sheet URLs
-        ];
-
-        availableRoutes.forEach(route => {
-            let opt = document.createElement("option");
-            opt.value = route.gid;
-            opt.innerText = route.name;
-            selector.appendChild(opt);
-        });
-    } catch (e) {
-        console.error("Tab fetch failed", e);
-    }
-}
-
 async function loadRoute() {
-    const selectedGid = document.getElementById("route-selector").value;
-    if(!selectedGid) return;
-
+    const selectedGid = document.getElementById("route-select").value;
     document.getElementById("status").innerText = "Loading Google Sheet...";
 
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${selectedGid}`;
@@ -120,13 +103,18 @@ async function loadRoute() {
         )
     );
     
+    if (rows.length === 0) {
+        document.getElementById("status").innerText = "Error: No data in tab.";
+        return;
+    }
+
     const addrKey = Object.keys(rows[0]).find(k => k.toLowerCase().includes("addr"));
     const nameKey = Object.keys(rows[0]).find(k =>
         k.toLowerCase().includes("comp") ||
         k.toLowerCase().includes("cust")
     );
-    
     let tempStops = [];
+
     for (let i = 0; i < rows.length; i++) {
         document.getElementById("status").innerText = `Geocoding ${i+1}/${rows.length}...`;
         const geo = await geocode(rows[i][addrKey]);
@@ -137,6 +125,7 @@ async function loadRoute() {
                 ...geo
             });
         }
+
         await new Promise(r => setTimeout(r, 1100));
     }
 
