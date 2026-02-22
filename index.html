@@ -40,6 +40,7 @@
     #status { font-size:13px; color:#0078ff; font-weight: bold;}
     .route-drop { padding: 10px; background: #333; color: white; border: 1px solid #0078ff; border-radius: 4px; width: 100%; margin-bottom: 10px;}
 
+    /* Manager Panel Styling */
     #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
     #manager-panel.open { bottom: 0; }
     .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; overflow-x: auto;}
@@ -204,30 +205,36 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-/** GLOBAL SEARCH **/
+/** GLOBAL SEARCH LOGIC **/
 async function runGlobalSearch() {
     const term = document.getElementById('global-search-input').value;
-    if (term.length < 3) return alert("Search term too short.");
+    if (term.length < 3) return alert("Enter at least 3 characters to search.");
     
-    document.getElementById('status').innerText = "Searching database...";
+    document.getElementById('status').innerText = "Scanning all sheets...";
     
     try {
-        const res = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`);
-        globalSearchResults = await res.json();
+        const res = await fetch(`${SCRIPT_URL}?action=searchGlobal&name=${encodeURIComponent(term)}`, {
+            method: "GET",
+            redirect: "follow"
+        });
+        
+        const rawText = await res.text();
+        globalSearchResults = JSON.parse(rawText);
         
         const drop = document.getElementById('global-results-drop');
         drop.innerHTML = '<option value="">-- Select Result --</option>';
         
         if (globalSearchResults.length === 0) {
-            alert("No matches found.");
+            alert("No matches found in any route.");
         } else {
             globalSearchResults.forEach((r, i) => {
                 drop.innerHTML += `<option value="${i}">${r.company} (${r.route})</option>`;
             });
-            alert(`Found ${globalSearchResults.length} matches across all routes.`);
+            alert(`Found ${globalSearchResults.length} matches!`);
         }
     } catch(e) {
-        alert("Search failed. Ensure your Script URL is deployed correctly.");
+        console.error(e);
+        alert("Search Error. Check your SCRIPT_URL and Deployment settings.");
     }
     document.getElementById('status').innerText = "Search Ready.";
 }
@@ -239,7 +246,7 @@ function populateGlobalFields() {
         document.getElementById('edit-name').value = s.company;
         document.getElementById('edit-addr').value = s.address;
         document.getElementById('edit-phone').value = s.phone;
-        document.getElementById('found-on-route').innerText = "Original Route: " + s.route;
+        document.getElementById('found-on-route').innerText = "Found on Route: " + s.route;
     }
 }
 
@@ -248,7 +255,7 @@ async function saveCustomerEdits() {
     const newAddr = document.getElementById('edit-addr').value;
     
     if (newAddr !== stops[currentStopIndex].address) {
-        document.getElementById('status').innerText = "Re-geocoding stop...";
+        document.getElementById('status').innerText = "Updating Map Pin...";
         let geo = await geocodeArcGIS(newAddr);
         if (geo) {
             stops[currentStopIndex].lat = geo.lat;
@@ -261,7 +268,7 @@ async function saveCustomerEdits() {
     stops[currentStopIndex].phone = document.getElementById('edit-phone').value;
     
     renderSidebar(); renderRoute(); updateHeader();
-    alert("Active stop updated with global data.");
+    alert("Stop information updated for this session.");
 }
 
 /** RUSH ORDERS **/
@@ -415,8 +422,8 @@ async function executeEOD() {
     try {
         document.getElementById('status').innerText = "Uploading Report...";
         await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "EOD", driver: driverName, log: deliveryLog }) });
-        alert("Trip Report Saved to Drive.");
-    } catch(e) { alert("Error."); }
+        alert("Trip Report Saved to Google Drive.");
+    } catch(e) { alert("Report upload failed."); }
 }
 
 function startRoute() {
@@ -424,6 +431,13 @@ function startRoute() {
     if (driverName) {
         document.getElementById('start-btn').style.display = 'none';
         document.getElementById('status').innerText = `Driver: ${driverName}`;
+    }
+}
+
+function adminResetCounter() {
+    if (confirm("Clear summary data?")) {
+        document.getElementById('summary-data').innerHTML = "";
+        deliveryLog = [];
     }
 }
 
