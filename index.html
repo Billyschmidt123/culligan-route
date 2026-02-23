@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v18.0</title>
+    <title>Culligan Route - Professional v21.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -23,9 +23,6 @@
         #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
         #map { flex:1; }
         .number-pin { color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
-        
-        #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; padding: 20px; box-sizing: border-box;}
-        #manager-panel.open { bottom: 0; }
     </style>
 </head>
 <body>
@@ -51,20 +48,17 @@
             <div class="profile-group"><label>Sm Del</label><input type="number" id="p-sm-del" value="0"></div>
             <div class="profile-group"><label>Sm Ret</label><input type="number" id="p-sm-ret" value="0"></div>
             <div class="profile-group"><label>Cases</label><input type="number" id="p-cases" value="0"></div>
-            <div class="profile-group">
-                <label>Email Receipt</label>
-                <input type="checkbox" id="p-send-email" checked style="width:20px; height:20px;">
-            </div>
+            <div class="profile-group"><label>Email Rec.</label><input type="checkbox" id="p-send-email" checked style="width:20px; height:20px;"></div>
         </div>
 
-        <label style="font-size:11px; color:#0078ff; font-weight:bold;">CUSTOMER SIGNATURE</label>
+        <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
-        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:8px; cursor:pointer;">CLEAR SIG</button>
+        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:8px; cursor:pointer;">CLEAR</button>
 
-        <button class="btn-del" onclick="handleSubmission('DELIVERED')">COMPLETE DELIVERY</button>
-        <div style="border-top: 1px solid #444; margin-top:10px; padding-top:10px;">
-            <input type="text" id="p-fail-reason" placeholder="Reason for skip..." style="width:100%; background:#333; color:white; padding:10px; border:1px solid #444; margin-bottom:5px;">
-            <button class="btn-not" onclick="handleSubmission('NOT DELIVERED')">MARK NOT DELIVERED</button>
+        <button class="btn-del" onclick="handleSubmission('DELIVERED')">COMPLETE</button>
+        <div style="border-top:1px solid #444; margin-top:10px; padding-top:10px;">
+            <input type="text" id="p-fail-reason" placeholder="Skip reason..." style="width:100%; background:#333; color:white; padding:10px; border:1px solid #444;">
+            <button class="btn-not" onclick="handleSubmission('NOT DELIVERED')">MARK SKIP</button>
         </div>
     </div>
 </div>
@@ -76,25 +70,17 @@
             <option value="1773492755">SALT</option>
             <option value="458612538">VALLEYVIEW</option>
         </select>
-        <button onclick="loadRoute()" style="padding:8px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">Load Route</button>
-        <button onclick="toggleManager()" style="margin-left:auto; background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer;">END OF DAY</button>
+        <button onclick="loadRoute()" id="load-btn" style="padding:8px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">Load Route</button>
     </div>
     <div id="map"></div>
-
-    <div id="manager-panel">
-        <button onclick="toggleManager()" style="float:right; background:red; color:white; border:none; padding:5px 15px;">CLOSE</button>
-        <h2>End of Day Summary</h2>
-        <div id="summary-content" style="background:#222; padding:15px; border-radius:5px; margin-bottom:20px; font-family:monospace; height:200px; overflow-y:auto;">No data yet.</div>
-        <button onclick="finalizeRoute()" style="width:100%; padding:20px; background:#0078ff; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">UPLOAD TRIP REPORT TO DRIVE</button>
-    </div>
 </div>
 
 <script>
-// --- CONFIG ---
-const WEB_APP_URL = https://script.google.com/macros/s/AKfycbzQv3LMbTY2biWpSc2IGVK6ALvB5LYfWWDiKfIf0pbWDhSTx7iSsmksfD4A0jEx6bSB/exec
+// --- V21 CONFIG ---
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzQv3LMbTY2biWpSc2IGVK6ALvB5LYfWWDiKfIf0pbWDhSTx7iSsmksfD4A0jEx6bSB/exec"; 
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 
-let map, markerLayer, stops = [], tripLog = [], currentIdx = null, drawing = false;
+let map, markerLayer, stops = [], currentIdx = null, drawing = false;
 let canvas, ctx;
 
 window.onload = () => {
@@ -113,7 +99,7 @@ function initSig() {
         return { x: clientX - r.left, y: clientY - r.top };
     };
     const start = (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); };
-    const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
+    const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.lineWidth = 2; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
     canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move);
     window.addEventListener('mouseup', () => drawing = false);
     canvas.addEventListener('touchstart', start, {passive: false}); canvas.addEventListener('touchmove', move, {passive: false});
@@ -124,33 +110,50 @@ function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
-    const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
-    const rows = (await res.text()).split('\n').slice(1);
-    stops = [];
-    for(let r of rows) {
-        const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-        if(c[3]) {
-            const addr = c[3].replace(/"/g,'');
-            const g = await (await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`)).json();
-            if(g.candidates.length) {
-                stops.push({ 
-                    name: c[2].replace(/"/g,''), 
-                    addr: addr, 
-                    email: c[7] ? c[7].replace(/"/g,'') : "", // Column H
-                    lat: g.candidates[0].location.y, 
-                    lng: g.candidates[0].location.x, 
-                    status: 'pending' 
-                });
+    document.getElementById('status-display').innerText = "Loading data...";
+    
+    try {
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
+        if(!res.ok) throw new Error("Could not access spreadsheet.");
+        
+        const text = await res.text();
+        const rows = text.split('\n').slice(1);
+        stops = [];
+
+        for(let r of rows) {
+            const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            if(c[3]) {
+                const addr = c[3].replace(/"/g,'').trim();
+                const g = await (await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`)).json();
+                
+                if(g.candidates && g.candidates.length) {
+                    stops.push({ 
+                        name: c[2].replace(/"/g,'').trim(), 
+                        addr: addr, 
+                        email: c[7] ? c[7].replace(/"/g,'').trim() : "", // Col H
+                        lat: g.candidates[0].location.y, 
+                        lng: g.candidates[0].location.x, 
+                        status: 'pending' 
+                    });
+                }
             }
         }
+        
+        if(stops.length === 0) {
+            alert("No stops found for this Route. Check Column D in your sheet.");
+        } else {
+            document.getElementById('status-display').innerText = stops.length + " Stops Loaded";
+            document.getElementById('start-route-btn').style.display = 'block';
+            renderAll();
+        }
+    } catch (err) {
+        console.error(err);
+        alert("CRITICAL ERROR: " + err.message);
+        document.getElementById('status-display').innerText = "Load Failed.";
     }
-    document.getElementById('status-display').innerText = stops.length + " Stops Loaded";
-    document.getElementById('start-route-btn').style.display = 'block';
-    renderAll();
 }
 
 function startDriverSession() {
-    tripLog.push("ROUTE START: " + new Date().toLocaleString());
     fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ status: "DRIVER_START", timestamp: new Date().toLocaleString() }) });
     document.getElementById('start-route-btn').style.display = 'none';
 }
@@ -174,33 +177,15 @@ function handleSubmission(type) {
     };
 
     fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
-    tripLog.push(`${payload.timestamp} - ${s.name} - ${type}`);
     s.status = 'completed';
-    renderAll(); closeProfile(); updateSummary();
+    renderAll(); 
+    closeProfile();
 }
-
-function finalizeRoute() {
-    alert("Sending Final Trip Report to Drive...");
-    fetch(WEB_APP_URL, { 
-        method: "POST", 
-        mode: "no-cors", 
-        body: JSON.stringify({ 
-            status: "ROUTE_COMPLETE", 
-            log: tripLog, 
-            routeName: document.getElementById('route-select').options[document.getElementById('route-select').selectedIndex].text 
-        }) 
-    });
-}
-
-function updateSummary() {
-    document.getElementById('summary-content').innerHTML = tripLog.map(line => `<div>${line}</div>`).join('');
-}
-
-function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
 
 function renderAll() {
     markerLayer.clearLayers();
-    const list = document.getElementById('stop-list'); list.innerHTML = "";
+    const list = document.getElementById('stop-list'); 
+    list.innerHTML = "";
     stops.forEach((s, i) => {
         const d = document.createElement('div');
         d.className = 'stop-card';
@@ -213,17 +198,20 @@ function renderAll() {
 }
 
 function openProfile(i) {
-    currentIdx = i; const s = stops[i];
+    currentIdx = i; 
+    const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
     document.getElementById('prof-name').innerText = s.name;
     document.getElementById('prof-addr').innerText = s.addr;
     clearSig();
+    map.setView([s.lat, s.lng], 16);
 }
 
-function closeProfile() { document.getElementById('list-view').style.display='block'; document.getElementById('customer-profile').style.display='none'; }
+function closeProfile() { 
+    document.getElementById('list-view').style.display='block'; 
+    document.getElementById('customer-profile').style.display='none'; 
+}
 </script>
 </body>
 </html>
-
-
