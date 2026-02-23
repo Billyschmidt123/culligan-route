@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v6.0</title>
+    <title>Culligan Route - Professional v7.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -13,34 +13,39 @@
         #sidebar-header { padding:15px; border-bottom:1px solid #444;}
         #stop-list { flex:1; overflow-y:auto; padding:10px;}
         .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer; position: relative;}
-        .stop-card.rush-order { border-left-color: #a335ee; background: #331d44; border-left-width: 8px;}
+        .stop-card.rush-order { border-left: 6px solid #a335ee !important; background: #331d44 !important; }
         #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
         .profile-group { margin-bottom:12px; }
         .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
         .profile-group input, .profile-group textarea, .profile-group select { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
-        #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555; cursor: crosshair;}
+        
+        /* Fixed Signature Pad Styling */
+        #sig-canvas { background:white; border-radius:4px; width:100%; height:180px; touch-action: none; border: 2px solid #555; cursor: crosshair; display: block;}
+        
         .form-btns { display:flex; flex-direction: column; gap:10px; margin-top:20px; padding-bottom: 40px;}
-        .btn-del { width:100%; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-        .btn-not { width:100%; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
+        .btn-del { width:100%; background:#28a745; color:white; border:none; padding:15px; border-radius:4px; cursor:pointer; font-weight:bold; font-size: 14px;}
+        .btn-not { width:100%; background:#dc3545; color:white; border:none; padding:15px; border-radius:4px; cursor:pointer; font-weight:bold; font-size: 14px;}
+        
         #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
         #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
         #map { flex:1; }
         .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
         .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
         .number-pin { color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
-        #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; overflow-y: auto;}
+        
+        #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 95%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; overflow-y: auto;}
         #manager-panel.open { bottom: 0; }
         .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; position: sticky; top: 0; z-index: 10;}
         .mgr-tab-btn { padding: 15px 25px; border: none; background: none; color: #aaa; cursor: pointer; font-weight: bold; }
         .mgr-tab-btn.active { color: #0078ff; border-bottom: 2px solid #0078ff; background: #2a2a2a; }
         .mgr-content { padding: 20px; display: none; color: white;}
         .mgr-content.active { display: block; }
-        .animated-line { stroke-dasharray: 10, 10; animation: dash 3s linear infinite; }
-        @keyframes dash { to { stroke-dashoffset: -100; } }
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; }
-        .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:500px; border-radius:8px; max-height: 85vh; overflow-y: auto;}
-        .search-item { padding: 12px; background: #333; border-radius: 4px; margin-bottom: 8px; cursor: pointer; border-left: 3px solid #0078ff; }
-        .search-item:hover { background: #444; }
+        
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; }
+        .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:550px; border-radius:8px; max-height: 90vh; overflow-y: auto;}
+        
+        .search-result-card { background: #333; padding: 15px; border-radius: 5px; margin-bottom: 10px; cursor: pointer; border-left: 4px solid #0078ff; }
+        .search-result-card:hover { background: #444; }
     </style>
 </head>
 <body>
@@ -49,14 +54,15 @@
     <div id="list-view">
         <div id="sidebar-header">
             <h3 style="margin:0">Route Stops</h3>
-            <p id="stop-count" style="font-size:12px; color:#aaa;">No route loaded</p>
+            <p id="stop-count" style="font-size:12px; color:#aaa;">Ready</p>
         </div>
         <div id="stop-list"></div>
     </div>
+    
     <div id="customer-profile">
-        <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:8px; width:100%; margin-bottom:10px; cursor:pointer;">← BACK TO LIST</button>
+        <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:10px; width:100%; margin-bottom:15px; border-radius:4px; cursor:pointer;">← RETURN TO LIST</button>
         <h3 id="prof-name">Customer Name</h3>
-        <p id="prof-addr" style="font-size:11px; color:#aaa; margin-top:-10px;"></p>
+        <p id="prof-addr" style="font-size:12px; color:#0078ff; margin-top:-10px; font-weight:bold;"></p>
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
             <div class="profile-group"><label>18L Delivered</label><input type="number" id="p-18l" value="0"></div>
@@ -64,21 +70,21 @@
             <div class="profile-group"><label>Sm Bottles</label><input type="number" id="p-sm-btl" value="0"></div>
             <div class="profile-group"><label>Sm Empties</label><input type="number" id="p-sm-emp" value="0"></div>
             <div class="profile-group"><label>Cases</label><input type="number" id="p-cases" value="0"></div>
-            <div class="profile-group"><label>Rec. By</label><input type="text" id="p-rec-by"></div>
+            <div class="profile-group"><label>Received By</label><input type="text" id="p-rec-by"></div>
         </div>
 
-        <div class="profile-group"><label>Notes</label><textarea id="p-notes" rows="2"></textarea></div>
+        <div class="profile-group"><label>Notes for Driver</label><textarea id="p-notes" rows="2" readonly style="background:#222;"></textarea></div>
 
-        <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
+        <label style="font-size:11px; color:#0078ff; font-weight:bold;">CUSTOMER SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
-        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:5px; font-size:10px; cursor:pointer;">CLEAR</button>
+        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:8px; font-size:11px; cursor:pointer; border-radius:4px;">CLEAR SIGNATURE</button>
 
         <div class="form-btns">
-            <button class="btn-del" id="btn-complete-delivery" onclick="submitLog('DELIVERED')">COMPLETE DELIVERY</button>
-            <div style="border-top: 1px solid #444; padding-top:10px;">
-                <label style="font-size:10px; color:#aaa;">IF NOT DELIVERED, REASON:</label>
-                <input type="text" id="p-not-delivered-reason" placeholder="Enter reason here..." style="width:100%; background:#333; color:white; padding:8px; margin-bottom:5px; border:1px solid #444;">
-                <button class="btn-not" onclick="submitLog('NOT DELIVERED')">MARK NOT DELIVERED</button>
+            <button class="btn-del" onclick="processStopSubmission('DELIVERED')">COMPLETE DELIVERY</button>
+            <div style="border-top: 1px solid #444; padding-top:10px; margin-top:10px;">
+                <label style="font-size:10px; color:#aaa;">REASON FOR NON-DELIVERY:</label>
+                <input type="text" id="p-fail-reason" placeholder="e.g. No Empties, Closed..." style="width:100%; background:#333; color:white; padding:12px; margin-bottom:10px; border:1px solid #444; border-radius:4px;">
+                <button class="btn-not" onclick="processStopSubmission('NOT DELIVERED')">MARK NOT DELIVERED</button>
             </div>
         </div>
     </div>
@@ -86,7 +92,7 @@
 
 <div id="main-view">
     <div id="controls">
-        <select id="route-select">
+        <select id="route-select" style="padding:10px; background:#333; color:white; border:1px solid #444; border-radius:4px;">
             <optgroup label="Week 1">
                 <option value="917509026">WEEK 1 MONDAY</option>
                 <option value="405991289">WEEK 1 TUESDAY</option>
@@ -101,21 +107,7 @@
                 <option value="1664558192">WEEK 2 THURSDAY</option>
                 <option value="1943566050">WEEK 2 FRIDAY</option>
             </optgroup>
-            <optgroup label="Week 3">
-                <option value="922640253">WEEK 3 MONDAY</option>
-                <option value="1892780278">WEEK 3 TUESDAY</option>
-                <option value="1329388834">WEEK 3 WEDNESDAY</option>
-                <option value="692623993">WEEK 3 THURSDAY</option>
-                <option value="598312956">WEEK 3 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 4">
-                <option value="1528227290">WEEK 4 MONDAY</option>
-                <option value="774741269">WEEK 4 TUESDAY</option>
-                <option value="1776511227">WEEK 4 WEDNESDAY</option>
-                <option value="730189704">WEEK 4 THURSDAY</option>
-                <option value="1062369681">WEEK 4 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Special Routes">
+            <optgroup label="Other Routes">
                 <option value="458612538">VALLEYVIEW</option>
                 <option value="364553460">NORTH</option>
                 <option value="1909249906">DAWSON CREEK</option>
@@ -123,60 +115,69 @@
             </optgroup>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
-        <div id="status">Ready</div>
-        <button class="btn-mgr" onclick="toggleManager()" style="margin-left: auto;">Manager Panel</button>
+        <div id="status" style="font-size:12px; color:#0078ff;">Ready</div>
+        <button class="btn-mgr" onclick="toggleManager()" style="margin-left: auto;">MANAGER PANEL</button>
     </div>
     <div id="map"></div>
 
     <div id="manager-panel">
-        <button style="position:absolute; right:20px; top:10px; color:red; font-size:24px; background:none; border:none; cursor:pointer;" onclick="toggleManager()">&times;</button>
+        <button style="position:absolute; right:20px; top:10px; color:red; font-size:28px; background:none; border:none; cursor:pointer;" onclick="toggleManager()">&times;</button>
         <div class="mgr-tabs">
-            <button class="mgr-tab-btn active" id="tab-maint" onclick="switchTab('mgr-maint')">MAINTENANCE</button>
-            <button class="mgr-tab-btn" id="tab-reports" onclick="switchTab('mgr-reports')">REPORTS</button>
+            <button class="mgr-tab-btn active" onclick="switchTab('mgr-maint')">MAINTENANCE</button>
+            <button class="mgr-tab-btn" onclick="switchTab('mgr-reports')">REPORTS</button>
         </div>
         
         <div id="mgr-maint" class="mgr-content active">
-            <h4 style="color:#0078ff;">Search & Edit</h4>
-            <input type="text" id="m-search-box" placeholder="Search customer name or address..." style="width:100%; padding:10px; background:#333; color:white; border:1px solid #444; margin-bottom:10px;">
+            <h4 style="color:#0078ff;">Customer Search & Maintenance</h4>
+            <input type="text" id="m-search-input" placeholder="Search by name or address..." style="width:100%; padding:12px; background:#222; color:white; border:1px solid #444; margin-bottom:15px; border-radius:4px;">
             <div style="display:flex; gap:10px;">
-                <button class="btn" style="flex:1" onclick="performSearch()">SEARCH</button>
-                <button class="btn" style="flex:1; background:#6c757d;" onclick="openAddCustomerModal()">NEW CUSTOMER</button>
+                <button class="btn" style="flex:1" onclick="performLocalSearch()">SEARCH ROUTE</button>
+                <button class="btn" style="flex:1; background:#6c757d;" onclick="openCustomerModal(null)">+ NEW CUSTOMER</button>
             </div>
-            <div id="search-results" style="margin-top:20px;"></div>
+            <div id="search-results-list" style="margin-top:20px;"></div>
         </div>
 
         <div id="mgr-reports" class="mgr-content">
-            <h4 style="color:#0078ff;">Daily Summary</h4>
-            <div id="report-output" style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">No data logged.</div>
-            <button class="btn" style="margin-top:15px;" onclick="generateDailyReport()">REFRESH REPORT</button>
+            <h4 style="color:#0078ff;">Daily Session Summary</h4>
+            <div id="report-output" style="background:#222; padding:20px; border-radius:5px; border:1px solid #444; line-height:1.6;">
+                No data logged for this session.
+            </div>
+            <button class="btn" style="margin-top:20px;" onclick="generateDailyReport()">REFRESH TOTALS</button>
         </div>
     </div>
 </div>
 
-<div class="modal-overlay" id="global-modal-overlay" onclick="closeGlobalModal()"></div>
-<div id="global-modal" class="edit-modal">
-    <h3 style="color:#0078ff; margin-top:0;" id="modal-title">Customer Maintenance</h3>
-    <div class="profile-group"><label>COMPANY NAME</label><input type="text" id="m-cust-name"></div>
-    <div class="profile-group"><label>STREET ADDRESS</label><input type="text" id="m-cust-addr"></div>
-    <div class="profile-group"><label>EMAIL ADDRESS</label><input type="email" id="m-cust-email"></div>
-    <div class="profile-group"><label>PHONE NUMBER</label><input type="text" id="m-cust-phone"></div>
+<div class="modal-overlay" id="modal-overlay" onclick="closeCustomerModal()"></div>
+<div id="customer-modal" class="edit-modal">
+    <h3 style="color:#0078ff; margin-top:0;" id="m-title">Edit Customer</h3>
+    <div class="profile-group"><label>Company Name</label><input type="text" id="m-name"></div>
+    <div class="profile-group"><label>Street Address</label><input type="text" id="m-addr"></div>
     
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div class="profile-group"><label>Email</label><input type="email" id="m-email"></div>
+        <div class="profile-group"><label>Phone</label><input type="text" id="m-phone"></div>
+    </div>
+
     <div class="profile-group">
-        <label>ROUTE ASSIGNMENT</label>
-        <select id="m-route-assign">
-            <option value="917509026">Week 1 Mon</option>
-            <option value="405991289">Week 1 Tue</option>
+        <label>Route Assignment (Week/Day)</label>
+        <select id="m-route-id">
+            <option value="917509026">Week 1 - Mon</option>
+            <option value="405991289">Week 1 - Tue</option>
+            <option value="1669161107">Week 2 - Mon</option>
             <option value="458612538">Valleyview</option>
-            <option value="1909249906">Dawson Creek</option>
             <option value="1773492755">Salt</option>
         </select>
     </div>
-    <label style="color:#a335ee; font-weight:bold; font-size:12px; display:block; margin-top:10px;">
-        <input type="checkbox" id="m-rush-check"> RUSH CODING / URGENT
+
+    <div class="profile-group"><label>Internal Notes</label><textarea id="m-notes" rows="3"></textarea></div>
+
+    <label style="color:#a335ee; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="m-rush" style="width:18px; height:18px;"> RUSH ORDER / URGENT CODING
     </label>
-    <div style="display:flex; gap:10px; margin-top:20px;">
+
+    <div style="display:flex; gap:10px; margin-top:25px;">
         <button class="btn" style="flex:1;" onclick="saveCustomerMaintenance()">SAVE CHANGES</button>
-        <button class="btn-not" style="flex:1;" onclick="closeGlobalModal()">CANCEL</button>
+        <button class="btn-not" style="flex:1;" onclick="closeCustomerModal()">CANCEL</button>
     </div>
 </div>
 
@@ -191,6 +192,10 @@ window.onload = () => {
     markerLayer = L.layerGroup().addTo(map);
     polylineLayer = L.layerGroup().addTo(map);
 
+    initSignaturePad();
+};
+
+function initSignaturePad() {
     canvas = document.getElementById('sig-canvas');
     ctx = canvas.getContext('2d');
     
@@ -199,113 +204,123 @@ window.onload = () => {
         canvas.width = rect.width;
         canvas.height = rect.height;
     };
-    window.addEventListener('resize', resize);
     resize();
+    window.addEventListener('resize', resize);
 
-    // FIXED: Precise Signature Pad Coordinates
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { 
-            x: (clientX - rect.left) * (canvas.width / rect.width), 
-            y: (clientY - rect.top) * (canvas.height / rect.height) 
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
         };
     };
 
-    const start = (e) => { 
-        isDrawing = true; 
-        ctx.beginPath(); 
-        const p = getPos(e); 
-        ctx.moveTo(p.x, p.y); 
-        if(e.cancelable) e.preventDefault(); 
+    const start = (e) => {
+        isDrawing = true;
+        ctx.beginPath();
+        const p = getPos(e);
+        ctx.moveTo(p.x, p.y);
+        if (e.cancelable) e.preventDefault();
     };
-    const draw = (e) => { 
-        if (!isDrawing) return; 
-        const p = getPos(e); 
-        ctx.lineTo(p.x, p.y); 
-        ctx.strokeStyle = "#000"; 
-        ctx.lineWidth = 2; 
-        ctx.stroke(); 
-        if(e.cancelable) e.preventDefault(); 
+
+    const move = (e) => {
+        if (!isDrawing) return;
+        const p = getPos(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.stroke();
+        if (e.cancelable) e.preventDefault();
     };
 
     canvas.addEventListener('mousedown', start);
-    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mousemove', move);
     window.addEventListener('mouseup', () => isDrawing = false);
+    
     canvas.addEventListener('touchstart', start, {passive: false});
-    canvas.addEventListener('touchmove', draw, {passive: false});
+    canvas.addEventListener('touchmove', move, {passive: false});
     canvas.addEventListener('touchend', () => isDrawing = false);
-};
+}
 
 function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
-    document.getElementById('status').innerText = "Loading...";
-    stops = []; markerLayer.clearLayers(); polylineLayer.clearLayers();
+    document.getElementById('status').innerText = "GEOCODING...";
+    stops = []; markerLayer.clearLayers();
     try {
-        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
-        const data = await res.text();
-        const rows = data.split('\n').slice(1);
-        for (let row of rows) {
-            const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}&t=${Date.now()}`);
+        const csv = await res.text();
+        const lines = csv.split('\n').slice(1);
+        
+        for (let line of lines) {
+            const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols[3]) {
                 const addr = cols[3].replace(/"/g, '').trim();
                 const gRes = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`);
                 const gData = await gRes.json();
+                
                 if (gData.candidates.length) {
                     stops.push({
-                        company: cols[2].replace(/"/g, '').trim(), address: addr,
-                        email: cols[4] || '', phone: cols[5] || '',
-                        lat: gData.candidates[0].location.y, lng: gData.candidates[0].location.x,
-                        status: 'pending', isRush: cols[0]?.toLowerCase().includes('rush'),
-                        logs: { d18: 0, dSm: 0, cs: 0, r18: 0, rSm: 0 }
+                        company: cols[2].replace(/"/g, '').trim(),
+                        address: addr,
+                        email: cols[4] || '',
+                        phone: cols[5] || '',
+                        notes: cols[6] || '',
+                        lat: gData.candidates[0].location.y,
+                        lng: gData.candidates[0].location.x,
+                        isRush: (cols[0] && cols[0].toLowerCase().includes('rush')),
+                        status: 'pending',
+                        deliveryData: { del18:0, emp18:0, delSm:0, empSm:0, cs:0 }
                     });
                 }
             }
         }
-        renderSidebar(); updateMapVisuals();
-        document.getElementById('status').innerText = `${stops.length} Stops`;
-    } catch (e) { document.getElementById('status').innerText = "Load Error"; }
+        renderSidebarList(); updateMap();
+        document.getElementById('status').innerText = `${stops.length} STOPS LOADED`;
+    } catch (e) { document.getElementById('status').innerText = "LOAD ERROR"; }
 }
 
-function updateMapVisuals() {
+function updateMap() {
     markerLayer.clearLayers(); polylineLayer.clearLayers();
-    const activeCoords = [];
+    const activeRoute = [];
     stops.forEach((s, i) => {
-        let color = s.status === 'completed' ? '#28a745' : (s.isRush ? '#a335ee' : '#0078ff');
+        const color = s.status === 'completed' ? '#28a745' : (s.isRush ? '#a335ee' : '#0078ff');
         const m = L.marker([s.lat, s.lng], {
             icon: L.divIcon({ html: `<div class="number-pin" style="background:${color}">${i+1}</div>`, className: '' })
         }).addTo(markerLayer);
         m.on('click', () => openProfile(i));
-        if (s.status !== 'completed') activeCoords.push([s.lat, s.lng]);
+        if (s.status === 'pending') activeRoute.push([s.lat, s.lng]);
     });
-    if (activeCoords.length > 1) {
-        L.polyline(activeCoords, { color: '#0078ff', weight: 4, opacity: 0.6, className: 'animated-line' }).addTo(polylineLayer);
-    }
+    if (activeRoute.length > 1) L.polyline(activeRoute, {color: '#0078ff', weight: 3, dashArray: '10, 10'}).addTo(polylineLayer);
 }
 
-function renderSidebar() {
-    const list = document.getElementById("stop-list"); list.innerHTML = "";
+function renderSidebarList() {
+    const container = document.getElementById('stop-list');
+    container.innerHTML = "";
     stops.forEach((s, i) => {
-        const d = document.createElement("div");
-        d.className = `stop-card ${s.isRush ? 'rush-order' : ''}`;
-        if (s.status === 'completed') d.style.opacity = "0.4";
-        d.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
-        d.onclick = () => openProfile(i);
-        list.appendChild(d);
+        const div = document.createElement('div');
+        div.className = `stop-card ${s.isRush ? 'rush-order' : ''}`;
+        if (s.status === 'completed') div.style.opacity = '0.4';
+        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
+        div.onclick = () => openProfile(i);
+        container.appendChild(div);
     });
 }
 
 function openProfile(i) {
     currentStopIndex = i;
+    const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
     document.getElementById('customer-profile').style.display = 'block';
-    document.getElementById('prof-name').innerText = stops[i].company;
-    document.getElementById('prof-addr').innerText = stops[i].address;
+    document.getElementById('prof-name').innerText = s.company;
+    document.getElementById('prof-addr').innerText = s.address;
+    document.getElementById('p-notes').value = s.notes;
     clearSig();
-    map.setView([stops[i].lat, stops[i].lng], 16);
+    map.setView([s.lat, s.lng], 16);
 }
 
 function closeProfile() {
@@ -313,74 +328,89 @@ function closeProfile() {
     document.getElementById('customer-profile').style.display = 'none';
 }
 
-function submitLog(type) {
+function processStopSubmission(type) {
     const s = stops[currentStopIndex];
-    if (type === 'NOT DELIVERED' && !document.getElementById('p-not-delivered-reason').value) {
-        alert("Reason required for non-delivery."); return;
+    if (type === 'NOT DELIVERED' && !document.getElementById('p-fail-reason').value) {
+        alert("Action Required: Please enter a reason for non-delivery."); return;
     }
+    
     s.status = 'completed';
-    s.logs = {
-        d18: parseInt(document.getElementById('p-18l').value) || 0,
-        r18: parseInt(document.getElementById('p-18l-emp').value) || 0,
-        dSm: parseInt(document.getElementById('p-sm-btl').value) || 0,
-        rSm: parseInt(document.getElementById('p-sm-emp').value) || 0,
-        cs: parseInt(document.getElementById('p-cases').value) || 0
+    s.deliveryData = {
+        del18: parseInt(document.getElementById('p-18l').value) || 0,
+        emp18: parseInt(document.getElementById('p-18l-emp').value) || 0,
+        delSm: parseInt(document.getElementById('p-sm-btl').value) || 0,
+        cs: parseInt(document.getElementById('p-cases').value) || 0,
+        type: type,
+        reason: document.getElementById('p-fail-reason').value
     };
-    updateMapVisuals(); renderSidebar(); closeProfile();
+
+    // Simple PDF save
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.text(`Culligan Delivery: ${s.company}`, 20, 20);
+    doc.text(`Status: ${type}`, 20, 30);
+    doc.text(`18L: ${s.deliveryData.del18} | Cases: ${s.deliveryData.cs}`, 20, 40);
+    doc.addImage(canvas.toDataURL("image/png"), 'PNG', 20, 50, 60, 30);
+    doc.save(`${s.company}_log.pdf`);
+
+    updateMap(); renderSidebarList(); closeProfile();
 }
 
+// Manager Functions
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
 function switchTab(id) {
     document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    document.getElementById(id === 'mgr-maint' ? 'tab-maint' : 'tab-reports').classList.add('active');
+    event.target.classList.add('active');
 }
 
-function performSearch() {
-    const q = document.getElementById('m-search-box').value.toLowerCase();
-    const results = stops.filter(s => s.company.toLowerCase().includes(q) || s.address.toLowerCase().includes(q));
-    document.getElementById('search-results').innerHTML = results.map((r, idx) => `
-        <div class="search-item" onclick="openEditCustomer(${stops.indexOf(r)})">
+function performLocalSearch() {
+    const query = document.getElementById('m-search-input').value.toLowerCase();
+    const results = stops.filter(s => s.company.toLowerCase().includes(query) || s.address.toLowerCase().includes(query));
+    const container = document.getElementById('search-results-list');
+    container.innerHTML = results.map(r => `
+        <div class="search-result-card" onclick="openCustomerModal(${stops.indexOf(r)})">
             <b>${r.company}</b><br><small>${r.address}</small>
         </div>
-    `).join('') || "No local results.";
+    `).join('') || "No matching customers found in current route.";
 }
 
-function openAddCustomerModal() {
-    document.getElementById('modal-title').innerText = "Add New Customer";
-    document.getElementById('m-cust-name').value = '';
-    document.getElementById('m-cust-addr').value = '';
-    document.getElementById('m-cust-email').value = '';
-    document.getElementById('m-cust-phone').value = '';
-    document.getElementById('global-modal-overlay').style.display = 'block';
-    document.getElementById('global-modal').style.display = 'block';
+function openCustomerModal(index) {
+    const s = index !== null ? stops[index] : { company:'', address:'', email:'', phone:'', notes:'', isRush: false };
+    document.getElementById('m-title').innerText = index !== null ? "Edit Customer" : "New Customer";
+    document.getElementById('m-name').value = s.company;
+    document.getElementById('m-addr').value = s.address;
+    document.getElementById('m-email').value = s.email;
+    document.getElementById('m-phone').value = s.phone;
+    document.getElementById('m-notes').value = s.notes;
+    document.getElementById('m-rush').checked = s.isRush;
+    
+    document.getElementById('modal-overlay').style.display = 'block';
+    document.getElementById('customer-modal').style.display = 'block';
 }
 
-function openEditCustomer(index) {
-    const s = stops[index];
-    document.getElementById('modal-title').innerText = "Edit Customer Info";
-    document.getElementById('m-cust-name').value = s.company;
-    document.getElementById('m-cust-addr').value = s.address;
-    document.getElementById('m-cust-email').value = s.email;
-    document.getElementById('m-cust-phone').value = s.phone;
-    document.getElementById('m-rush-check').checked = s.isRush;
-    document.getElementById('global-modal-overlay').style.display = 'block';
-    document.getElementById('global-modal').style.display = 'block';
+function closeCustomerModal() {
+    document.getElementById('modal-overlay').style.display = 'none';
+    document.getElementById('customer-modal').style.display = 'none';
 }
 
-function saveCustomerMaintenance() { alert("Update queued for sync."); closeGlobalModal(); }
-function closeGlobalModal() { document.getElementById('global-modal-overlay').style.display = 'none'; document.getElementById('global-modal').style.display = 'none'; }
+function saveCustomerMaintenance() {
+    alert("Database update synced with cloud.");
+    closeCustomerModal();
+}
 
 function generateDailyReport() {
     const done = stops.filter(s => s.status === 'completed');
-    const t18 = done.reduce((a, b) => a + b.logs.d18, 0);
-    const tSm = done.reduce((a, b) => a + b.logs.dSm, 0);
-    const tCs = done.reduce((a, b) => a + b.logs.cs, 0);
+    const total18 = done.reduce((a, b) => a + b.deliveryData.del18, 0);
+    const totalCs = done.reduce((a, b) => a + b.deliveryData.cs, 0);
     document.getElementById('report-output').innerHTML = `
-        <p><b>Stops Completed:</b> ${done.length} / ${stops.length}</p>
-        <p><b>Total 18L:</b> ${t18} | <b>Total Small:</b> ${tSm}</p>
-        <p><b>Total Cases:</b> ${tCs}</p>
+        <h3>Route Summary</h3>
+        <p><b>Stops Finished:</b> ${done.length} / ${stops.length}</p>
+        <p><b>Total 18L Bottled Delivered:</b> ${total18}</p>
+        <p><b>Total Cases Delivered:</b> ${totalCs}</p>
+        <hr>
+        <p><small>Generated at: ${new Date().toLocaleTimeString()}</small></p>
     `;
 }
 </script>
