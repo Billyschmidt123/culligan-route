@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v21.0</title>
+    <title>Culligan Route - Professional v23.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -66,7 +66,7 @@
 <div id="main-view">
     <div id="controls">
         <select id="route-select" style="padding:8px; background:#333; color:white;">
-            <option value="917509026">WEEK 1 MONDAY</option>
+            <option value="666943587">MON WEEK 1</option>
             <option value="1773492755">SALT</option>
             <option value="458612538">VALLEYVIEW</option>
         </select>
@@ -76,7 +76,7 @@
 </div>
 
 <script>
-// --- V21 CONFIG ---
+// --- CONFIGURATION ---
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzQv3LMbTY2biWpSc2IGVK6ALvB5LYfWWDiKfIf0pbWDhSTx7iSsmksfD4A0jEx6bSB/exec"; 
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 
@@ -110,19 +110,29 @@ function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
-    document.getElementById('status-display').innerText = "Loading data...";
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+    
+    document.getElementById('status-display').innerText = "Connecting to Google...";
     
     try {
-        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
-        if(!res.ok) throw new Error("Could not access spreadsheet.");
+        const res = await fetch(url);
+        if(!res.ok) {
+            alert("Google refused the connection. Ensure the Sheet is shared as 'Anyone with the link'.");
+            return;
+        }
         
         const text = await res.text();
+        if(text.includes("<!DOCTYPE html>")) {
+            alert("Error: The sheet returned a Login Page. Change 'General Access' in your Google Sheet to 'Anyone with the link'.");
+            return;
+        }
+
         const rows = text.split('\n').slice(1);
-        stops = [];
+        stops = []; 
 
         for(let r of rows) {
             const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            if(c[3]) {
+            if(c[3]) { 
                 const addr = c[3].replace(/"/g,'').trim();
                 const g = await (await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`)).json();
                 
@@ -130,7 +140,7 @@ async function loadRoute() {
                     stops.push({ 
                         name: c[2].replace(/"/g,'').trim(), 
                         addr: addr, 
-                        email: c[7] ? c[7].replace(/"/g,'').trim() : "", // Col H
+                        email: c[7] ? c[7].replace(/"/g,'').trim() : "", 
                         lat: g.candidates[0].location.y, 
                         lng: g.candidates[0].location.x, 
                         status: 'pending' 
@@ -139,17 +149,12 @@ async function loadRoute() {
             }
         }
         
-        if(stops.length === 0) {
-            alert("No stops found for this Route. Check Column D in your sheet.");
-        } else {
-            document.getElementById('status-display').innerText = stops.length + " Stops Loaded";
-            document.getElementById('start-route-btn').style.display = 'block';
-            renderAll();
-        }
+        document.getElementById('status-display').innerText = stops.length + " Stops Loaded";
+        document.getElementById('start-route-btn').style.display = 'block';
+        renderAll();
+        
     } catch (err) {
-        console.error(err);
-        alert("CRITICAL ERROR: " + err.message);
-        document.getElementById('status-display').innerText = "Load Failed.";
+        alert("Network Error: " + err.message);
     }
 }
 
