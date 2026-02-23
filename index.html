@@ -39,8 +39,6 @@
         .mgr-content { padding: 20px; display: none; overflow-y: auto; height: calc(100% - 150px); color: white;}
         .mgr-content.active { display: block; }
         .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
-        
-        /* Animated Route Line */
         .animated-line { stroke-dasharray: 10, 10; animation: dash 3s linear infinite; }
         @keyframes dash { to { stroke-dashoffset: -100; } }
     </style>
@@ -79,10 +77,40 @@
 <div id="main-view">
     <div id="controls">
         <select id="route-select">
-            <option value="917509026">WEEK 1 MONDAY</option>
-            <option value="458612538">VALLEYVIEW</option>
-            <option value="364553460">NORTH</option>
-            <option value="1909249906">DAWSON CREEK</option>
+            <optgroup label="Week 1">
+                <option value="917509026">WEEK 1 MONDAY</option>
+                <option value="405991289">WEEK 1 TUESDAY</option>
+                <option value="405991289">WEEK 1 WEDNESDAY</option>
+                <option value="850217841">WEEK 1 THURSDAY</option>
+                <option value="524003696">WEEK 1 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 2">
+                <option value="1669161107">WEEK 2 MONDAY</option>
+                <option value="158782334">WEEK 2 TUESDAY</option>
+                <option value="534069449">WEEK 2 WEDNESDAY</option>
+                <option value="1664558192">WEEK 2 THURSDAY</option>
+                <option value="1943566050">WEEK 2 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 3">
+                <option value="922640253">WEEK 3 MONDAY</option>
+                <option value="1892780278">WEEK 3 TUESDAY</option>
+                <option value="1329388834">WEEK 3 WEDNESDAY</option>
+                <option value="692623993">WEEK 3 THURSDAY</option>
+                <option value="598312956">WEEK 3 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 4">
+                <option value="1528227290">WEEK 4 MONDAY</option>
+                <option value="774741269">WEEK 4 TUESDAY</option>
+                <option value="1776511227">WEEK 4 WEDNESDAY</option>
+                <option value="730189704">WEEK 4 THURSDAY</option>
+                <option value="1062369681">WEEK 4 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Special Routes">
+                <option value="458612538">VALLEYVIEW</option>
+                <option value="364553460">NORTH</option>
+                <option value="1909249906">DAWSON CREEK</option>
+                <option value="1773492755">SALT</option>
+            </optgroup>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
         <div id="status">Status: Ready</div>
