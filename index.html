@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v5.0</title>
+    <title>Culligan Route - Professional v6.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -38,7 +38,9 @@
         .animated-line { stroke-dasharray: 10, 10; animation: dash 3s linear infinite; }
         @keyframes dash { to { stroke-dashoffset: -100; } }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; }
-        .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; }
+        .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:500px; border-radius:8px; max-height: 85vh; overflow-y: auto;}
+        .search-item { padding: 12px; background: #333; border-radius: 4px; margin-bottom: 8px; cursor: pointer; border-left: 3px solid #0078ff; }
+        .search-item:hover { background: #444; }
     </style>
 </head>
 <body>
@@ -52,7 +54,7 @@
         <div id="stop-list"></div>
     </div>
     <div id="customer-profile">
-        <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:8px; width:100%; margin-bottom:10px;">← BACK TO LIST</button>
+        <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:8px; width:100%; margin-bottom:10px; cursor:pointer;">← BACK TO LIST</button>
         <h3 id="prof-name">Customer Name</h3>
         <p id="prof-addr" style="font-size:11px; color:#aaa; margin-top:-10px;"></p>
         
@@ -69,7 +71,7 @@
 
         <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
-        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:5px; font-size:10px;">CLEAR</button>
+        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:5px; font-size:10px; cursor:pointer;">CLEAR</button>
 
         <div class="form-btns">
             <button class="btn-del" id="btn-complete-delivery" onclick="submitLog('DELIVERED')">COMPLETE DELIVERY</button>
@@ -99,6 +101,20 @@
                 <option value="1664558192">WEEK 2 THURSDAY</option>
                 <option value="1943566050">WEEK 2 FRIDAY</option>
             </optgroup>
+            <optgroup label="Week 3">
+                <option value="922640253">WEEK 3 MONDAY</option>
+                <option value="1892780278">WEEK 3 TUESDAY</option>
+                <option value="1329388834">WEEK 3 WEDNESDAY</option>
+                <option value="692623993">WEEK 3 THURSDAY</option>
+                <option value="598312956">WEEK 3 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 4">
+                <option value="1528227290">WEEK 4 MONDAY</option>
+                <option value="774741269">WEEK 4 TUESDAY</option>
+                <option value="1776511227">WEEK 4 WEDNESDAY</option>
+                <option value="730189704">WEEK 4 THURSDAY</option>
+                <option value="1062369681">WEEK 4 FRIDAY</option>
+            </optgroup>
             <optgroup label="Special Routes">
                 <option value="458612538">VALLEYVIEW</option>
                 <option value="364553460">NORTH</option>
@@ -113,18 +129,18 @@
     <div id="map"></div>
 
     <div id="manager-panel">
-        <button style="position:absolute; right:20px; top:10px; color:red; font-size:24px; background:none; border:none;" onclick="toggleManager()">&times;</button>
+        <button style="position:absolute; right:20px; top:10px; color:red; font-size:24px; background:none; border:none; cursor:pointer;" onclick="toggleManager()">&times;</button>
         <div class="mgr-tabs">
-            <button class="mgr-tab-btn active" id="tab-maint" onclick="switchTab('mgr-maint')">CUSTOMER MAINTENANCE</button>
+            <button class="mgr-tab-btn active" id="tab-maint" onclick="switchTab('mgr-maint')">MAINTENANCE</button>
             <button class="mgr-tab-btn" id="tab-reports" onclick="switchTab('mgr-reports')">REPORTS</button>
         </div>
         
         <div id="mgr-maint" class="mgr-content active">
-            <h4 style="color:#0078ff;">Database Search</h4>
-            <input type="text" id="m-search-box" placeholder="Search customer name..." style="width:100%; padding:10px; background:#333; color:white; border:1px solid #444; margin-bottom:10px;">
+            <h4 style="color:#0078ff;">Search & Edit</h4>
+            <input type="text" id="m-search-box" placeholder="Search customer name or address..." style="width:100%; padding:10px; background:#333; color:white; border:1px solid #444; margin-bottom:10px;">
             <div style="display:flex; gap:10px;">
                 <button class="btn" style="flex:1" onclick="performSearch()">SEARCH</button>
-                <button class="btn" style="flex:1; background:#6c757d;" onclick="openAddCustomerModal()">ADD NEW CUSTOMER</button>
+                <button class="btn" style="flex:1; background:#6c757d;" onclick="openAddCustomerModal()">NEW CUSTOMER</button>
             </div>
             <div id="search-results" style="margin-top:20px;"></div>
         </div>
@@ -132,25 +148,34 @@
         <div id="mgr-reports" class="mgr-content">
             <h4 style="color:#0078ff;">Daily Summary</h4>
             <div id="report-output" style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">No data logged.</div>
-            <button class="btn" style="margin-top:15px;" onclick="generateDailyReport()">GENERATE REPORT</button>
+            <button class="btn" style="margin-top:15px;" onclick="generateDailyReport()">REFRESH REPORT</button>
         </div>
     </div>
 </div>
 
 <div class="modal-overlay" id="global-modal-overlay" onclick="closeGlobalModal()"></div>
 <div id="global-modal" class="edit-modal">
-    <h3 style="color:#0078ff; margin-top:0;">Add New Customer</h3>
+    <h3 style="color:#0078ff; margin-top:0;" id="modal-title">Customer Maintenance</h3>
     <div class="profile-group"><label>COMPANY NAME</label><input type="text" id="m-cust-name"></div>
     <div class="profile-group"><label>STREET ADDRESS</label><input type="text" id="m-cust-addr"></div>
+    <div class="profile-group"><label>EMAIL ADDRESS</label><input type="email" id="m-cust-email"></div>
+    <div class="profile-group"><label>PHONE NUMBER</label><input type="text" id="m-cust-phone"></div>
+    
     <div class="profile-group">
         <label>ROUTE ASSIGNMENT</label>
-        <select id="m-route-assign"><option value="917509026">Week 1 Mon</option><option value="458612538">Valleyview</option></select>
+        <select id="m-route-assign">
+            <option value="917509026">Week 1 Mon</option>
+            <option value="405991289">Week 1 Tue</option>
+            <option value="458612538">Valleyview</option>
+            <option value="1909249906">Dawson Creek</option>
+            <option value="1773492755">Salt</option>
+        </select>
     </div>
     <label style="color:#a335ee; font-weight:bold; font-size:12px; display:block; margin-top:10px;">
         <input type="checkbox" id="m-rush-check"> RUSH CODING / URGENT
     </label>
     <div style="display:flex; gap:10px; margin-top:20px;">
-        <button class="btn" style="flex:1;" onclick="alert('Customer added to sync queue'); closeGlobalModal();">SAVE CUSTOMER</button>
+        <button class="btn" style="flex:1;" onclick="saveCustomerMaintenance()">SAVE CHANGES</button>
         <button class="btn-not" style="flex:1;" onclick="closeGlobalModal()">CANCEL</button>
     </div>
 </div>
@@ -169,7 +194,6 @@ window.onload = () => {
     canvas = document.getElementById('sig-canvas');
     ctx = canvas.getContext('2d');
     
-    // Fixed Scaling Logic for Signature Pad
     const resize = () => {
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
@@ -178,30 +202,47 @@ window.onload = () => {
     window.addEventListener('resize', resize);
     resize();
 
+    // FIXED: Precise Signature Pad Coordinates
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { x: clientX - rect.left, y: clientY - rect.top };
+        return { 
+            x: (clientX - rect.left) * (canvas.width / rect.width), 
+            y: (clientY - rect.top) * (canvas.height / rect.height) 
+        };
     };
 
-    const start = (e) => { isDrawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); };
-    const draw = (e) => { if (!isDrawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
-    const stop = () => { isDrawing = false; };
+    const start = (e) => { 
+        isDrawing = true; 
+        ctx.beginPath(); 
+        const p = getPos(e); 
+        ctx.moveTo(p.x, p.y); 
+        if(e.cancelable) e.preventDefault(); 
+    };
+    const draw = (e) => { 
+        if (!isDrawing) return; 
+        const p = getPos(e); 
+        ctx.lineTo(p.x, p.y); 
+        ctx.strokeStyle = "#000"; 
+        ctx.lineWidth = 2; 
+        ctx.stroke(); 
+        if(e.cancelable) e.preventDefault(); 
+    };
 
     canvas.addEventListener('mousedown', start);
     canvas.addEventListener('mousemove', draw);
-    window.addEventListener('mouseup', stop);
+    window.addEventListener('mouseup', () => isDrawing = false);
     canvas.addEventListener('touchstart', start, {passive: false});
     canvas.addEventListener('touchmove', draw, {passive: false});
-    canvas.addEventListener('touchend', stop);
+    canvas.addEventListener('touchend', () => isDrawing = false);
 };
 
 function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
-    document.getElementById('status').innerText = "Status: Connecting...";
+    document.getElementById('status').innerText = "Loading...";
     stops = []; markerLayer.clearLayers(); polylineLayer.clearLayers();
     try {
         const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
@@ -216,16 +257,17 @@ async function loadRoute() {
                 if (gData.candidates.length) {
                     stops.push({
                         company: cols[2].replace(/"/g, '').trim(), address: addr,
+                        email: cols[4] || '', phone: cols[5] || '',
                         lat: gData.candidates[0].location.y, lng: gData.candidates[0].location.x,
                         status: 'pending', isRush: cols[0]?.toLowerCase().includes('rush'),
-                        logs: { d18: 0, sB: 0, cs: 0 }
+                        logs: { d18: 0, dSm: 0, cs: 0, r18: 0, rSm: 0 }
                     });
                 }
             }
         }
         renderSidebar(); updateMapVisuals();
-        document.getElementById('status').innerText = `Status: ${stops.length} Stops`;
-    } catch (e) { document.getElementById('status').innerText = "Status: Error"; }
+        document.getElementById('status').innerText = `${stops.length} Stops`;
+    } catch (e) { document.getElementById('status').innerText = "Load Error"; }
 }
 
 function updateMapVisuals() {
@@ -271,27 +313,19 @@ function closeProfile() {
     document.getElementById('customer-profile').style.display = 'none';
 }
 
-async function submitLog(type) {
+function submitLog(type) {
     const s = stops[currentStopIndex];
     if (type === 'NOT DELIVERED' && !document.getElementById('p-not-delivered-reason').value) {
-        alert("Please provide a reason."); return;
+        alert("Reason required for non-delivery."); return;
     }
-    
     s.status = 'completed';
     s.logs = {
         d18: parseInt(document.getElementById('p-18l').value) || 0,
-        sB: parseInt(document.getElementById('p-sm-btl').value) || 0,
+        r18: parseInt(document.getElementById('p-18l-emp').value) || 0,
+        dSm: parseInt(document.getElementById('p-sm-btl').value) || 0,
+        rSm: parseInt(document.getElementById('p-sm-emp').value) || 0,
         cs: parseInt(document.getElementById('p-cases').value) || 0
     };
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.text(`Culligan Log: ${s.company}`, 20, 20);
-    doc.text(`Result: ${type}`, 20, 30);
-    doc.text(`Notes: ${document.getElementById('p-notes').value}`, 20, 40);
-    doc.addImage(canvas.toDataURL("image/png"), 'PNG', 20, 60, 60, 30);
-    doc.save(`${s.company}.pdf`);
-    
     updateMapVisuals(); renderSidebar(); closeProfile();
 }
 
@@ -305,18 +339,50 @@ function switchTab(id) {
 
 function performSearch() {
     const q = document.getElementById('m-search-box').value.toLowerCase();
-    const results = stops.filter(s => s.company.toLowerCase().includes(q));
-    document.getElementById('search-results').innerHTML = results.map(r => `<div style="padding:10px; background:#222; margin-bottom:5px;">${r.company}</div>`).join('') || "No local matches.";
+    const results = stops.filter(s => s.company.toLowerCase().includes(q) || s.address.toLowerCase().includes(q));
+    document.getElementById('search-results').innerHTML = results.map((r, idx) => `
+        <div class="search-item" onclick="openEditCustomer(${stops.indexOf(r)})">
+            <b>${r.company}</b><br><small>${r.address}</small>
+        </div>
+    `).join('') || "No local results.";
 }
+
+function openAddCustomerModal() {
+    document.getElementById('modal-title').innerText = "Add New Customer";
+    document.getElementById('m-cust-name').value = '';
+    document.getElementById('m-cust-addr').value = '';
+    document.getElementById('m-cust-email').value = '';
+    document.getElementById('m-cust-phone').value = '';
+    document.getElementById('global-modal-overlay').style.display = 'block';
+    document.getElementById('global-modal').style.display = 'block';
+}
+
+function openEditCustomer(index) {
+    const s = stops[index];
+    document.getElementById('modal-title').innerText = "Edit Customer Info";
+    document.getElementById('m-cust-name').value = s.company;
+    document.getElementById('m-cust-addr').value = s.address;
+    document.getElementById('m-cust-email').value = s.email;
+    document.getElementById('m-cust-phone').value = s.phone;
+    document.getElementById('m-rush-check').checked = s.isRush;
+    document.getElementById('global-modal-overlay').style.display = 'block';
+    document.getElementById('global-modal').style.display = 'block';
+}
+
+function saveCustomerMaintenance() { alert("Update queued for sync."); closeGlobalModal(); }
+function closeGlobalModal() { document.getElementById('global-modal-overlay').style.display = 'none'; document.getElementById('global-modal').style.display = 'none'; }
 
 function generateDailyReport() {
     const done = stops.filter(s => s.status === 'completed');
-    const total18 = done.reduce((a, b) => a + b.logs.d18, 0);
-    document.getElementById('report-output').innerHTML = `<b>Stops:</b> ${done.length} / ${stops.length}<br><b>Total 18L:</b> ${total18}`;
+    const t18 = done.reduce((a, b) => a + b.logs.d18, 0);
+    const tSm = done.reduce((a, b) => a + b.logs.dSm, 0);
+    const tCs = done.reduce((a, b) => a + b.logs.cs, 0);
+    document.getElementById('report-output').innerHTML = `
+        <p><b>Stops Completed:</b> ${done.length} / ${stops.length}</p>
+        <p><b>Total 18L:</b> ${t18} | <b>Total Small:</b> ${tSm}</p>
+        <p><b>Total Cases:</b> ${tCs}</p>
+    `;
 }
-
-function openAddCustomerModal() { document.getElementById('global-modal-overlay').style.display = 'block'; document.getElementById('global-modal').style.display = 'block'; }
-function closeGlobalModal() { document.getElementById('global-modal-overlay').style.display = 'none'; document.getElementById('global-modal').style.display = 'none'; }
 </script>
 </body>
 </html>
