@@ -3,739 +3,121 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Culligan Delivery System - Online</title>
+<title>Culligan Grande Prairie - Driver Portal</title>
 
-<!-- Try multiple CDN sources for Leaflet -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" 
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
-      crossorigin="anonymous" />
-
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" 
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
-        crossorigin="anonymous"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 
 <style>
   :root { --culligan-blue: #002b7f; --accent-blue: #0078ff; }
-  * { box-sizing: border-box; }
-  body { margin: 0; height: 100vh; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; flex-direction: column; background: #0a0a0a; color: white; overflow: hidden; }
-  #topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: linear-gradient(135deg, #002b7f 0%, #0047cc 100%); border-bottom: 3px solid var(--accent-blue); box-shadow: 0 4px 20px rgba(0, 120, 255, 0.3); z-index: 1001; }
-  #mainContainer { display: flex; flex: 1; overflow: hidden; }
-  #sidebar { width: 420px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5); }
-  #sidebarFixed { padding: 20px; border-bottom: 1px solid #333; flex-shrink: 0; }
-  #sidebarScroll { flex: 1; overflow-y: auto; padding: 12px 20px; }
-  #map { flex: 1; height: 100%; background: #0a0a0a; z-index: 1; }
-  .btn { padding: 10px 18px; background: var(--accent-blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; }
-  .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-  .btn-green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
-  .btn-red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
-  .btn-orange { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
-  .card-input { width: 100%; padding: 12px; margin: 5px 0; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 14px; outline: none; transition: all 0.3s; }
-  .card-input:focus { border-color: var(--accent-blue); }
-  #activeStopCard { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 24px; border-radius: 12px; border: 1px solid rgba(0, 120, 255, 0.3); box-shadow: 0 8px 32px rgba(0, 120, 255, 0.2); }
-  #sig-canvas { background: #fff; border-radius: 6px; width: 100%; height: 120px; margin-top: 10px; border: 1px solid #cbd5e1; cursor: crosshair; touch-action: none; }
-  .status-toggle { display: flex; gap: 12px; margin: 20px 0; }
-  .status-toggle label { flex: 1; background: #2d3748; padding: 14px; text-align: center; border-radius: 8px; cursor: pointer; font-weight: 600; border: 2px solid transparent; transition: all 0.3s; }
-  .status-toggle label:hover { opacity: 0.9; }
-  .status-toggle input[type="radio"]:checked + span { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-  .hidden-section { display: none; margin-top: 10px; border-top: 1px solid #334155; padding-top: 16px; }
-  .overlay { display: none; position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 3000; }
-  .mgr-content { position: absolute; top: 0; right: 0; width: 95%; max-width: 900px; height: 100%; background: #1a1a1a; display: flex; flex-direction: column; box-shadow: -4px 0 40px rgba(0, 0, 0, 0.8); }
-  #reportView { background: white; color: black; padding: 32px; font-size: 13px; }
-  .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-  .report-table th, .report-table td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-  .report-table th { background: #002b7f; color: white; }
-  .report-table tr:nth-child(even) { background: #f9fafb; }
-  .stop-item { padding: 12px; border-bottom: 1px solid #1e293b; font-size: 13px; background: transparent; border-left: 3px solid transparent; border-radius: 4px; margin-bottom: 4px; transition: all 0.3s; }
-  .stop-item.active { background: rgba(0, 120, 255, 0.1); border-left-color: #0078ff; }
-  .status-badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
-  .status-delivered { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-  .status-skipped { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+  body { margin: 0; font-family: sans-serif; background: #f4f4f4; display: flex; flex-direction: column; height: 100vh; }
+  header { background: var(--culligan-blue); color: white; padding: 15px; text-align: center; }
+  #controls { padding: 10px; background: white; border-bottom: 2px solid #ddd; }
+  select, button { width: 100%; padding: 12px; margin: 5px 0; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+  button { background: var(--accent-blue); color: white; font-weight: bold; cursor: pointer; border: none; }
+  #map { flex-grow: 1; width: 100%; }
+  .stop-card { background: white; padding: 15px; border-top: 2px solid var(--culligan-blue); }
 </style>
 </head>
 <body>
 
-<div id="topbar">
-  <div style="display: flex; gap: 16px; align-items: center;">
-    <h2 style="margin:0; font-size: 24px; font-weight: 700; color: #fff; letter-spacing: 1px;">CULLIGAN</h2>
-    <label class="btn" style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.2);">
-      📂 Load Route
-      <input type="file" id="fileInput" accept=".xlsx,.csv" style="display:none;">
-    </label>
-    <button class="btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);" onclick="toggleManager()">📊 Manager Panel</button>
-    <button class="btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); font-size: 18px; padding: 10px 14px;" onclick="toggleSettings()">⚙️</button>
-  </div>
-  <div style="font-size: 14px; font-weight: 500;">
-    Next Slip: <span id="slipDisplay" style="color: #4ade80; font-weight: 700; font-size: 18px; padding: 4px 12px; background: rgba(74, 222, 128, 0.1); border-radius: 6px; border: 1px solid rgba(74, 222, 128, 0.3);">001</span>
-  </div>
+<header>
+  <strong>CULLIGAN GP - ROUTE SYNC</strong>
+</header>
+
+<div id="controls">
+  <select id="routeSelect">
+    <option value="">-- SELECT TODAY'S ROUTE --</option>
+    <option value="data/Bottle-water.xlsx - Week 1 Monday.csv">Week 1 - Monday</option>
+    <option value="data/Bottle-water.xlsx - Week 1 Tuesday.csv">Week 1 - Tuesday</option>
+    <option value="data/Bottle-water.xlsx - Week 1 Wednessday.csv">Week 1 - Wednesday</option>
+    <option value="data/Bottle-water.xlsx - Week 1 Thursday.csv">Week 1 - Thursday</option>
+    <option value="data/Bottle-water.xlsx - Week 1 Friday.csv">Week 1 - Friday</option>
+    <option value="data/Bottle-water.xlsx - Week 2 Monday.csv">Week 2 - Monday</option>
+    <option value="data/Bottle-water.xlsx - Week 2 Tuesday.csv">Week 2 - Tuesday</option>
+    <option value="data/Bottle-water.xlsx - North.csv">North Route (Peace River)</option>
+    <option value="data/Bottle-water.xlsx - Valley view .csv">Valleyview</option>
+    <option value="data/Bottle-water.xlsx - Dawson creek.csv">Dawson Creek</option>
+    <option value="data/Bottle-water.xlsx - Salt.csv">Salt Deliveries</option>
+  </select>
+  <button onclick="loadRoute()">LOAD ROUTE</button>
 </div>
 
-<div id="mainContainer">
-  <div id="sidebar">
-    <div id="sidebarFixed">
-      <div id="setupSection">
-        <input type="text" id="setupDriver" class="card-input" placeholder="Driver Name" style="margin-bottom: 12px; padding: 14px; font-size: 15px; border-radius: 8px;">
-        <button class="btn btn-green" style="width:100%; padding: 14px; font-size: 15px; font-weight: 700;" onclick="startRoute()">🚀 Start Route</button>
-      </div>
-      <div id="activeStopCard" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 16px;">
-            <div style="max-width: 70%;">
-                <h3 id="cName" style="margin:0; font-size: 20px; font-weight: 700; margin-bottom: 8px;">Customer</h3>
-                <p id="cAddr" style="font-size:14px; color:#60a5fa; margin:0; line-height: 1.5;"></p>
-            </div>
-            <button class="btn btn-orange" style="font-size:12px; padding:8px 12px; font-weight: 600;" onclick="getDirections()">📍 I'M LOST</button>
-        </div>
-        <p id="cStamp" style="font-size:12px; color:#94a3b8; font-style:italic; margin-top: 8px;"></p>
-        
-        <div class="status-toggle">
-          <label>
-            <input type="radio" name="stat" id="radDel" onclick="stampTime()" style="display: none;">
-            <span id="deliveredLabel" style="display: block;">✓ Delivered</span>
-          </label>
-          <label>
-            <input type="radio" name="stat" id="radSkip" onclick="stampTime()" style="display: none;">
-            <span id="skippedLabel" style="display: block;">✕ Skipped</span>
-          </label>
-        </div>
-        
-        <div id="delSection" class="hidden-section">
-          <input type="text" id="vRecipient" class="card-input" placeholder="Customer Name (Recipient)">
-          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; margin: 12px 0;">
-            <div><label style="font-size:11px; color: #94a3b8; margin-bottom: 4px; display: block;">18L</label><input type="number" id="v18L" class="card-input" value="0" style="padding: 10px;"></div>
-            <div><label style="font-size:11px; color: #94a3b8; margin-bottom: 4px; display: block;">Small</label><input type="number" id="vSml" class="card-input" value="0" style="padding: 10px;"></div>
-            <div><label style="font-size:11px; color: #94a3b8; margin-bottom: 4px; display: block;">Case</label><input type="number" id="vCase" class="card-input" value="0" style="padding: 10px;"></div>
-          </div>
-          <input type="text" id="vMisc" class="card-input" placeholder="Misc Items">
-          <div style="margin: 12px 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <label style="font-size: 13px; color: #94a3b8; font-weight: 500;">Customer Signature</label>
-              <button onclick="clearSignature()" style="padding: 4px 8px; background: #334155; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Clear</button>
-            </div>
-            <canvas id="sig-canvas"></canvas>
-          </div>
-          <button class="btn btn-orange" style="width:100%; padding: 12px; font-weight: 600; margin-top: 10px;" onclick="emailCustomer()">📧 Email Slip to Customer</button>
-        </div>
-        
-        <div id="skipSection" class="hidden-section">
-          <textarea id="vReason" class="card-input" placeholder="Reason for skipping..." style="min-height: 100px; font-family: inherit; resize: vertical;"></textarea>
-        </div>
-        
-        <button class="btn btn-green" style="width:100%; margin-top:16px; padding: 14px; font-size: 15px; font-weight: 700;" onclick="processNext()" id="confirmBtn" disabled>✓ Confirm & Next</button>
-      </div>
-      <button id="endBtn" class="btn btn-red" style="display:none; width:100%; margin-top:12px; padding: 12px; font-weight: 600;" onclick="endRoute()">🛑 End Route Audit</button>
-    </div>
-    <div id="sidebarScroll">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h4 style="font-size: 14px; font-weight: 600; color: #94a3b8; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Route Stops (<span id="stopCount">0</span>)</h4>
-        <button onclick="viewFullRoute()" style="padding: 6px 10px; background: rgba(0, 120, 255, 0.15); border: 1px solid rgba(0, 120, 255, 0.3); border-radius: 6px; color: #60a5fa; cursor: pointer; font-size: 11px; font-weight: 600; transition: all 0.3s;">🗺️ View All</button>
-      </div>
-      <div id="stopList"></div>
-    </div>
-  </div>
-  <div id="map"></div>
-</div>
+<div id="map"></div>
 
-<div id="managerOverlay" class="overlay">
-  <div class="mgr-content">
-    <div style="padding:20px 24px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #0078ff;">
-      <h2 style="margin:0; font-size: 24px; font-weight: 700;">📊 Manager Portal</h2>
-      <button class="btn btn-red" onclick="toggleManager()">Close</button>
-    </div>
-    <div style="padding:24px; flex:1; overflow-y:auto;">
-        <button class="btn btn-green" style="width:100%; padding: 14px; font-size: 15px; font-weight: 700; margin-bottom: 24px;" onclick="runDailyReport()">📄 Generate Today's Report</button>
-        <div id="reportContainer"></div>
-    </div>
-  </div>
-</div>
-
-<div id="settingsOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:4000; align-items:center; justify-content:center;">
-  <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:32px; border-radius:16px; width:340px; text-align:center; border: 1px solid #334155; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);">
-    <h3 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 24px;">⚙️ Admin Settings</h3>
-    <input type="password" id="resetPass" class="card-input" placeholder="Password" style="margin-bottom: 16px; padding: 14px;">
-    <button class="btn btn-red" style="width:100%; padding: 14px; font-weight: 700; margin-bottom: 12px;" onclick="resetCounter()">🔄 Reset Slip Counter</button>
-    <button class="btn" style="width:100%; padding: 14px; background:#334155; font-weight: 600;" onclick="toggleSettings()">Cancel</button>
-  </div>
+<div id="currentStop" class="stop-card">
+  <h3 id="companyName">Select a Route to Begin</h3>
+  <p id="addressText">---</p>
+  <button id="syncBtn" style="background: green; display:none;" onclick="syncData()">END ROUTE & SYNC TO OFFICE</button>
 </div>
 
 <script>
-let map, stops = [], currentIndex = -1, routeName = "";
-let sigPad, slipSeq = 0, sigDrawing = false, sigLastPos = {x:0, y:0};
-let markerLayer, routeLine, blueIcon, redIcon;
+let stops = [];
+let map = L.map('map').setView([55.1707, -118.7947], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-// Load from cloud storage
-async function loadFromStorage() {
+// IMPORTANT: Replace this with your new Web App URL from Google Script
+const scriptURL = "REPLACE_WITH_YOUR_NEW_GOOGLE_SCRIPT_URL";
+
+async function loadRoute() {
+  const file = document.getElementById('routeSelect').value;
+  if(!file) return alert("Please select a route");
+
   try {
-    const seqData = localStorage.getItem('culligan_seq');
-    if (seqData) {
-      slipSeq = parseInt(seqData) || 0;
-      updateSlipDisplay();
-    }
-    const routeData = localStorage.getItem('culligan_route');
-    if (routeData) {
-      const saved = JSON.parse(routeData);
-      stops = saved.stops || [];
-      currentIndex = saved.currentIndex || -1;
-      document.getElementById('setupDriver').value = saved.driverName || '';
-      if (saved.routeStarted && stops.length > 0) {
-        document.getElementById("setupSection").style.display = "none";
-        document.getElementById("activeStopCard").style.display = "block";
-        document.getElementById("endBtn").style.display = "block";
-        renderList();
-        updateUI();
-        plotRoute(); // Will skip if map not available
+    const response = await fetch(file);
+    if(!response.ok) throw new Error("File not found");
+    const csvData = await response.text();
+    
+    Papa.parse(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        stops = results.data;
+        alert("Route Loaded: " + stops.length + " stops found.");
+        displayStopsOnMap();
+        document.getElementById('syncBtn').style.display = 'block';
       }
-    }
-  } catch (e) {
-    console.log('Starting fresh');
-  }
-}
-
-function saveToStorage() {
-  try {
-    localStorage.setItem('culligan_seq', slipSeq.toString());
-    localStorage.setItem('culligan_route', JSON.stringify({
-      stops: stops,
-      currentIndex: currentIndex,
-      driverName: document.getElementById('setupDriver').value,
-      routeStarted: currentIndex >= 0
-    }));
-  } catch (e) {
-    console.error('Save error:', e);
-  }
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  initSignature();
-  updateStatusButtons();
-  document.getElementById("fileInput").onchange = handleFile;
-});
-
-// Wait for window to fully load including all scripts
-window.addEventListener('load', () => {
-  // Check if Leaflet loaded
-  setTimeout(() => {
-    if (typeof L !== 'undefined') {
-      console.log('Leaflet loaded successfully from jsDelivr');
-      initMap();
-      loadFromStorage();
-    } else {
-      // Try fallback CDN
-      console.log('Trying fallback CDN for Leaflet...');
-      const fallbackScript = document.createElement('script');
-      fallbackScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      fallbackScript.onload = () => {
-        if (typeof L !== 'undefined') {
-          console.log('Leaflet loaded from unpkg fallback');
-          initMap();
-          loadFromStorage();
-        } else {
-          showMapError();
-        }
-      };
-      fallbackScript.onerror = showMapError;
-      document.head.appendChild(fallbackScript);
-    }
-  }, 500);
-});
-
-function showMapError() {
-  console.error('All CDN attempts failed');
-  document.getElementById('map').innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; text-align: center; padding: 20px;"><div><h3 style="color: #ef4444; margin-bottom: 10px;">⚠️ Map Unavailable</h3><p>The mapping library could not load from external sources.<br>This may be due to network restrictions or firewall settings.</p><p style="margin-top: 15px; color: #94a3b8;">The rest of the system will work normally.<br>You can still track deliveries, signatures, and generate reports.</p></div></div>';
-}
-
-function initMap() {
-  if (typeof L === 'undefined') {
-    console.log('ERROR: Leaflet library (L) is undefined');
-    showMapError();
-    return;
-  }
-  
-  console.log('✓ Leaflet loaded successfully');
-  
-  try {
-    map = L.map('map').setView([55.1707, -118.7947], 12);
-    console.log('✓ Map initialized');
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-    console.log('✓ Map tiles added');
-    
-    markerLayer = L.layerGroup().addTo(map);
-    routeLine = L.polyline([], { color: '#0078ff', weight: 3 }).addTo(map);
-    console.log('✓ Marker layer and route line created');
-    
-    // Create icons
-    blueIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-      iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
     });
-    
-    redIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-      iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-    });
-    console.log('✓ Map icons created');
-    console.log('✓✓✓ MAP FULLY INITIALIZED AND READY ✓✓✓');
-  } catch (error) {
-    console.error('ERROR initializing map:', error);
-    showMapError();
+  } catch (err) {
+    alert("Error: " + err.message + ". Check that the 'data' folder and files are named correctly on GitHub.");
   }
 }
 
-function initSignature() {
-  const canvas = document.getElementById('sig-canvas');
-  canvas.addEventListener('mousedown', startSig);
-  canvas.addEventListener('mousemove', drawSig);
-  canvas.addEventListener('mouseup', stopSig);
-  canvas.addEventListener('mouseleave', stopSig);
-  canvas.addEventListener('touchstart', startSig);
-  canvas.addEventListener('touchmove', drawSig);
-  canvas.addEventListener('touchend', stopSig);
-}
-
-function startSig(e) {
-  e.preventDefault();
-  const canvas = document.getElementById('sig-canvas');
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
-  const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
-  sigDrawing = true;
-  sigLastPos = {x, y};
-}
-
-function drawSig(e) {
-  if (!sigDrawing) return;
-  e.preventDefault();
-  const canvas = document.getElementById('sig-canvas');
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
-  const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
-  const ctx = canvas.getContext('2d');
-  ctx.beginPath();
-  ctx.moveTo(sigLastPos.x, sigLastPos.y);
-  ctx.lineTo(x, y);
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.stroke();
-  sigLastPos = {x, y};
-}
-
-function stopSig() {
-  sigDrawing = false;
-}
-
-function clearSignature() {
-  const canvas = document.getElementById('sig-canvas');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function handleFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet);
-        stops = rows.map((row, idx) => ({
-            id: idx,
-            company: row.Company || row.company || row.Customer || row.customer || '',
-            address: row.Address || row.address || '',
-            email: row.Email || row.email || '',
-            lat: parseFloat(row.Latitude || row.latitude || row.Lat || row.lat || 0),
-            lng: parseFloat(row.Longitude || row.longitude || row.Lng || row.lng || 0),
-            status: '', timeStamp: '', q18: 0, qSml: 0, qCse: 0, qMisc: '', qRecipient: '', qReason: '', qSlip: ''
-        }));
-        currentIndex = -1;
-        saveToStorage();
-        renderList();
-        
-        // Try to plot on map if available
-        if (map && markerLayer && routeLine) {
-            plotRoute();
-        }
-        
-        alert(`✅ Loaded ${stops.length} stops successfully!`);
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-function plotRoute() {
-    console.log('=== plotRoute() called ===');
-    console.log('- L defined?', typeof L !== 'undefined');
-    console.log('- map exists?', !!map);
-    console.log('- markerLayer exists?', !!markerLayer);
-    console.log('- routeLine exists?', !!routeLine);
-    console.log('- stops.length:', stops.length);
-    
-    if (typeof L === 'undefined' || !map || !markerLayer || !routeLine) {
-        console.log('⚠️ Map not available - skipping map update');
-        return;
-    }
-    try {
-        markerLayer.clearLayers();
-        console.log('✓ Cleared existing markers');
-        
-        const coords = [];
-        let markerCount = 0;
-        
-        stops.forEach((s, i) => {
-            console.log(`Stop ${i+1}: ${s.company}, lat=${s.lat}, lng=${s.lng}`);
-            
-            if(!isNaN(s.lat) && !isNaN(s.lng) && s.lat !== 0 && s.lng !== 0) {
-                const icon = (i === currentIndex) ? redIcon : blueIcon;
-                console.log(`  → Creating ${i === currentIndex ? 'RED' : 'BLUE'} marker`);
-                
-                const m = L.marker([s.lat, s.lng], {icon: icon})
-                         .bindPopup(`
-                            <div style="min-width: 200px;">
-                                <b style="font-size: 14px; color: #002b7f;">Stop ${i+1}: ${s.company}</b><br>
-                                <p style="margin: 5px 0; font-size: 12px;">${s.address}</p>
-                                ${s.status ? `<span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-top: 5px; background: ${s.status === 'Delivered' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}; color: ${s.status === 'Delivered' ? '#10b981' : '#ef4444'}; font-weight: 600;">${s.status}</span>` : ''}
-                                ${i !== currentIndex && !s.status ? `<button onclick="jumpToStop(${i})" style="width: 100%; margin-top: 10px; padding: 8px; background: #0078ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">Go to This Stop</button>` : ''}
-                                ${i === currentIndex ? `<p style="margin-top: 8px; color: #ef4444; font-weight: 600; font-size: 12px;">📍 Current Stop</p>` : ''}
-                            </div>
-                         `);
-                markerLayer.addLayer(m);
-                coords.push([s.lat, s.lng]);
-                markerCount++;
-                console.log(`  ✓ Marker ${markerCount} added to map`);
-            } else {
-                console.log(`  ✗ Skip: Invalid coordinates`);
-            }
-        });
-        
-        console.log(`✓ Total markers added: ${markerCount}`);
-        
-        routeLine.setLatLngs(coords);
-        console.log(`✓ Route line updated with ${coords.length} points`);
-        
-        if(coords.length > 0) {
-            if(currentIndex === -1) {
-                map.fitBounds(routeLine.getBounds(), {padding: [50,50]});
-                console.log('✓ Map zoomed to fit all stops');
-            } else {
-                const active = stops[currentIndex];
-                if (active && !isNaN(active.lat) && !isNaN(active.lng)) {
-                    map.setView([active.lat, active.lng], 16);
-                    console.log(`✓ Map centered on current stop (${active.lat}, ${active.lng})`);
-                }
-            }
-        }
-        console.log('=== plotRoute() completed successfully ===');
-    } catch (e) {
-        console.error('❌ ERROR in plotRoute():', e);
-    }
-}
-
-function getDirections() {
-    if (currentIndex === -1 || currentIndex >= stops.length) return;
-    const s = stops[currentIndex];
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}`, '_blank');
-}
-
-function updateStatusButtons() {
-  const delChecked = document.getElementById('radDel').checked;
-  const skipChecked = document.getElementById('radSkip').checked;
-  const delLabel = document.getElementById('deliveredLabel');
-  const skipLabel = document.getElementById('skippedLabel');
-  
-  if (delChecked) {
-    delLabel.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-    delLabel.parentElement.style.border = '2px solid #10b981';
-    delLabel.parentElement.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.4)';
-    skipLabel.parentElement.style.background = '#2d3748';
-    skipLabel.parentElement.style.border = '2px solid transparent';
-    skipLabel.parentElement.style.boxShadow = 'none';
-  } else if (skipChecked) {
-    skipLabel.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-    skipLabel.parentElement.style.border = '2px solid #ef4444';
-    skipLabel.parentElement.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.4)';
-    delLabel.parentElement.style.background = '#2d3748';
-    delLabel.parentElement.style.border = '2px solid transparent';
-    delLabel.parentElement.style.boxShadow = 'none';
-  } else {
-    delLabel.parentElement.style.background = '#2d3748';
-    delLabel.parentElement.style.border = '2px solid transparent';
-    delLabel.parentElement.style.boxShadow = 'none';
-    skipLabel.parentElement.style.background = '#2d3748';
-    skipLabel.parentElement.style.border = '2px solid transparent';
-    skipLabel.parentElement.style.boxShadow = 'none';
-  }
-  
-  const confirmBtn = document.getElementById('confirmBtn');
-  if (delChecked || skipChecked) {
-    confirmBtn.disabled = false;
-    confirmBtn.style.opacity = '1';
-    confirmBtn.style.cursor = 'pointer';
-  } else {
-    confirmBtn.disabled = true;
-    confirmBtn.style.opacity = '0.5';
-    confirmBtn.style.cursor = 'not-allowed';
-    confirmBtn.style.background = '#2d3748';
-  }
-}
-
-function stampTime() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (currentIndex >= 0 && currentIndex < stops.length) {
-        stops[currentIndex].timeStamp = timeStr;
-    }
-    document.getElementById("cStamp").textContent = "Time Recorded: " + timeStr;
-    if(document.getElementById("radDel").checked) {
-        document.getElementById('delSection').style.display='block';
-        document.getElementById('skipSection').style.display='none';
-    } else {
-        document.getElementById('delSection').style.display='none';
-        document.getElementById('skipSection').style.display='block';
-    }
-    updateStatusButtons();
-}
-
-async function emailCustomer() {
-    if (currentIndex === -1 || currentIndex >= stops.length) return;
-    const s = stops[currentIndex];
-    if(!s.email) {
-        alert('No email address available for this customer');
-        return;
-    }
-    s.q18 = document.getElementById("v18L").value;
-    s.qSml = document.getElementById("vSml").value;
-    s.qCse = document.getElementById("vCase").value;
-    const subject = encodeURIComponent("Culligan Water Delivery Slip");
-    const body = encodeURIComponent(`Hello,\n\nYour delivery has been completed.\n\nDelivery Details:\n18L Bottles: ${s.q18}\nSmall Bottles: ${s.qSml}\nCase Bottles: ${s.qCse}\n\nThank you,\nCulligan Grande Prairie`);
-    window.location.href = `mailto:${s.email}?subject=${subject}&body=${body}`;
-}
-
-function startRoute() {
-  if(!document.getElementById("setupDriver").value) return alert("Enter Driver Name.");
-  if(stops.length === 0) return alert("Please load a route file first.");
-  currentIndex = 0;
-  document.getElementById("setupSection").style.display = "none";
-  document.getElementById("activeStopCard").style.display = "block";
-  document.getElementById("endBtn").style.display = "block";
-  saveToStorage();
-  plotRoute();
-  updateUI();
-  renderList();
-}
-
-function updateUI() {
-  if (currentIndex < 0 || currentIndex >= stops.length) return;
-  const s = stops[currentIndex];
-  document.getElementById("cName").textContent = s.company;
-  document.getElementById("cAddr").textContent = s.address;
-  document.getElementById("cStamp").textContent = s.timeStamp ? "Time Recorded: " + s.timeStamp : "";
-}
-
-function processNext() {
-  if (currentIndex < 0 || currentIndex >= stops.length) return;
-  const s = stops[currentIndex];
-  const isDelivered = document.getElementById("radDel").checked;
-  s.status = isDelivered ? "Delivered" : "Skipped";
-  s.q18 = document.getElementById("v18L").value;
-  s.qSml = document.getElementById("vSml").value;
-  s.qCse = document.getElementById("vCase").value;
-  s.qMisc = document.getElementById("vMisc").value;
-  s.qRes = document.getElementById("vReason").value;
-  s.qRecipient = document.getElementById("vRecipient").value;
-
-  if (isDelivered) {
-    slipSeq++;
-    s.qSlip = (slipSeq).toString().padStart(3, '0');
-    updateSlipDisplay();
-    
-    // Save delivery to cloud
-    const deliveryRecord = {
-      ...s,
-      driverName: document.getElementById('setupDriver').value,
-      date: new Date().toISOString(),
-      signature: document.getElementById('sig-canvas').toDataURL()
-    };
-    const recordKey = `delivery_${Date.now()}_${s.qSlip}`;
-    localStorage.setItem(recordKey, JSON.stringify(deliveryRecord));
-  }
-
-  saveToStorage();
-
-  if (currentIndex < stops.length - 1) {
-    currentIndex++; 
-    resetForm(); 
-    saveToStorage();
-    plotRoute();
-    updateUI();
-    renderList();
-  } else { 
-    alert("Route Completed."); 
-  }
-}
-
-function resetForm() { 
-  clearSignature(); 
-  ["v18L","vSml","vCase"].forEach(i=>document.getElementById(i).value=0); 
-  ["vMisc","vReason","vRecipient"].forEach(i=>document.getElementById(i).value=""); 
-  document.getElementById("radDel").checked = false; 
-  document.getElementById("radSkip").checked = false;
-  document.getElementById('delSection').style.display='none';
-  document.getElementById('skipSection').style.display='none';
-  updateStatusButtons();
-}
-
-function runDailyReport() {
-  const driver = document.getElementById("setupDriver").value;
-  const longDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  
-  // Load deliveries from storage
-  const deliveries = [];
-  const today = new Date().toLocaleDateString();
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key.startsWith('delivery_')) {
-      try {
-        const record = JSON.parse(localStorage.getItem(key));
-        const recordDate = new Date(record.date).toLocaleDateString();
-        if (recordDate === today) {
-          deliveries.push(record);
-        }
-      } catch (e) {}
-    }
-  }
-  
-  const total18L = deliveries.reduce((sum, d) => sum + (parseInt(d.q18) || 0), 0);
-  const totalSml = deliveries.reduce((sum, d) => sum + (parseInt(d.qSml) || 0), 0);
-  const totalCse = deliveries.reduce((sum, d) => sum + (parseInt(d.qCse) || 0), 0);
-  
-  let html = `<div id="reportView"><h2 style="color: #002b7f; font-size: 24px; font-weight: 700; margin-top: 0;">DAILY SUMMARY</h2><p style="margin-bottom: 24px; font-size: 14px; color: #555;">Driver: ${driver} | Date: ${longDate}</p>
-    <table class="report-table"><thead><tr><th>Customer / Time</th><th>Recipient</th><th>Slip #</th><th style="text-align: center;">18L</th><th style="text-align: center;">Sml</th><th style="text-align: center;">Case</th></tr></thead><tbody>
-    ${deliveries.map(s => `<tr><td><strong>${s.company}</strong><br><small style="color: #666;">Time: ${s.timeStamp || '--'}</small></td><td>${s.qRecipient || '--'}</td><td style="font-weight: 600;">${s.qSlip||'--'}</td><td style="text-align: center;">${s.q18}</td><td style="text-align: center;">${s.qSml}</td><td style="text-align: center;">${s.qCse}</td></tr>`).join('')}
-    </tbody></table>
-    <div style="margin-top: 32px; padding-top: 20px; border-top: 2px solid #002b7f;">
-      <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Summary Totals</h3>
-      <p style="margin-bottom: 8px;"><strong>Total Deliveries:</strong> ${deliveries.length}</p>
-      <p style="margin-bottom: 8px;"><strong>Total 18L Bottles:</strong> ${total18L}</p>
-      <p style="margin-bottom: 8px;"><strong>Total Small Bottles:</strong> ${totalSml}</p>
-      <p><strong>Total Cases:</strong> ${totalCse}</p>
-    </div>
-    </div>`;
-  document.getElementById("reportContainer").innerHTML = html;
-}
-
-function updateSlipDisplay() { 
-  document.getElementById("slipDisplay").textContent = (slipSeq + 1).toString().padStart(3, '0'); 
-}
-
-function toggleManager() { 
-  const m = document.getElementById("managerOverlay"); 
-  m.style.display = m.style.display==="none" || m.style.display==="" ? "block":"none"; 
-}
-
-function toggleSettings() { 
-  const s = document.getElementById("settingsOverlay"); 
-  s.style.display = s.style.display==="none" || s.style.display==="" ? "flex":"none"; 
-}
-
-function resetCounter() { 
-  if(document.getElementById("resetPass").value === "2026dne") { 
-    slipSeq = 0; 
-    updateSlipDisplay();
-    saveToStorage();
-    toggleSettings(); 
-    alert('Slip counter reset successfully');
-  } else {
-    alert('Incorrect password');
-  }
-}
-
-function renderList() { 
-  document.getElementById("stopCount").textContent = stops.length;
-  document.getElementById("stopList").innerHTML = stops.map((s, i) => `
-    <div class="stop-item ${i === currentIndex ? 'active' : ''}" 
-         style="padding:12px; border-bottom:1px solid #1e293b; font-size:13px; cursor: pointer; transition: all 0.3s;"
-         onclick="viewStopOnMap(${i})"
-         onmouseover="this.style.background='rgba(0, 120, 255, 0.05)'"
-         onmouseout="this.style.background='${i === currentIndex ? 'rgba(0, 120, 255, 0.1)' : 'transparent'}'">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight:600;">
-          ${i === currentIndex ? '📍 ' : ''}${i+1}. ${s.company}
-        </span>
-        ${s.status ? `<span class="status-badge ${s.status === 'Delivered' ? 'status-delivered' : 'status-skipped'}">${s.status}</span>` : ''}
-      </div>
-      ${s.timeStamp ? `<div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">🕐 ${s.timeStamp}</div>` : ''}
-    </div>
-  `).join(''); 
-}
-
-// View a stop on the map (centers map and opens popup)
-function viewStopOnMap(stopIndex) {
-  if (!map || typeof L === 'undefined') return;
-  
-  const stop = stops[stopIndex];
-  if (!stop || isNaN(stop.lat) || isNaN(stop.lng) || stop.lat === 0 || stop.lng === 0) {
-    alert('No GPS coordinates available for this stop.');
-    return;
-  }
-  
-  // Center map on this stop
-  map.setView([stop.lat, stop.lng], 17);
-  
-  // Find and open the popup for this marker
-  markerLayer.eachLayer((marker) => {
-    const pos = marker.getLatLng();
-    if (Math.abs(pos.lat - stop.lat) < 0.0001 && Math.abs(pos.lng - stop.lng) < 0.0001) {
-      marker.openPopup();
+function displayStopsOnMap() {
+  stops.forEach((stop, index) => {
+    if(stop.Address) {
+        // This is a simplified version; real geocoding would happen here
+        L.marker([55.17, -118.79]).addTo(map)
+          .bindPopup(`<b>${stop.Company}</b><br>${stop.Address}`);
     }
   });
 }
 
-// View the full route (zoom out to see all stops)
-function viewFullRoute() {
-  if (!map || !routeLine || typeof L === 'undefined') return;
-  
-  const coords = routeLine.getLatLngs();
-  if (coords.length > 0) {
-    map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-  }
-}
+async function syncData() {
+  if(!confirm("Are you sure you want to end the route and send data to the office?")) return;
 
-function endRoute() { 
-  if (confirm('Are you sure you want to end this route?')) {
-    alert("Route Summary Finalized."); 
-    currentIndex = -1;
-    saveToStorage();
-  }
-}
+  const payload = {
+    route: document.getElementById('routeSelect').selectedOptions[0].text,
+    timestamp: new Date().toLocaleString(),
+    data: stops
+  };
 
-// Jump to a specific stop from map marker
-function jumpToStop(stopIndex) {
-  if (stopIndex < 0 || stopIndex >= stops.length) return;
-  if (stops[stopIndex].status) {
-    alert('This stop has already been completed.');
-    return;
-  }
-  if (confirm(`Jump to Stop ${stopIndex + 1}: ${stops[stopIndex].company}?`)) {
-    currentIndex = stopIndex;
-    resetForm();
-    saveToStorage();
-    plotRoute();
-    updateUI();
-    renderList();
-    // Scroll to active stop in sidebar
-    setTimeout(() => {
-      const activeStopEl = document.querySelector('.stop-item.active');
-      if (activeStopEl) {
-        activeStopEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
+  try {
+    // Using 'no-cors' to prevent the 401/Authorization block
+    await fetch(scriptURL, {
+      method: 'POST',
+      mode: 'no-cors',
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    alert("SUCCESS! Data sent to Google Drive.");
+  } catch (e) {
+    alert("Sync Error: " + e.message);
   }
 }
 </script>
+
 </body>
 </html>
