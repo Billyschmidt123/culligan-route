@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v3.0</title>
+    <title>Culligan Route - Professional v4.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -18,20 +18,16 @@
         .profile-group { margin-bottom:12px; }
         .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
         .profile-group input, .profile-group textarea, .profile-group select { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
-        
         #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555; cursor: crosshair;}
-        
         .form-btns { display:flex; flex-direction: column; gap:10px; margin-top:20px; padding-bottom: 40px;}
         .btn-del { width:100%; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
         .btn-not { width:100%; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-        
         #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
         #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
         #map { flex:1; }
         .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
         .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
         .number-pin { color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.5);}
-        
         #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; overflow-y: auto;}
         #manager-panel.open { bottom: 0; }
         .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; position: sticky; top: 0; z-index: 10;}
@@ -39,10 +35,8 @@
         .mgr-tab-btn.active { color: #0078ff; border-bottom: 2px solid #0078ff; background: #2a2a2a; }
         .mgr-content { padding: 20px; display: none; color: white;}
         .mgr-content.active { display: block; }
-
         .animated-line { stroke-dasharray: 10, 10; animation: dash 3s linear infinite; }
         @keyframes dash { to { stroke-dashoffset: -100; } }
-
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; }
         .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; max-height: 90vh; overflow-y: auto;}
     </style>
@@ -59,9 +53,9 @@
     </div>
     <div id="customer-profile">
         <div class="nav-btns" style="display:flex; justify-content: space-between; margin-bottom:10px;">
-            <button onclick="navStop(-1)" style="background:#444; color:white; border:none; padding:8px; cursor:pointer;">← BACK</button>
-            <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:8px; cursor:pointer;">CLOSE</button>
-            <button onclick="navStop(1)" style="background:#444; color:white; border:none; padding:8px; cursor:pointer;">NEXT →</button>
+            <button onclick="navStop(-1)" style="background:#444; color:white; border:none; padding:8px;">← BACK</button>
+            <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:8px;">CLOSE</button>
+            <button onclick="navStop(1)" style="background:#444; color:white; border:none; padding:8px;">NEXT →</button>
         </div>
         <h3 id="prof-name">Customer Name</h3>
         <p id="prof-addr" style="font-size:11px; color:#aaa; margin-top:-10px;"></p>
@@ -82,7 +76,7 @@
 
         <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
-        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:5px; font-size:10px; cursor:pointer;">CLEAR SIGNATURE</button>
+        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:5px; font-size:10px;">CLEAR SIGNATURE</button>
 
         <div class="form-btns">
             <button class="btn-del" onclick="submitLog('DELIVERED')">COMPLETE DELIVERY</button>
@@ -114,7 +108,6 @@
             <optgroup label="Special Routes">
                 <option value="458612538">VALLEYVIEW</option>
                 <option value="364553460">NORTH</option>
-                <option value="1909249906">DAWSON CREEK</option>
             </optgroup>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
@@ -133,21 +126,21 @@
         <div id="mgr-maint" class="mgr-content active">
             <h4 style="color:#0078ff;">Search & Maintenance</h4>
             <div style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">
-                <input type="text" id="m-search" placeholder="Search Database..." style="width:100%; padding:10px; background:#333; color:white; border:1px solid #444; margin-bottom:10px;">
+                <input type="text" id="m-search-input" placeholder="Search Active Route..." style="width:100%; padding:10px; background:#333; color:white; border:1px solid #444; margin-bottom:10px;">
                 <div style="display:flex; gap:10px;">
-                    <button class="btn" style="flex:1" onclick="alert('Searching...')">SEARCH</button>
+                    <button class="btn" style="flex:1" onclick="performLocalSearch()">SEARCH</button>
                     <button class="btn" style="flex:1; background:#6c757d;" onclick="openAddCustomerModal()">NEW CUSTOMER</button>
                 </div>
-                <button class="btn" style="width:100%; margin-top:10px; background:#a335ee;" onclick="alert('Building Rush...')">BUILD A RUSH ORDER</button>
             </div>
+            <div id="search-results" style="margin-top:15px;"></div>
         </div>
 
         <div id="mgr-reports" class="mgr-content">
-            <h4 style="color:#0078ff;">Daily Summary</h4>
-            <div id="report-output" style="background:#222; padding:15px; min-height:100px; border-radius:5px;">
-                Load a route and complete stops to see data.
+            <h4 style="color:#0078ff;">Daily Summary Report</h4>
+            <div id="report-output" style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">
+                No route data found.
             </div>
-            <button class="btn" style="margin-top:10px;" onclick="generateDailyReport()">GENERATE REPORT</button>
+            <button class="btn" style="margin-top:15px;" onclick="generateDailyReport()">REFRESH REPORT</button>
         </div>
     </div>
 </div>
@@ -186,11 +179,15 @@ window.onload = () => {
     window.addEventListener('resize', resize);
     resize();
 
+    // FIXED: Correct signature pad coordinate logic
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { x: clientX - rect.left, y: clientY - rect.top };
+        return { 
+            x: (clientX - rect.left) * (canvas.width / rect.width), 
+            y: (clientY - rect.top) * (canvas.height / rect.height) 
+        };
     };
 
     const start = (e) => { 
@@ -198,16 +195,17 @@ window.onload = () => {
         ctx.beginPath(); 
         const p = getPos(e); 
         ctx.moveTo(p.x, p.y); 
+        if (e.cancelable) e.preventDefault();
     };
 
     const draw = (e) => {
         if (!isDrawing) return;
-        if (e.cancelable) e.preventDefault();
         const p = getPos(e);
         ctx.lineTo(p.x, p.y);
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
         ctx.stroke();
+        if (e.cancelable) e.preventDefault();
     };
 
     canvas.addEventListener('mousedown', start);
@@ -222,10 +220,10 @@ function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
-    document.getElementById('status').innerText = "Status: Loading...";
+    document.getElementById('status').innerText = "Status: Geocoding...";
     stops = []; markerLayer.clearLayers(); polylineLayer.clearLayers();
     try {
-        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}&t=${Date.now()}`);
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
         const data = await res.text();
         const rows = data.split('\n').slice(1);
         for (let row of rows) {
@@ -238,7 +236,8 @@ async function loadRoute() {
                     stops.push({
                         company: cols[2].replace(/"/g, '').trim(), address: addr,
                         lat: gData.candidates[0].location.y, lng: gData.candidates[0].location.x,
-                        status: 'pending', isRush: cols[0]?.toLowerCase().includes('rush')
+                        status: 'pending', isRush: cols[0]?.toLowerCase().includes('rush'),
+                        data: { del18:0, emp18:0, sm:0, cases:0 }
                     });
                 }
             }
@@ -256,12 +255,13 @@ function updateMapVisuals() {
         const m = L.marker([s.lat, s.lng], {
             icon: L.divIcon({ html: `<div class="number-pin" style="background:${color}">${i+1}</div>`, className: '' })
         }).addTo(markerLayer);
-        m.bindTooltip(`<b>${s.company}</b><br>${s.address}`);
+        m.bindTooltip(`<b>${s.company}</b>`);
         m.on('click', () => openProfile(i));
         if (s.status !== 'completed') activeCoords.push([s.lat, s.lng]);
     });
+    // FIXED: Animated Map Lines
     if (activeCoords.length > 1) {
-        L.polyline(activeCoords, { color: '#0078ff', weight: 3, opacity: 0.5, className: 'animated-line' }).addTo(polylineLayer);
+        L.polyline(activeCoords, { color: '#0078ff', weight: 4, opacity: 0.6, className: 'animated-line' }).addTo(polylineLayer);
     }
 }
 
@@ -299,39 +299,28 @@ function navStop(dir) {
 
 async function submitLog(type) {
     const s = stops[currentStopIndex];
+    // FIXED: Require reason for non-delivery
     if (type === 'NOT DELIVERED' && document.getElementById('p-fail-reason').value === "None") {
-        alert("Please select a reason for non-delivery.");
+        alert("CRITICAL: You must select a reason for non-delivery.");
         return;
     }
 
     s.status = 'completed';
+    s.data = {
+        del18: parseInt(document.getElementById('p-18l').value),
+        emp18: parseInt(document.getElementById('p-18l-emp').value),
+        sm: parseInt(document.getElementById('p-sm-btl').value),
+        cases: parseInt(document.getElementById('p-cases').value),
+        reason: document.getElementById('p-fail-reason').value
+    };
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    
-    doc.text(`Culligan Delivery Log: ${s.company}`, 20, 20);
-    doc.text(`Status: ${type}`, 20, 30);
-    if(type === 'NOT DELIVERED') doc.text(`Reason: ${document.getElementById('p-fail-reason').value}`, 20, 40);
-    doc.text(`18L: ${document.getElementById('p-18l').value} | Empties: ${document.getElementById('p-18l-emp').value}`, 20, 50);
-    doc.text(`Rec By: ${document.getElementById('p-rec-by').value}`, 20, 60);
-    
-    const sigImg = canvas.toDataURL("image/png");
-    doc.addImage(sigImg, 'PNG', 20, 70, 60, 30);
-
-    try {
-        const pdfBlob = doc.output('blob');
-        const metadata = { name: `${s.company}_Log.pdf`, mimeType: 'application/pdf' };
-        const form = new FormData();
-        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        form.append('file', pdfBlob);
-
-        await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + (typeof gapi !== 'undefined' ? gapi.auth.getToken().access_token : '') },
-            body: form
-        });
-    } catch (e) { 
-        doc.save(`${s.company}_Log.pdf`); 
-    }
+    doc.text(`Culligan Log: ${s.company}`, 20, 20);
+    doc.text(`Result: ${type} | Reason: ${s.data.reason}`, 20, 30);
+    doc.text(`18L: ${s.data.del18} | Sm: ${s.data.sm} | Cases: ${s.data.cases}`, 20, 40);
+    doc.addImage(canvas.toDataURL("image/png"), 'PNG', 20, 50, 60, 30);
+    doc.save(`${s.company}_Log.pdf`);
 
     updateMapVisuals(); renderSidebar(); closeProfile();
 }
@@ -342,8 +331,31 @@ function switchTab(id) {
     document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    if (id === 'mgr-maint') document.getElementById('tab-maint').classList.add('active');
-    else document.getElementById('tab-reports').classList.add('active');
+    document.getElementById(id === 'mgr-maint' ? 'tab-maint' : 'tab-reports').classList.add('active');
+}
+
+// FIXED: Local Search functionality
+function performLocalSearch() {
+    const q = document.getElementById('m-search-input').value.toLowerCase();
+    const results = stops.filter(s => s.company.toLowerCase().includes(q) || s.address.toLowerCase().includes(q));
+    const container = document.getElementById('search-results');
+    container.innerHTML = results.map((r, idx) => `
+        <div style="background:#333; padding:10px; border-radius:4px; margin-bottom:5px;">
+            <b>${r.company}</b><br><small>${r.address}</small>
+        </div>
+    `).join('') || "No matching stops in current route.";
+}
+
+// FIXED: Reports logic
+function generateDailyReport() {
+    const done = stops.filter(s => s.status === 'completed');
+    const total18 = done.reduce((a, b) => a + b.data.del18, 0);
+    const totalSm = done.reduce((a, b) => a + b.data.sm, 0);
+    document.getElementById('report-output').innerHTML = `
+        <p><b>Stops Completed:</b> ${done.length} / ${stops.length}</p>
+        <p><b>Total 18L Delivered:</b> ${total18}</p>
+        <p><b>Total Small Bottles:</b> ${totalSm}</p>
+    `;
 }
 
 function openAddCustomerModal() {
@@ -354,11 +366,6 @@ function openAddCustomerModal() {
 function closeGlobalModal() {
     document.getElementById('global-modal-overlay').style.display = 'none';
     document.getElementById('global-modal').style.display = 'none';
-}
-
-function generateDailyReport() {
-    const done = stops.filter(s => s.status === 'completed').length;
-    document.getElementById('report-output').innerHTML = `<b>Stops:</b> ${done} / ${stops.length} Finished.`;
 }
 </script>
 </body>
