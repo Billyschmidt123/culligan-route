@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v9.0</title>
+    <title>Culligan Route - Professional v10.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -16,19 +16,22 @@
         #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
         .profile-group { margin-bottom:12px; }
         .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
-        .profile-group input, .profile-group textarea, .profile-group select { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
+        .profile-group input, .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
         
         #sig-canvas { background:white; border-radius:4px; width:100%; height:180px; touch-action: none; border: 2px solid #555; cursor: crosshair; display: block;}
         
         .btn-del { width:100%; background:#28a745; color:white; border:none; padding:15px; border-radius:4px; cursor:pointer; font-weight:bold; margin-top:10px;}
         .btn-not { width:100%; background:#dc3545; color:white; border:none; padding:15px; border-radius:4px; cursor:pointer; font-weight:bold; margin-top:5px;}
+        .btn-not:disabled { background: #555; cursor: not-allowed; opacity: 0.5; }
         
         #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
         #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
         #map { flex:1; }
-        .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
         .number-pin { color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
         
+        .animated-line { stroke-dasharray: 10, 10; animation: dash 3s linear infinite; }
+        @keyframes dash { to { stroke-dashoffset: -100; } }
+
         #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 95%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; overflow-y: auto;}
         #manager-panel.open { bottom: 0; }
         .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; position: sticky; top: 0; z-index: 10;}
@@ -36,12 +39,9 @@
         .mgr-tab-btn.active { color: #0078ff; border-bottom: 2px solid #0078ff; background: #2a2a2a; }
         .mgr-content { padding: 20px; display: none; }
         .mgr-content.active { display: block; }
-        
+
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; }
         .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:600px; border-radius:8px; max-height: 90vh; overflow-y: auto;}
-        
-        .trip-log-item { border-bottom: 1px solid #444; padding: 10px 0; font-size: 13px; }
-        .log-time { color: #0078ff; font-weight: bold; margin-right: 10px; }
     </style>
 </head>
 <body>
@@ -51,6 +51,7 @@
         <div id="sidebar-header">
             <h3 style="margin:0">Route Stops</h3>
             <p id="stop-count" style="font-size:12px; color:#aaa;">Ready</p>
+            <button id="start-route-btn" onclick="startDriverSession()" style="width:100%; padding:10px; background:#0078ff; color:white; border:none; margin-top:10px; display:none; cursor:pointer; font-weight:bold;">START ROUTE & LOG DRIVER</button>
         </div>
         <div id="stop-list"></div>
     </div>
@@ -62,8 +63,6 @@
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
             <div class="profile-group"><label>18L Delivered</label><input type="number" id="p-18l" value="0"></div>
-            <div class="profile-group"><label>18L Empties</label><input type="number" id="p-18l-emp" value="0"></div>
-            <div class="profile-group"><label>Sm Bottles</label><input type="number" id="p-sm-btl" value="0"></div>
             <div class="profile-group"><label>Cases</label><input type="number" id="p-cases" value="0"></div>
         </div>
 
@@ -75,9 +74,9 @@
 
         <button class="btn-del" onclick="handleSubmission('DELIVERED')">COMPLETE DELIVERY</button>
         <div style="border-top: 1px solid #444; margin-top:10px; padding-top:10px;">
-            <label style="font-size:10px; color:#aaa;">REASON FOR SKIP:</label>
-            <input type="text" id="p-fail-reason" style="width:100%; background:#333; color:white; padding:10px; border:1px solid #444; margin-bottom:5px;">
-            <button class="btn-not" onclick="handleSubmission('NOT DELIVERED')">MARK NOT DELIVERED</button>
+            <label style="font-size:10px; color:#aaa;">REASON FOR SKIP (MANDATORY):</label>
+            <input type="text" id="p-fail-reason" oninput="toggleNotDelBtn()" placeholder="Must enter reason to skip..." style="width:100%; background:#333; color:white; padding:10px; border:1px solid #444; margin-bottom:5px;">
+            <button class="btn-not" id="btn-not-del" disabled onclick="handleSubmission('NOT DELIVERED')">MARK NOT DELIVERED</button>
         </div>
     </div>
 </div>
@@ -88,78 +87,72 @@
             <optgroup label="Week 1">
                 <option value="917509026">WEEK 1 MONDAY</option>
                 <option value="405991289">WEEK 1 TUESDAY</option>
+                <option value="405991289">WEEK 1 WEDNESDAY</option>
+                <option value="850217841">WEEK 1 THURSDAY</option>
+                <option value="524003696">WEEK 1 FRIDAY</option>
             </optgroup>
             <optgroup label="Week 2">
                 <option value="1669161107">WEEK 2 MONDAY</option>
                 <option value="158782334">WEEK 2 TUESDAY</option>
+                <option value="534069449">WEEK 2 WEDNESDAY</option>
+                <option value="1664558192">WEEK 2 THURSDAY</option>
+                <option value="1943566050">WEEK 2 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 3">
+                <option value="922640253">WEEK 3 MONDAY</option>
+                <option value="1892780278">WEEK 3 TUESDAY</option>
+                <option value="1329388834">WEEK 3 WEDNESDAY</option>
+                <option value="692623993">WEEK 3 THURSDAY</option>
+                <option value="598312956">WEEK 3 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Week 4">
+                <option value="1528227290">WEEK 4 MONDAY</option>
+                <option value="774741269">WEEK 4 TUESDAY</option>
+                <option value="1776511227">WEEK 4 WEDNESDAY</option>
+                <option value="730189704">WEEK 4 THURSDAY</option>
+                <option value="1062369681">WEEK 4 FRIDAY</option>
             </optgroup>
             <optgroup label="Special">
                 <option value="458612538">VALLEYVIEW</option>
+                <option value="364553460">NORTH</option>
+                <option value="1909249906">DAWSON CREEK</option>
                 <option value="1773492755">SALT</option>
             </optgroup>
         </select>
-        <button onclick="loadRoute()" style="padding:8px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">Load Route</button>
-        <button class="btn-mgr" onclick="toggleManager()" style="margin-left: auto;">MANAGER PANEL</button>
+        <button onclick="loadRoute()" id="load-btn" style="padding:8px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">Load Route</button>
+        <div id="status-display" style="font-size:12px; color:#0078ff;">Ready</div>
+        <button onclick="toggleManager()" style="margin-left:auto; background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer;">MANAGER PANEL</button>
     </div>
     <div id="map"></div>
 
     <div id="manager-panel">
         <div class="mgr-tabs">
             <button class="mgr-tab-btn active" onclick="switchTab('mgr-maint', this)">MAINTENANCE</button>
-            <button class="mgr-tab-btn" onclick="switchTab('mgr-reports', this)">REPORTS & LOGS</button>
+            <button class="mgr-tab-btn" onclick="switchTab('mgr-reports', this)">TRIP REPORT & LOGS</button>
             <button onclick="toggleManager()" style="margin-left:auto; background:none; border:none; color:red; font-size:24px; cursor:pointer;">&times;</button>
         </div>
-        
         <div id="mgr-maint" class="mgr-content active">
-            <h4 style="color:#0078ff;">Search Results / Edit</h4>
-            <input type="text" id="m-search" placeholder="Search customer name..." style="width:100%; padding:12px; background:#222; color:white; border:1px solid #444; margin-bottom:10px;">
-            <div style="display:flex; gap:10px;">
-                <button onclick="runSearch()" style="flex:1; padding:12px; background:#0078ff; color:white; border:none; cursor:pointer;">SEARCH</button>
-                <button onclick="openModal(null, true)" style="flex:1; padding:12px; background:#a335ee; color:white; border:none; cursor:pointer;">START RUSH ORDER</button>
-            </div>
-            <div id="search-list" style="margin-top:20px;"></div>
+            <h4>Customer Maintenance</h4>
+            <input type="text" id="m-search" oninput="runSearch()" placeholder="Search customer..." style="width:100%; padding:10px; background:#222; color:white;">
+            <div id="search-list" style="margin-top:15px;"></div>
         </div>
-
         <div id="mgr-reports" class="mgr-content">
-            <h4 style="color:#0078ff;">Live Daily Summary</h4>
-            <div id="summary-report" style="background:#222; padding:15px; border:1px solid #444; margin-bottom:20px;"></div>
-            <h4 style="color:#a335ee;">Trip Log (Sequential)</h4>
-            <div id="trip-log" style="background:#222; padding:15px; border:1px solid #444;"></div>
+            <h4>Live Trip Log</h4>
+            <div id="trip-log" style="background:#222; padding:15px; border:1px solid #444; font-family:monospace;"></div>
         </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
-<div id="cust-modal" class="edit-modal">
-    <h3 id="modal-title" style="color:#0078ff;">Edit Customer</h3>
-    <div class="profile-group"><label>Company Name</label><input type="text" id="m-name"></div>
-    <div class="profile-group"><label>Address</label><input type="text" id="m-addr"></div>
-    <div class="profile-group"><label>Email</label><input type="email" id="m-email"></div>
-    <div class="profile-group"><label>Phone</label><input type="text" id="m-phone"></div>
-    <div class="profile-group"><label>Notes</label><textarea id="m-notes" rows="2"></textarea></div>
-    <div class="profile-group">
-        <label>Assign Route</label>
-        <select id="m-route">
-            <option value="917509026">Week 1 Mon</option>
-            <option value="458612538">Valleyview</option>
-        </select>
-    </div>
-    <label style="color:#a335ee; font-weight:bold;"><input type="checkbox" id="m-rush"> RUSH CODING</label>
-    <div style="display:flex; gap:10px; margin-top:20px;">
-        <button onclick="saveChanges()" style="flex:1; padding:12px; background:#28a745; border:none; color:white; cursor:pointer;">SAVE CUSTOMER</button>
-        <button onclick="closeModal()" style="flex:1; padding:12px; background:#444; border:none; color:white; cursor:pointer;">CANCEL</button>
     </div>
 </div>
 
 <script>
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-let map, markerLayer, stops = [], tripLog = [], currentIdx = null;
+let map, markerLayer, routeLine, stops = [], tripLog = [], currentIdx = null, driverStart = null;
 let canvas, ctx, drawing = false;
 
 window.onload = () => {
     map = L.map("map").setView([55.1707, -118.7947], 11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
+    routeLine = L.polyline([], {color: '#0078ff', weight: 4, className: 'animated-line'}).addTo(map);
     initSig();
 };
 
@@ -184,30 +177,45 @@ function clearSig() { ctx.clearRect(0,0,canvas.width,canvas.height); }
 
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
+    const status = document.getElementById('status-display');
+    status.innerText = "PROCESSING FILE...";
     stops = []; markerLayer.clearLayers();
+    
     const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
-    const csv = await res.text();
-    const rows = csv.split('\n').slice(1);
+    const rows = (await res.text()).split('\n').slice(1);
+    
     for(let r of rows) {
         const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         if(c[3]) {
             const addr = c[3].replace(/"/g,'');
+            status.innerText = `GEOCODING: ${c[2].substring(0,10)}...`;
             const g = await (await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`)).json();
             if(g.candidates.length) {
                 stops.push({
-                    name: c[2].replace(/"/g,''), addr: addr, email: c[4]||'', phone: c[5]||'', notes: c[6]||'',
+                    name: c[2].replace(/"/g,''), addr: addr, notes: c[6]||'',
                     lat: g.candidates[0].location.y, lng: g.candidates[0].location.x,
                     rush: c[0]?.toLowerCase().includes('rush'), status: 'pending', logs: {d18:0, cs:0}
                 });
             }
         }
     }
+    status.innerText = `${stops.length} STOPS LOADED`;
+    document.getElementById('start-route-btn').style.display = 'block';
     renderAll();
+}
+
+function startDriverSession() {
+    driverStart = new Date().toLocaleString();
+    tripLog.push(`--- ROUTE START: ${driverStart} ---`);
+    document.getElementById('start-route-btn').style.display = 'none';
+    document.getElementById('status-display').innerText = "ROUTE ACTIVE";
+    updateReports();
 }
 
 function renderAll() {
     const list = document.getElementById('stop-list'); list.innerHTML = "";
     markerLayer.clearLayers();
+    const activeCoords = [];
     stops.forEach((s, i) => {
         const color = s.status === 'completed' ? '#28a745' : (s.rush ? '#a335ee' : '#0078ff');
         const d = document.createElement('div');
@@ -216,8 +224,16 @@ function renderAll() {
         d.innerHTML = `<b>${i+1}. ${s.name}</b><br><small>${s.addr}</small>`;
         d.onclick = () => openProfile(i);
         list.appendChild(d);
-        L.marker([s.lat, s.lng], {icon: L.divIcon({html:`<div class="number-pin" style="background:${color}">${i+1}</div>`, className:''})}).addTo(markerLayer).on('click', ()=>openProfile(i));
+        
+        const m = L.marker([s.lat, s.lng], {
+            icon: L.divIcon({html:`<div class="number-pin" style="background:${color}">${i+1}</div>`, className:''})
+        }).addTo(markerLayer);
+        m.bindTooltip(`<b>${s.name}</b><br>${s.addr}`);
+        m.on('click', ()=>openProfile(i));
+        
+        if(s.status === 'pending') activeCoords.push([s.lat, s.lng]);
     });
+    routeLine.setLatLngs(activeCoords);
 }
 
 function openProfile(i) {
@@ -227,17 +243,34 @@ function openProfile(i) {
     document.getElementById('prof-name').innerText = s.name;
     document.getElementById('prof-addr').innerText = s.addr;
     document.getElementById('p-notes-display').value = s.notes;
+    document.getElementById('p-fail-reason').value = "";
+    toggleNotDelBtn();
     clearSig(); map.setView([s.lat, s.lng], 16);
 }
 
 function closeProfile() { document.getElementById('list-view').style.display='block'; document.getElementById('customer-profile').style.display='none'; }
 
+function toggleNotDelBtn() {
+    const reason = document.getElementById('p-fail-reason').value.trim();
+    document.getElementById('btn-not-del').disabled = (reason.length < 3);
+}
+
 function handleSubmission(type) {
     const s = stops[currentIdx];
+    const timestamp = new Date().toLocaleString();
+    const reason = document.getElementById('p-fail-reason').value;
+    
     s.status = 'completed';
-    s.logs = { d18: parseInt(document.getElementById('p-18l').value)||0, cs: parseInt(document.getElementById('p-cases').value)||0 };
-    tripLog.push({ time: new Date().toLocaleTimeString(), name: s.name, type: type });
+    s.logs = { d18: document.getElementById('p-18l').value, cs: document.getElementById('p-cases').value };
+    
+    const logEntry = `[${timestamp}] ${s.name} | STATUS: ${type} | ${type==='NOT DELIVERED' ? 'REASON: '+reason : '18L:'+s.logs.d18+' CS:'+s.logs.cs}`;
+    tripLog.push(logEntry);
+    
     renderAll(); closeProfile(); updateReports();
+}
+
+function updateReports() {
+    document.getElementById('trip-log').innerHTML = tripLog.map(l => `<div>${l}</div>`).join('');
 }
 
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
@@ -249,51 +282,11 @@ function switchTab(id, btn) {
 
 function runSearch() {
     const q = document.getElementById('m-search').value.toLowerCase();
-    const results = stops.filter(s => s.name.toLowerCase().includes(q));
-    document.getElementById('search-list').innerHTML = results.map(r => `
-        <div style="background:#333; padding:10px; margin-bottom:5px; border-left:4px solid #0078ff; cursor:pointer;" onclick="openModal(${stops.indexOf(r)})">
+    const res = stops.filter(s => s.name.toLowerCase().includes(q));
+    document.getElementById('search-list').innerHTML = res.map(r => `
+        <div style="padding:10px; background:#333; margin-bottom:5px; border-left:4px solid #0078ff;">
             ${r.name} - ${r.addr}
         </div>
-    `).join('') || "No local results.";
-}
-
-function openModal(idx, isRushNew = false) {
-    currentIdx = idx;
-    const s = idx !== null ? stops[idx] : { name:'', addr:'', email:'', phone:'', notes:'', rush: isRushNew };
-    document.getElementById('modal-title').innerText = isRushNew ? "Create New Rush Order" : "Edit Customer Info";
-    document.getElementById('m-name').value = s.name;
-    document.getElementById('m-addr').value = s.addr;
-    document.getElementById('m-email').value = s.email;
-    document.getElementById('m-phone').value = s.phone;
-    document.getElementById('m-notes').value = s.notes;
-    document.getElementById('m-rush').checked = s.rush;
-    document.getElementById('overlay').style.display = 'block';
-    document.getElementById('cust-modal').style.display = 'block';
-}
-
-function closeModal() { document.getElementById('overlay').style.display='none'; document.getElementById('cust-modal').style.display='none'; }
-
-function saveChanges() {
-    if(currentIdx === null) {
-        stops.unshift({
-            name: document.getElementById('m-name').value, addr: document.getElementById('m-addr').value,
-            rush: document.getElementById('m-rush').checked, status: 'pending', lat: 55.17, lng: -118.79, logs: {d18:0, cs:0}
-        });
-    } else {
-        stops[currentIdx].rush = document.getElementById('m-rush').checked;
-    }
-    renderAll(); closeModal();
-}
-
-function updateReports() {
-    const done = stops.filter(s => s.status === 'completed');
-    document.getElementById('summary-report').innerHTML = `
-        Stops: ${done.length} / ${stops.length}<br>
-        Total 18L: ${done.reduce((a,b)=>a+b.logs.d18, 0)}<br>
-        Total Cases: ${done.reduce((a,b)=>a+b.logs.cs, 0)}
-    `;
-    document.getElementById('trip-log').innerHTML = tripLog.map(l => `
-        <div class="trip-log-item"><span class="log-time">${l.time}</span> <b>${l.name}</b> - ${l.type}</div>
     `).join('');
 }
 </script>
