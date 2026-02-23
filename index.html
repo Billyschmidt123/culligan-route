@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v10.0</title>
+    <title>Culligan Route - Professional v11.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -22,7 +22,6 @@
         
         .btn-del { width:100%; background:#28a745; color:white; border:none; padding:15px; border-radius:4px; cursor:pointer; font-weight:bold; margin-top:10px;}
         .btn-not { width:100%; background:#dc3545; color:white; border:none; padding:15px; border-radius:4px; cursor:pointer; font-weight:bold; margin-top:5px;}
-        .btn-not:disabled { background: #555; cursor: not-allowed; opacity: 0.5; }
         
         #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
         #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
@@ -39,9 +38,6 @@
         .mgr-tab-btn.active { color: #0078ff; border-bottom: 2px solid #0078ff; background: #2a2a2a; }
         .mgr-content { padding: 20px; display: none; }
         .mgr-content.active { display: block; }
-
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; }
-        .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:600px; border-radius:8px; max-height: 90vh; overflow-y: auto;}
     </style>
 </head>
 <body>
@@ -75,8 +71,8 @@
         <button class="btn-del" onclick="handleSubmission('DELIVERED')">COMPLETE DELIVERY</button>
         <div style="border-top: 1px solid #444; margin-top:10px; padding-top:10px;">
             <label style="font-size:10px; color:#aaa;">REASON FOR SKIP (MANDATORY):</label>
-            <input type="text" id="p-fail-reason" oninput="toggleNotDelBtn()" placeholder="Must enter reason to skip..." style="width:100%; background:#333; color:white; padding:10px; border:1px solid #444; margin-bottom:5px;">
-            <button class="btn-not" id="btn-not-del" disabled onclick="handleSubmission('NOT DELIVERED')">MARK NOT DELIVERED</button>
+            <input type="text" id="p-fail-reason" placeholder="Must enter reason to skip..." style="width:100%; background:#333; color:white; padding:10px; border:1px solid #444; margin-bottom:5px;">
+            <button class="btn-not" onclick="handleSubmission('NOT DELIVERED')">MARK NOT DELIVERED</button>
         </div>
     </div>
 </div>
@@ -144,7 +140,10 @@
 </div>
 
 <script>
+// --- DATABASE & DEPLOYMENT CONFIG ---
 const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyci_tFKmEpEKTk1GvVrL9q6_khMU2pXOoOchXoOqKCCH4AJke3eQnhSsxezi-YZJ29/exec"; 
+
 let map, markerLayer, routeLine, stops = [], tripLog = [], currentIdx = null, driverStart = null;
 let canvas, ctx, drawing = false;
 
@@ -181,35 +180,29 @@ async function loadRoute() {
     status.innerText = "PROCESSING FILE...";
     stops = []; markerLayer.clearLayers();
     
-    const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
-    const rows = (await res.text()).split('\n').slice(1);
-    
-    for(let r of rows) {
-        const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-        if(c[3]) {
-            const addr = c[3].replace(/"/g,'');
-            status.innerText = `GEOCODING: ${c[2].substring(0,10)}...`;
-            const g = await (await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`)).json();
-            if(g.candidates.length) {
-                stops.push({
-                    name: c[2].replace(/"/g,''), addr: addr, notes: c[6]||'',
-                    lat: g.candidates[0].location.y, lng: g.candidates[0].location.x,
-                    rush: c[0]?.toLowerCase().includes('rush'), status: 'pending', logs: {d18:0, cs:0}
-                });
+    try {
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
+        const rows = (await res.text()).split('\n').slice(1);
+        
+        for(let r of rows) {
+            const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            if(c[3]) {
+                const addr = c[3].replace(/"/g,'');
+                status.innerText = `GEOCODING: ${c[2].substring(0,10)}...`;
+                const g = await (await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`)).json();
+                if(g.candidates.length) {
+                    stops.push({
+                        name: c[2].replace(/"/g,''), addr: addr, notes: c[6]||'',
+                        lat: g.candidates[0].location.y, lng: g.candidates[0].location.x,
+                        rush: c[0]?.toLowerCase().includes('rush'), status: 'pending', logs: {d18:0, cs:0}
+                    });
+                }
             }
         }
-    }
-    status.innerText = `${stops.length} STOPS LOADED`;
-    document.getElementById('start-route-btn').style.display = 'block';
-    renderAll();
-}
-
-function startDriverSession() {
-    driverStart = new Date().toLocaleString();
-    tripLog.push(`--- ROUTE START: ${driverStart} ---`);
-    document.getElementById('start-route-btn').style.display = 'none';
-    document.getElementById('status-display').innerText = "ROUTE ACTIVE";
-    updateReports();
+        status.innerText = `${stops.length} STOPS LOADED`;
+        document.getElementById('start-route-btn').style.display = 'block';
+        renderAll();
+    } catch(e) { status.innerText = "ERROR LOADING FILE"; }
 }
 
 function renderAll() {
@@ -236,6 +229,73 @@ function renderAll() {
     routeLine.setLatLngs(activeCoords);
 }
 
+function startDriverSession() {
+    driverStart = new Date().toLocaleString();
+    const routeName = document.getElementById('route-select').options[document.getElementById('route-select').selectedIndex].text;
+    tripLog.push(`--- ROUTE START: ${driverStart} ---`);
+    
+    fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify({
+            routeName: routeName,
+            timestamp: driverStart,
+            customer: "SYSTEM",
+            status: "DRIVER_START",
+            notes: "Driver started route session."
+        })
+    });
+
+    document.getElementById('start-route-btn').style.display = 'none';
+    document.getElementById('status-display').innerText = "ROUTE ACTIVE";
+    updateReports();
+}
+
+function handleSubmission(type) {
+    const s = stops[currentIdx];
+    const timestamp = new Date().toLocaleString();
+    const reasonField = document.getElementById('p-fail-reason');
+    const reason = reasonField.value.trim();
+    
+    if (type === 'NOT DELIVERED' && reason.length < 3) {
+        alert("MANDATORY: You must enter a reason for skipping this stop.");
+        reasonField.style.border = "2px solid red";
+        return;
+    }
+
+    const routeSelect = document.getElementById('route-select');
+    const routeName = routeSelect.options[routeSelect.selectedIndex].text;
+    
+    s.status = 'completed';
+    s.logs = { 
+        d18: document.getElementById('p-18l').value || 0, 
+        cs: document.getElementById('p-cases').value || 0 
+    };
+    
+    const payload = {
+        routeName: routeName,
+        timestamp: timestamp,
+        customer: s.name,
+        status: type,
+        d18: s.logs.d18,
+        cs: s.logs.cs,
+        notes: type === 'NOT DELIVERED' ? reason : s.notes
+    };
+
+    fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors", 
+        body: JSON.stringify(payload)
+    }).catch(err => console.log("Logging error: ", err));
+
+    const logEntry = `[${timestamp}] ${s.name} | ${type} | 18L:${s.logs.d18} CS:${s.logs.cs}`;
+    tripLog.push(logEntry);
+    
+    renderAll();
+    closeProfile(); 
+    updateReports();
+}
+
 function openProfile(i) {
     currentIdx = i; const s = stops[i];
     document.getElementById('list-view').style.display = 'none';
@@ -244,50 +304,22 @@ function openProfile(i) {
     document.getElementById('prof-addr').innerText = s.addr;
     document.getElementById('p-notes-display').value = s.notes;
     document.getElementById('p-fail-reason').value = "";
-    toggleNotDelBtn();
+    document.getElementById('p-fail-reason').style.border = "1px solid #444";
     clearSig(); map.setView([s.lat, s.lng], 16);
 }
 
 function closeProfile() { document.getElementById('list-view').style.display='block'; document.getElementById('customer-profile').style.display='none'; }
-
-function toggleNotDelBtn() {
-    const reason = document.getElementById('p-fail-reason').value.trim();
-    document.getElementById('btn-not-del').disabled = (reason.length < 3);
-}
-
-function handleSubmission(type) {
-    const s = stops[currentIdx];
-    const timestamp = new Date().toLocaleString();
-    const reason = document.getElementById('p-fail-reason').value;
-    
-    s.status = 'completed';
-    s.logs = { d18: document.getElementById('p-18l').value, cs: document.getElementById('p-cases').value };
-    
-    const logEntry = `[${timestamp}] ${s.name} | STATUS: ${type} | ${type==='NOT DELIVERED' ? 'REASON: '+reason : '18L:'+s.logs.d18+' CS:'+s.logs.cs}`;
-    tripLog.push(logEntry);
-    
-    renderAll(); closeProfile(); updateReports();
-}
-
-function updateReports() {
-    document.getElementById('trip-log').innerHTML = tripLog.map(l => `<div>${l}</div>`).join('');
-}
-
+function updateReports() { document.getElementById('trip-log').innerHTML = tripLog.map(l => `<div>${l}</div>`).join(''); }
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
 function switchTab(id, btn) {
     document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(id).classList.add('active'); btn.classList.add('active');
 }
-
 function runSearch() {
     const q = document.getElementById('m-search').value.toLowerCase();
     const res = stops.filter(s => s.name.toLowerCase().includes(q));
-    document.getElementById('search-list').innerHTML = res.map(r => `
-        <div style="padding:10px; background:#333; margin-bottom:5px; border-left:4px solid #0078ff;">
-            ${r.name} - ${r.addr}
-        </div>
-    `).join('');
+    document.getElementById('search-list').innerHTML = res.map(r => `<div style="padding:10px; background:#333; margin-bottom:5px; border-left:4px solid #0078ff;">${r.name} - ${r.addr}</div>`).join('');
 }
 </script>
 </body>
