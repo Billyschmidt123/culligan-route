@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v13.0</title>
+    <title>Culligan Route - Professional v14.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -81,10 +81,16 @@
 <div id="main-view">
     <div id="controls">
         <select id="route-select" style="padding:8px; background:#333; color:white;">
-            <optgroup label="Routes">
+            <optgroup label="Week 1">
                 <option value="917509026">WEEK 1 MONDAY</option>
-                <option value="1773492755">SALT</option>
+                <option value="405991289">WEEK 1 TUESDAY</option>
+                <option value="405991289">WEEK 1 WEDNESDAY</option>
+                <option value="850217841">WEEK 1 THURSDAY</option>
+                <option value="524003696">WEEK 1 FRIDAY</option>
+            </optgroup>
+            <optgroup label="Special">
                 <option value="458612538">VALLEYVIEW</option>
+                <option value="1773492755">SALT</option>
             </optgroup>
         </select>
         <button onclick="loadRoute()" id="load-btn" style="padding:8px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">Load Route</button>
@@ -157,7 +163,7 @@ async function loadRoute() {
                 stops.push({ 
                     name: c[2].replace(/"/g,''), 
                     addr: addr, 
-                    email: c[4] ? c[4].replace(/"/g,'') : "",
+                    email: c[7] ? c[7].replace(/"/g,'') : "", // c[7] is Column H (A=0, B=1, ... H=7)
                     lat: g.candidates[0].location.y, 
                     lng: g.candidates[0].location.x, 
                     status: 'pending' 
