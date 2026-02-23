@@ -2,73 +2,66 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Culligan Route - Professional</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Culligan Route - Professional v27.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;}
-        #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;}
-        #sidebar-header { padding:15px; border-bottom:1px solid #444;}
-        #stop-list { flex:1; overflow-y:auto; padding:10px;}
-        .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer; position: relative;}
-        .stop-card.flagged { border-left-color: #ffc107; background: #443c20; }
-        .stop-card.rush-order { border-left-color: #a335ee; background: #331d44; border-left-width: 8px;}
-        #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
-        .profile-group { margin-bottom:12px; }
-        .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
-        .profile-group input, .profile-group textarea, .profile-group select { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
-        #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555;}
-        .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;}
-        .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-        .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;}
-        #main-view { flex:1; display:flex; flex-direction:column; position: relative;}
-        #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;}
-        #map { flex:1; }
-        .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
-        .btn-rush { background:#a335ee; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold; width:100%; margin-top:10px;}
-        .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
-        #status { font-size:13px; color:#0078ff; font-weight: bold;}
-        .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
-        .rush-pin { background:#a335ee !important; }
-        #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; }
-        #manager-panel.open { bottom: 0; }
-        .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; }
-        .mgr-tab-btn { padding: 15px 25px; border: none; background: none; color: #aaa; cursor: pointer; font-weight: bold; }
-        .mgr-tab-btn.active { color: #0078ff; border-bottom: 2px solid #0078ff; background: #2a2a2a; }
-        .mgr-content { padding: 20px; display: none; overflow-y: auto; height: calc(100% - 150px); color: white;}
-        .mgr-content.active { display: block; }
-        .close-mgr { position: absolute; top: 10px; right: 20px; background: none; border: none; color: #dc3545; font-size: 24px; cursor: pointer; }
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; }
-        .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; max-height: 90vh; overflow-y: auto;}
+        body { margin:0; height:100vh; display:flex; font-family:'Segoe UI',sans-serif; background:#111; color:white; overflow:hidden;} [cite: 2]
+        #sidebar { width:350px; background:#222; border-right:2px solid #0078ff; display:flex; flex-direction:column;} [cite: 3]
+        #sidebar-header { padding:15px; border-bottom:1px solid #444;} [cite: 4]
+        #stop-list { flex:1; overflow-y:auto; padding:10px;} [cite: 5]
+        .stop-card { background:#333; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #0078ff; cursor:pointer; position: relative;} [cite: 5, 6]
+        #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; } [cite: 8]
+        .profile-group { margin-bottom:12px; } [cite: 9]
+        .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;} [cite: 10, 11]
+        .profile-group input, .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; } [cite: 12]
+        #sig-canvas { background:white; border-radius:4px; width:100%; height:150px; touch-action: none; border: 2px solid #555; display: block;} [cite: 12, 13]
+        .form-btns { display:flex; gap:10px; margin-top:20px; padding-bottom: 40px;} [cite: 13, 14]
+        .btn-del { flex:1; background:#28a745; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;} [cite: 14, 15]
+        .btn-not { flex:1; background:#dc3545; color:white; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:bold;} [cite: 15, 16]
+        #main-view { flex:1; display:flex; flex-direction:column; position: relative;} [cite: 16, 17]
+        #controls { background:#222; padding:15px; border-bottom:2px solid #0078ff; display: flex; align-items: center; gap: 10px;} [cite: 17, 18]
+        #map { flex:1; } [cite: 18, 19]
+        .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;} [cite: 19, 20]
+        #status { font-size:13px; color:#0078ff; font-weight: bold;} [cite: 22, 23]
+        .number-pin { background:#0078ff; color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;} [cite: 23, 24]
     </style>
 </head>
 <body>
+
 <div id="sidebar">
     <div id="list-view">
         <div id="sidebar-header">
             <h3 style="margin:0">Route Stops</h3>
-            <p id="stop-count" style="font-size:12px; color:#aaa;">No route loaded</p>
+            <p id="stop-count" style="font-size:12px; color:#aaa;">No route loaded</p> [cite: 38]
         </div>
         <div id="stop-list"></div>
     </div>
+
     <div id="customer-profile">
-        <button class="back-btn" onclick="closeProfile()">← BACK TO LIST</button>
-        <h3 id="prof-name">Customer Name</h3>
-        <p id="prof-addr" style="font-size:12px; color:#aaa;"></p>
-        <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l" value="0"></div>
-        <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div>
-        <div class="profile-group"><label>18L RETURNS</label><input type="number" id="p-18l-ret" value="0"></div>
-        <div class="profile-group"><label>CASES</label><input type="number" id="p-cases" value="0"></div>
-        <div class="profile-group"><label>SMALL BOTTLES RETURNED</label><input type="number" id="p-small-ret" value="0"></div>
-        <div class="profile-group"><label>RECEIVED BY</label><input type="text" id="p-rec-by" placeholder="Name"></div>
-        <div class="profile-group"><label>NOTES / INSTRUCTIONS</label><textarea id="p-notes" rows="3"></textarea></div>
-        <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
+        <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:10px; width:100%; margin-bottom:15px; cursor:pointer;">← BACK TO LIST</button>
+        <h3 id="prof-name" style="margin:0;">Customer Name</h3> [cite: 38]
+        <p id="prof-addr" style="font-size:12px; color:#aaa; margin-bottom:15px;"></p> [cite: 38]
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div class="profile-group"><label>18L BOTTLES</label><input type="number" id="p-18l" value="0"></div> [cite: 38]
+            <div class="profile-group"><label>18L RETURNS</label><input type="number" id="p-18l-ret" value="0"></div> [cite: 38]
+            <div class="profile-group"><label>SMALL BOTTLES</label><input type="number" id="p-small" value="0"></div> [cite: 38]
+            <div class="profile-group"><label>SMALL RETURNS</label><input type="number" id="p-small-ret" value="0"></div> [cite: 38]
+            <div class="profile-group" style="grid-column: span 2;"><label>CASES</label><input type="number" id="p-cases" value="0"></div> [cite: 38]
+        </div>
+
+        <div class="profile-group"><label>RECEIVED BY</label><input type="text" id="p-rec-by" placeholder="Name"></div> [cite: 39]
+        <div class="profile-group"><label>NOTES / INSTRUCTIONS</label><textarea id="p-notes" rows="2"></textarea></div> [cite: 39]
+        
+        <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label> [cite: 40]
         <canvas id="sig-canvas"></canvas>
+        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:5px; cursor:pointer;">CLEAR SIGNATURE</button>
+
         <div class="form-btns">
-            <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button>
-            <button class="btn-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button>
+            <button class="btn-del" onclick="submitLog('DELIVERED')">DELIVERED</button> [cite: 14, 15]
+            <button class="btn-not" onclick="submitLog('NOT DELIVERED')">NOT DELIVERED</button> [cite: 15, 16]
         </div>
     </div>
 </div>
@@ -77,222 +70,183 @@
     <div id="controls">
         <select id="route-select">
             <optgroup label="Week 1">
-                <option value="917509026">WEEK 1 MONDAY</option>
-                <option value="405991289">WEEK 1 TUESDAY</option>
-                <option value="405991289">WEEK 1 WEDNESDAY</option>
-                <option value="850217841">WEEK 1 THURSDAY</option>
-                <option value="524003696">WEEK 1 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 2">
-                <option value="1669161107">WEEK 2 MONDAY</option>
-                <option value="158782334">WEEK 2 TUESDAY</option>
-                <option value="534069449">WEEK 2 WEDNESDAY</option>
-                <option value="1664558192">WEEK 2 THURSDAY</option>
-                <option value="1943566050">WEEK 2 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 3">
-                <option value="922640253">WEEK 3 MONDAY</option>
-                <option value="1892780278">WEEK 3 TUESDAY</option>
-                <option value="1329388834">WEEK 3 WEDNESDAY</option>
-                <option value="692623993">WEEK 3 THURSDAY</option>
-                <option value="598312956">WEEK 3 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 4">
-                <option value="1528227290">WEEK 4 MONDAY</option>
-                <option value="774741269">WEEK 4 TUESDAY</option>
-                <option value="1776511227">WEEK 4 WEDNESDAY</option>
-                <option value="730189704">WEEK 4 THURSDAY</option>
-                <option value="1062369681">WEEK 4 FRIDAY</option>
+                <option value="917509026">WEEK 1 MONDAY</option> 
+                <option value="405991289">WEEK 1 TUESDAY</option> 
+                <option value="405991289">WEEK 1 WEDNESDAY</option> 
+                <option value="850217841">WEEK 1 THURSDAY</option> 
+                <option value="524003696">WEEK 1 FRIDAY</option> 
             </optgroup>
             <optgroup label="Special Routes">
-                <option value="458612538">VALLEYVIEW</option>
-                <option value="364553460">NORTH</option>
-                <option value="1909249906">DAWSON CREEK</option>
-                <option value="1773492755">SALT</option>
+                <option value="458612538">VALLEYVIEW</option> [cite: 45]
+                <option value="1773492755">SALT</option> [cite: 46]
             </optgroup>
         </select>
-        <button class="btn" onclick="loadRoute()">Load Route</button>
-        <div id="status">Status: Ready</div>
-        <button class="btn-mgr" onclick="toggleManager()" style="margin-left: auto;">Manager Panel</button>
+        <button class="btn" onclick="loadRoute()">Load Route</button> [cite: 46]
+        <div id="status">Status: Ready</div> [cite: 46]
     </div>
     <div id="map"></div>
-
-    <div id="manager-panel">
-        <button class="close-mgr" onclick="toggleManager()">&times;</button>
-        <div class="mgr-tabs">
-            <button class="mgr-tab-btn active" onclick="switchTab('customer-area')">CUSTOMER MAINTENANCE</button>
-            <button class="mgr-tab-btn" onclick="switchTab('reports')">DAILY SUMMARY</button>
-        </div>
-        <div id="customer-area" class="mgr-content active">
-            <h3 style="color:#0078ff;">Customer Database Maintenance</h3>
-            <div style="background:#222; padding:15px; border:1px solid #444; border-radius:4px;">
-                <label style="display:block; margin-bottom:10px; font-weight:bold; color:#0078ff;">CUSTOMER SEARCH</label>
-                <input type="text" id="global-search-input" placeholder="Search by name or address..." style="width:100%; padding:10px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing: border-box;">
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <button class="btn" style="flex: 1;" onclick="performGlobalSearch()">SEARCH DATABASE</button>
-                    <button class="btn" style="flex: 1; background: #6c757d;" onclick="openAddCustomerModal()">ADD NEW CUSTOMER</button>
-                </div>
-                <button class="btn-rush" onclick="triggerRushWorkflow()">BUILD A RUSH ORDER</button>
-            </div>
-            <div id="search-results-area" style="margin-top:15px;">
-                <div style="text-align:center; color:#777; padding:20px;">Results will appear here</div>
-            </div>
-        </div>
-        <div id="reports" class="mgr-content">
-             <div id="summary-data"></div>
-        </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="global-modal-overlay" onclick="closeGlobalModal()"></div>
-<div id="global-modal" class="edit-modal">
-    <h3 id="modal-title" style="color:#0078ff; margin-top:0;">Customer Details</h3>
-    <div class="profile-group">
-        <label>NAME</label><input type="text" id="m-cust-name">
-    </div>
-    <div class="profile-group">
-        <label>ADDRESS</label><input type="text" id="m-cust-addr"><small style="color:#ffc107; font-size:10px; margin-top:4px; display:block;">* MUST include City and Postal Code</small>
-    </div>
-    <div style="display:flex; gap:10px; margin-top:20px;">
-        <button id="modal-primary-btn" class="btn" style="flex:1;" onclick="handleModalSubmit()">SAVE</button>
-        <button class="btn-not" style="flex:1;" onclick="closeGlobalModal()">CANCEL</button>
-    </div>
 </div>
 
 <script>
-const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
-let map, markerLayer, stops = [], currentStopIndex = null;
+// --- CORE CONNECTION ---
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwarIJVpFBV2mbD0z3A5OHTQ2GT0xdt7dRuTqO-7gb6kRE-7Odch7FehiyP7HnZeLc3/exec"; 
+const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio"; [cite: 57]
+
+let map, markerLayer, stops = [], currentStopIndex = null, drawing = false;
+let canvas, ctx;
 
 window.onload = () => {
-    map = L.map("map").setView([55.1707, -118.7947], 11);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-    markerLayer = L.layerGroup().addTo(map);
+    map = L.map("map").setView([55.1707, -118.7947], 11); [cite: 57]
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map); [cite: 57]
+    markerLayer = L.layerGroup().addTo(map); [cite: 57]
+    initSig();
 };
 
+function initSig() {
+    canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
+    const getPos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - r.left, y: clientY - r.top };
+    };
+    const start = (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); };
+    const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.lineWidth = 2; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
+    canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', () => drawing = false);
+    canvas.addEventListener('touchstart', start, {passive: false}); canvas.addEventListener('touchmove', move, {passive: false});
+    window.addEventListener('touchend', () => drawing = false);
+}
+
+function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
 async function loadRoute() {
-    const gid = document.getElementById('route-select').value;
+    const gid = document.getElementById('route-select').value; [cite: 58]
     const statusDiv = document.getElementById('status');
-    statusDiv.innerText = "Status: Connecting...";
+    statusDiv.innerText = "Status: Connecting..."; [cite: 58]
     
     stops = [];
-    markerLayer.clearLayers();
-    document.getElementById('stop-list').innerHTML = "";
+    markerLayer.clearLayers(); [cite: 58]
+    document.getElementById('stop-list').innerHTML = ""; [cite: 58]
 
     try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}&t=${Date.now()}`;
-        const res = await fetch(url);
-        const data = await res.text();
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}&t=${Date.now()}`; [cite: 58]
+        const res = await fetch(url); [cite: 59]
+        const data = await res.text(); [cite: 59]
         
-        const lines = data.split('\n');
-        statusDiv.innerText = "Status: Geocoding...";
+        const lines = data.split('\n'); [cite: 59]
+        statusDiv.innerText = "Status: Geocoding..."; [cite: 59]
 
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        for (let i = 1; i < lines.length; i++) { [cite: 60]
+            const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); [cite: 60]
             if (cols.length > 3) {
-                const company = cols[2]?.replace(/"/g, '').trim();
-                const address = cols[3]?.replace(/"/g, '').trim();
+                const company = cols[2]?.replace(/"/g, '').trim(); [cite: 60]
+                const address = cols[3]?.replace(/"/g, '').trim(); [cite: 61]
+                const email = cols[7]?.replace(/"/g, '').trim(); 
                 
-                if (address && address.length > 5) {
-                    const geo = await geocodeArcGIS(address);
-                    stops.push({
-                        company: company || "Customer",
-                        address: address,
-                        lat: geo ? geo.lat : 55.1707,
-                        lng: geo ? geo.lng : -118.7947,
-                        isRush: false
-                    });
+                if (address && address.length > 5) { [cite: 61]
+                    const resGeo = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(address)}&maxLocations=1`); [cite: 66]
+                    const gData = await resGeo.json(); [cite: 67]
+                    
+                    if (gData.candidates && gData.candidates.length) { [cite: 67]
+                        stops.push({
+                            company: company || "Customer", [cite: 62]
+                            address: address, [cite: 62]
+                            email: email || "",
+                            lat: gData.candidates[0].location.y, [cite: 67]
+                            lng: gData.candidates[0].location.x, [cite: 67]
+                            status: 'pending'
+                        });
+                    }
                 }
             }
         }
 
-        renderSidebar();
-        renderRoute();
-        
-        if (stops.length > 0) {
-            const group = new L.featureGroup(markerLayer.getLayers());
-            map.fitBounds(group.getBounds().pad(0.1));
-            statusDiv.innerText = `Status: Success (${stops.length})`;
-            document.getElementById('stop-count').innerText = `${stops.length} Stops Found`;
+        renderSidebar(); [cite: 63]
+        renderMapMarkers(); [cite: 63]
+       
+        if (stops.length > 0) { [cite: 64]
+            statusDiv.innerText = `Status: Loaded (${stops.length})`; [cite: 64]
+            document.getElementById('stop-count').innerText = `${stops.length} Stops Found`; [cite: 64]
         } else {
-            statusDiv.innerText = "Status: Empty Sheet";
+            statusDiv.innerText = "Status: No Data"; [cite: 64]
         }
     } catch (e) {
-        statusDiv.innerText = "Status: Load Failed";
+        statusDiv.innerText = "Status: Load Failed"; [cite: 65]
     }
 }
 
-async function geocodeArcGIS(addr) {
-    try {
-        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`);
-        const data = await res.json();
-        return data.candidates.length ? { lat: data.candidates[0].location.y, lng: data.candidates[0].location.x } : null;
-    } catch (e) { return null; }
-}
-
-function renderRoute() {
-    markerLayer.clearLayers();
-    stops.forEach((s, i) => {
+function renderMapMarkers() {
+    markerLayer.clearLayers(); [cite: 68]
+    stops.forEach((s, i) => { [cite: 69]
         L.marker([s.lat, s.lng], { 
             icon: L.divIcon({ 
                 className:'custom-div-icon', 
-                html:`<div class="number-pin ${s.isRush ? 'rush-pin' : ''}">${i+1}</div>` 
+                html:`<div class="number-pin" style="background:${s.status==='completed'?'#28a745':'#0078ff'}">${i+1}</div>` 
             }) 
-        }).addTo(markerLayer);
+        }).addTo(markerLayer); [cite: 69]
     });
 }
 
 function renderSidebar() {
-    const list = document.getElementById("stop-list");
-    list.innerHTML = "";
-    stops.forEach((s, i) => {
-        const div = document.createElement("div");
-        div.className = `stop-card ${s.isRush ? 'rush-order' : ''}`;
-        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`;
-        div.onclick = () => openProfile(i);
-        list.appendChild(div);
+    const list = document.getElementById("stop-list"); [cite: 70]
+    list.innerHTML = ""; [cite: 70]
+    stops.forEach((s, i) => { [cite: 71]
+        const div = document.createElement("div"); [cite: 71]
+        div.className = "stop-card"; [cite: 71]
+        div.style.opacity = s.status === 'completed' ? '0.4' : '1';
+        div.innerHTML = `<b>${i+1}. ${s.company}</b><br><small>${s.address}</small>`; [cite: 71]
+        div.onclick = () => openProfile(i); [cite: 71]
+        list.appendChild(div); [cite: 71]
     });
 }
 
 function openProfile(i) {
-    currentStopIndex = i;
-    const s = stops[i];
-    document.getElementById('list-view').style.display = 'none';
-    document.getElementById('customer-profile').style.display = 'block';
-    document.getElementById('prof-name').innerText = s.company;
-    document.getElementById('prof-addr').innerText = s.address;
-    map.setView([s.lat, s.lng], 15);
+    currentStopIndex = i; [cite: 72]
+    const s = stops[i]; [cite: 72]
+    document.getElementById('list-view').style.display = 'none'; [cite: 72]
+    document.getElementById('customer-profile').style.display = 'block'; [cite: 72]
+    document.getElementById('prof-name').innerText = s.company; [cite: 73]
+    document.getElementById('prof-addr').innerText = s.address; [cite: 73]
+    clearSig();
+    map.setView([s.lat, s.lng], 16); [cite: 73]
 }
 
 function closeProfile() {
-    document.getElementById('list-view').style.display = 'block';
-    document.getElementById('customer-profile').style.display = 'none';
-}
-
-function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
-function switchTab(tabId) {
-    document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-}
-
-function openAddCustomerModal(name = "") {
-    document.getElementById('m-cust-name').value = name;
-    document.getElementById('global-modal-overlay').style.display = 'block';
-    document.getElementById('global-modal').style.display = 'block';
-}
-
-function closeGlobalModal() {
-    document.getElementById('global-modal-overlay').style.display = 'none';
-    document.getElementById('global-modal').style.display = 'none';
+    document.getElementById('list-view').style.display = 'block'; [cite: 74]
+    document.getElementById('customer-profile').style.display = 'none'; [cite: 74]
 }
 
 function submitLog(status) {
-    closeProfile();
-    alert("Logged: " + status);
-}
+    const s = stops[currentStopIndex];
+    const payload = {
+        routeName: document.getElementById('route-select').options[document.getElementById('route-select').selectedIndex].text,
+        customer: s.company,
+        address: s.address,
+        customerEmail: s.email,
+        status: status,
+        d18: document.getElementById('p-18l').value || 0,
+        r18: document.getElementById('p-18l-ret').value || 0,
+        dSm: document.getElementById('p-small').value || 0,
+        rSm: document.getElementById('p-small-ret').value || 0,
+        cs: document.getElementById('p-cases').value || 0,
+        receivedBy: document.getElementById('p-rec-by').value || "N/A",
+        notes: document.getElementById('p-notes').value || "None",
+        sig: canvas.toDataURL(),
+        timestamp: new Date().toLocaleString()
+    };
 
-function performGlobalSearch() { alert("Search initiated..."); }
-function triggerRushWorkflow() { alert("Building rush order..."); }
-function handleModalSubmit() { closeGlobalModal(); }
+    fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify(payload)
+    });
+
+    s.status = 'completed';
+    closeProfile();
+    renderSidebar();
+    renderMapMarkers();
+}
 </script>
 </body>
 </html>
