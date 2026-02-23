@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v11.0</title>
+    <title>Culligan Route - Professional v12.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -15,10 +15,10 @@
         .stop-card.rush-order { border-left: 8px solid #a335ee !important; background: #331d44 !important; }
         #customer-profile { display:none; padding:15px; background:#222; overflow-y:auto; height:100%; }
         .profile-group { margin-bottom:12px; }
-        .profile-group label { display:block; font-size:11px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
+        .profile-group label { display:block; font-size:10px; color:#0078ff; font-weight:bold; margin-bottom:4px; text-transform: uppercase;}
         .profile-group input, .profile-group textarea { width:100%; padding:8px; background:#333; border:1px solid #444; color:white; border-radius:4px; box-sizing:border-box; }
         
-        #sig-canvas { background:white; border-radius:4px; width:100%; height:180px; touch-action: none; border: 2px solid #555; cursor: crosshair; display: block;}
+        #sig-canvas { background:white; border-radius:4px; width:100%; height:160px; touch-action: none; border: 2px solid #555; cursor: crosshair; display: block;}
         
         .btn-del { width:100%; background:#28a745; color:white; border:none; padding:15px; border-radius:4px; cursor:pointer; font-weight:bold; margin-top:10px;}
         .btn-not { width:100%; background:#dc3545; color:white; border:none; padding:15px; border-radius:4px; cursor:pointer; font-weight:bold; margin-top:5px;}
@@ -28,9 +28,6 @@
         #map { flex:1; }
         .number-pin { color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
         
-        .animated-line { stroke-dasharray: 10, 10; animation: dash 3s linear infinite; }
-        @keyframes dash { to { stroke-dashoffset: -100; } }
-
         #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 95%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; overflow-y: auto;}
         #manager-panel.open { bottom: 0; }
         .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; position: sticky; top: 0; z-index: 10;}
@@ -46,32 +43,33 @@
     <div id="list-view">
         <div id="sidebar-header">
             <h3 style="margin:0">Route Stops</h3>
-            <p id="stop-count" style="font-size:12px; color:#aaa;">Ready</p>
-            <button id="start-route-btn" onclick="startDriverSession()" style="width:100%; padding:10px; background:#0078ff; color:white; border:none; margin-top:10px; display:none; cursor:pointer; font-weight:bold;">START ROUTE & LOG DRIVER</button>
+            <p id="status-display" style="font-size:12px; color:#aaa;">Ready</p>
+            <button id="start-route-btn" onclick="startDriverSession()" style="width:100%; padding:10px; background:#0078ff; color:white; border:none; margin-top:10px; display:none; cursor:pointer; font-weight:bold;">START ROUTE</button>
         </div>
         <div id="stop-list"></div>
     </div>
     
     <div id="customer-profile">
-        <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:10px; width:100%; margin-bottom:15px; cursor:pointer;">← RETURN TO LIST</button>
-        <h3 id="prof-name">Customer Name</h3>
-        <p id="prof-addr" style="font-size:12px; color:#0078ff; margin-top:-10px; font-weight:bold;"></p>
+        <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:10px; width:100%; margin-bottom:15px; cursor:pointer;">← RETURN</button>
+        <h3 id="prof-name" style="margin:0;"></h3>
+        <p id="prof-addr" style="font-size:11px; color:#0078ff; margin-bottom:15px;"></p>
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
             <div class="profile-group"><label>18L Delivered</label><input type="number" id="p-18l" value="0"></div>
+            <div class="profile-group"><label>18L Returns</label><input type="number" id="p-18l-ret" value="0"></div>
+            <div class="profile-group"><label>Sm Delivered</label><input type="number" id="p-sm-del" value="0"></div>
+            <div class="profile-group"><label>Sm Returns</label><input type="number" id="p-sm-ret" value="0"></div>
             <div class="profile-group"><label>Cases</label><input type="number" id="p-cases" value="0"></div>
+            <div class="profile-group"><label>Email Copy</label><input type="checkbox" id="p-send-email" checked style="width:20px;"></div>
         </div>
 
-        <div class="profile-group"><label>Driver Notes</label><textarea id="p-notes-display" rows="2" readonly style="background:#222; color:#ccc;"></textarea></div>
-
-        <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
+        <label style="font-size:11px; color:#0078ff; font-weight:bold;">CUSTOMER SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
-        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:8px; font-size:11px; cursor:pointer;">CLEAR</button>
+        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:8px; font-size:11px; cursor:pointer;">CLEAR SIG</button>
 
         <button class="btn-del" onclick="handleSubmission('DELIVERED')">COMPLETE DELIVERY</button>
         <div style="border-top: 1px solid #444; margin-top:10px; padding-top:10px;">
-            <label style="font-size:10px; color:#aaa;">REASON FOR SKIP (MANDATORY):</label>
-            <input type="text" id="p-fail-reason" placeholder="Must enter reason to skip..." style="width:100%; background:#333; color:white; padding:10px; border:1px solid #444; margin-bottom:5px;">
+            <input type="text" id="p-fail-reason" placeholder="Mandatory reason for skip..." style="width:100%; background:#333; color:white; padding:10px; border:1px solid #444; margin-bottom:5px;">
             <button class="btn-not" onclick="handleSubmission('NOT DELIVERED')">MARK NOT DELIVERED</button>
         </div>
     </div>
@@ -80,220 +78,134 @@
 <div id="main-view">
     <div id="controls">
         <select id="route-select" style="padding:8px; background:#333; color:white;">
-            <optgroup label="Week 1">
+            <optgroup label="Routes">
                 <option value="917509026">WEEK 1 MONDAY</option>
-                <option value="405991289">WEEK 1 TUESDAY</option>
-                <option value="405991289">WEEK 1 WEDNESDAY</option>
-                <option value="850217841">WEEK 1 THURSDAY</option>
-                <option value="524003696">WEEK 1 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 2">
-                <option value="1669161107">WEEK 2 MONDAY</option>
-                <option value="158782334">WEEK 2 TUESDAY</option>
-                <option value="534069449">WEEK 2 WEDNESDAY</option>
-                <option value="1664558192">WEEK 2 THURSDAY</option>
-                <option value="1943566050">WEEK 2 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 3">
-                <option value="922640253">WEEK 3 MONDAY</option>
-                <option value="1892780278">WEEK 3 TUESDAY</option>
-                <option value="1329388834">WEEK 3 WEDNESDAY</option>
-                <option value="692623993">WEEK 3 THURSDAY</option>
-                <option value="598312956">WEEK 3 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Week 4">
-                <option value="1528227290">WEEK 4 MONDAY</option>
-                <option value="774741269">WEEK 4 TUESDAY</option>
-                <option value="1776511227">WEEK 4 WEDNESDAY</option>
-                <option value="730189704">WEEK 4 THURSDAY</option>
-                <option value="1062369681">WEEK 4 FRIDAY</option>
-            </optgroup>
-            <optgroup label="Special">
-                <option value="458612538">VALLEYVIEW</option>
-                <option value="364553460">NORTH</option>
-                <option value="1909249906">DAWSON CREEK</option>
                 <option value="1773492755">SALT</option>
+                <option value="458612538">VALLEYVIEW</option>
             </optgroup>
         </select>
         <button onclick="loadRoute()" id="load-btn" style="padding:8px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">Load Route</button>
-        <div id="status-display" style="font-size:12px; color:#0078ff;">Ready</div>
-        <button onclick="toggleManager()" style="margin-left:auto; background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer;">MANAGER PANEL</button>
+        <button onclick="toggleManager()" style="margin-left:auto; background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer;">MANAGER</button>
     </div>
     <div id="map"></div>
 
     <div id="manager-panel">
         <div class="mgr-tabs">
             <button class="mgr-tab-btn active" onclick="switchTab('mgr-maint', this)">MAINTENANCE</button>
-            <button class="mgr-tab-btn" onclick="switchTab('mgr-reports', this)">TRIP REPORT & LOGS</button>
+            <button class="mgr-tab-btn" onclick="switchTab('mgr-reports', this)">END OF DAY</button>
             <button onclick="toggleManager()" style="margin-left:auto; background:none; border:none; color:red; font-size:24px; cursor:pointer;">&times;</button>
         </div>
         <div id="mgr-maint" class="mgr-content active">
-            <h4>Customer Maintenance</h4>
             <input type="text" id="m-search" oninput="runSearch()" placeholder="Search customer..." style="width:100%; padding:10px; background:#222; color:white;">
             <div id="search-list" style="margin-top:15px;"></div>
         </div>
         <div id="mgr-reports" class="mgr-content">
-            <h4>Live Trip Log</h4>
-            <div id="trip-log" style="background:#222; padding:15px; border:1px solid #444; font-family:monospace;"></div>
+            <button onclick="finalizeRoute()" style="width:100%; padding:20px; background:#0078ff; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">UPLOAD TRIP REPORT & SEND PDFs</button>
+            <div id="trip-log" style="background:#222; padding:15px; margin-top:20px; border:1px solid #444; font-family:monospace; font-size:12px;"></div>
         </div>
     </div>
 </div>
 
 <script>
-// --- DATABASE & DEPLOYMENT CONFIG ---
-const SHEET_ID = "1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyci_tFKmEpEKTk1GvVrL9q6_khMU2pXOoOchXoOqKCCH4AJke3eQnhSsxezi-YZJ29/exec"; 
-
-let map, markerLayer, routeLine, stops = [], tripLog = [], currentIdx = null, driverStart = null;
-let canvas, ctx, drawing = false;
+let map, markerLayer, stops = [], tripLog = [], currentIdx = null, drawing = false;
+let canvas, ctx;
 
 window.onload = () => {
     map = L.map("map").setView([55.1707, -118.7947], 11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     markerLayer = L.layerGroup().addTo(map);
-    routeLine = L.polyline([], {color: '#0078ff', weight: 4, className: 'animated-line'}).addTo(map);
     initSig();
 };
 
 function initSig() {
     canvas = document.getElementById('sig-canvas'); ctx = canvas.getContext('2d');
-    const res = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
-    res(); window.onresize = res;
-    const pos = (e) => { 
-        const r = canvas.getBoundingClientRect(); 
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-        return {x, y};
+    const getPos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - r.left, y: clientY - r.top };
     };
-    canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); const p = pos(e); ctx.moveTo(p.x, p.y); };
-    canvas.onmousemove = (e) => { if(!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
-    window.onmouseup = () => drawing = false;
-    canvas.ontouchstart = (e) => { drawing = true; ctx.beginPath(); const p = pos(e); ctx.moveTo(p.x, p.y); e.preventDefault(); };
-    canvas.ontouchmove = (e) => { if(!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); };
+    const start = (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); };
+    const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.lineWidth = 2; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
+    canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', () => drawing = false);
+    canvas.addEventListener('touchstart', start, {passive: false}); canvas.addEventListener('touchmove', move, {passive: false});
+    window.addEventListener('touchend', () => drawing = false);
 }
 
-function clearSig() { ctx.clearRect(0,0,canvas.width,canvas.height); }
+function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
-    const status = document.getElementById('status-display');
-    status.innerText = "PROCESSING FILE...";
-    stops = []; markerLayer.clearLayers();
-    
-    try {
-        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
-        const rows = (await res.text()).split('\n').slice(1);
-        
-        for(let r of rows) {
-            const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            if(c[3]) {
-                const addr = c[3].replace(/"/g,'');
-                status.innerText = `GEOCODING: ${c[2].substring(0,10)}...`;
-                const g = await (await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`)).json();
-                if(g.candidates.length) {
-                    stops.push({
-                        name: c[2].replace(/"/g,''), addr: addr, notes: c[6]||'',
-                        lat: g.candidates[0].location.y, lng: g.candidates[0].location.x,
-                        rush: c[0]?.toLowerCase().includes('rush'), status: 'pending', logs: {d18:0, cs:0}
-                    });
-                }
+    const res = await fetch(`https://docs.google.com/spreadsheets/d/1YPO88jWDyXMiJleawmd86r6asllpm6v4DWdnezEaqio/export?format=csv&gid=${gid}`);
+    const rows = (await res.text()).split('\n').slice(1);
+    stops = [];
+    for(let r of rows) {
+        const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        if(c[3]) {
+            const addr = c[3].replace(/"/g,'');
+            const g = await (await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(addr)}&maxLocations=1`)).json();
+            if(g.candidates.length) {
+                stops.push({ name: c[2].replace(/"/g,''), addr: addr, lat: g.candidates[0].location.y, lng: g.candidates[0].location.x, status: 'pending' });
             }
         }
-        status.innerText = `${stops.length} STOPS LOADED`;
-        document.getElementById('start-route-btn').style.display = 'block';
-        renderAll();
-    } catch(e) { status.innerText = "ERROR LOADING FILE"; }
+    }
+    document.getElementById('start-route-btn').style.display = 'block';
+    renderAll();
+}
+
+function startDriverSession() {
+    const time = new Date().toLocaleString();
+    tripLog.push(`START: ${time}`);
+    fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ status: "DRIVER_START", timestamp: time }) });
+    document.getElementById('start-route-btn').style.display = 'none';
+}
+
+function handleSubmission(type) {
+    const s = stops[currentIdx];
+    const reason = document.getElementById('p-fail-reason').value.trim();
+    if (type === 'NOT DELIVERED' && reason.length < 3) return alert("Enter reason.");
+
+    const payload = {
+        routeName: document.getElementById('route-select').options[document.getElementById('route-select').selectedIndex].text,
+        timestamp: new Date().toLocaleString(),
+        customer: s.name,
+        status: type,
+        d18: document.getElementById('p-18l').value,
+        r18: document.getElementById('p-18l-ret').value,
+        dSm: document.getElementById('p-sm-del').value,
+        rSm: document.getElementById('p-sm-ret').value,
+        cs: document.getElementById('p-cases').value,
+        notes: reason,
+        emailCustomer: document.getElementById('p-send-email').checked,
+        sig: canvas.toDataURL()
+    };
+
+    fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+    s.status = 'completed';
+    tripLog.push(`${payload.timestamp} - ${s.name} - ${type}`);
+    renderAll(); closeProfile(); updateReports();
+}
+
+function finalizeRoute() {
+    alert("Compiling PDFs and uploading Final Trip Log to Google Drive...");
+    fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ status: "ROUTE_COMPLETE", log: tripLog }) });
 }
 
 function renderAll() {
     const list = document.getElementById('stop-list'); list.innerHTML = "";
     markerLayer.clearLayers();
-    const activeCoords = [];
     stops.forEach((s, i) => {
-        const color = s.status === 'completed' ? '#28a745' : (s.rush ? '#a335ee' : '#0078ff');
+        const color = s.status === 'completed' ? '#28a745' : '#0078ff';
         const d = document.createElement('div');
-        d.className = `stop-card ${s.rush?'rush-order':''}`;
+        d.className = 'stop-card';
         d.style.opacity = s.status === 'completed' ? '0.4' : '1';
         d.innerHTML = `<b>${i+1}. ${s.name}</b><br><small>${s.addr}</small>`;
         d.onclick = () => openProfile(i);
         list.appendChild(d);
-        
-        const m = L.marker([s.lat, s.lng], {
-            icon: L.divIcon({html:`<div class="number-pin" style="background:${color}">${i+1}</div>`, className:''})
-        }).addTo(markerLayer);
-        m.bindTooltip(`<b>${s.name}</b><br>${s.addr}`);
-        m.on('click', ()=>openProfile(i));
-        
-        if(s.status === 'pending') activeCoords.push([s.lat, s.lng]);
+        L.marker([s.lat, s.lng], {icon: L.divIcon({html:`<div class="number-pin" style="background:${color}">${i+1}</div>`, className:''})}).addTo(markerLayer).on('click', ()=>openProfile(i));
     });
-    routeLine.setLatLngs(activeCoords);
-}
-
-function startDriverSession() {
-    driverStart = new Date().toLocaleString();
-    const routeName = document.getElementById('route-select').options[document.getElementById('route-select').selectedIndex].text;
-    tripLog.push(`--- ROUTE START: ${driverStart} ---`);
-    
-    fetch(WEB_APP_URL, {
-        method: "POST",
-        mode: "no-cors",
-        body: JSON.stringify({
-            routeName: routeName,
-            timestamp: driverStart,
-            customer: "SYSTEM",
-            status: "DRIVER_START",
-            notes: "Driver started route session."
-        })
-    });
-
-    document.getElementById('start-route-btn').style.display = 'none';
-    document.getElementById('status-display').innerText = "ROUTE ACTIVE";
-    updateReports();
-}
-
-function handleSubmission(type) {
-    const s = stops[currentIdx];
-    const timestamp = new Date().toLocaleString();
-    const reasonField = document.getElementById('p-fail-reason');
-    const reason = reasonField.value.trim();
-    
-    if (type === 'NOT DELIVERED' && reason.length < 3) {
-        alert("MANDATORY: You must enter a reason for skipping this stop.");
-        reasonField.style.border = "2px solid red";
-        return;
-    }
-
-    const routeSelect = document.getElementById('route-select');
-    const routeName = routeSelect.options[routeSelect.selectedIndex].text;
-    
-    s.status = 'completed';
-    s.logs = { 
-        d18: document.getElementById('p-18l').value || 0, 
-        cs: document.getElementById('p-cases').value || 0 
-    };
-    
-    const payload = {
-        routeName: routeName,
-        timestamp: timestamp,
-        customer: s.name,
-        status: type,
-        d18: s.logs.d18,
-        cs: s.logs.cs,
-        notes: type === 'NOT DELIVERED' ? reason : s.notes
-    };
-
-    fetch(WEB_APP_URL, {
-        method: "POST",
-        mode: "no-cors", 
-        body: JSON.stringify(payload)
-    }).catch(err => console.log("Logging error: ", err));
-
-    const logEntry = `[${timestamp}] ${s.name} | ${type} | 18L:${s.logs.d18} CS:${s.logs.cs}`;
-    tripLog.push(logEntry);
-    
-    renderAll();
-    closeProfile(); 
-    updateReports();
 }
 
 function openProfile(i) {
@@ -302,9 +214,6 @@ function openProfile(i) {
     document.getElementById('customer-profile').style.display = 'block';
     document.getElementById('prof-name').innerText = s.name;
     document.getElementById('prof-addr').innerText = s.addr;
-    document.getElementById('p-notes-display').value = s.notes;
-    document.getElementById('p-fail-reason').value = "";
-    document.getElementById('p-fail-reason').style.border = "1px solid #444";
     clearSig(); map.setView([s.lat, s.lng], 16);
 }
 
@@ -319,7 +228,7 @@ function switchTab(id, btn) {
 function runSearch() {
     const q = document.getElementById('m-search').value.toLowerCase();
     const res = stops.filter(s => s.name.toLowerCase().includes(q));
-    document.getElementById('search-list').innerHTML = res.map(r => `<div style="padding:10px; background:#333; margin-bottom:5px; border-left:4px solid #0078ff;">${r.name} - ${r.addr}</div>`).join('');
+    document.getElementById('search-list').innerHTML = res.map(r => `<div style="padding:10px; background:#333; margin-bottom:5px; border-left:4px solid #0078ff;">${r.name}</div>`).join('');
 }
 </script>
 </body>
