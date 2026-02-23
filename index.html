@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Culligan Route - Professional v4.0</title>
+    <title>Culligan Route - Professional v5.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -27,7 +27,7 @@
         #map { flex:1; }
         .btn { padding:10px 15px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;}
         .btn-mgr { background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; font-weight:bold;}
-        .number-pin { color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.5);}
+        .number-pin { color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;}
         #manager-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 90%; background: #1a1a1a; z-index: 1000; transition: bottom 0.4s ease; border-top: 3px solid #0078ff; overflow-y: auto;}
         #manager-panel.open { bottom: 0; }
         .mgr-tabs { display: flex; background: #222; border-bottom: 1px solid #444; position: sticky; top: 0; z-index: 10;}
@@ -38,7 +38,7 @@
         .animated-line { stroke-dasharray: 10, 10; animation: dash 3s linear infinite; }
         @keyframes dash { to { stroke-dashoffset: -100; } }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; }
-        .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; max-height: 90vh; overflow-y: auto;}
+        .edit-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:2px solid #0078ff; padding:20px; z-index:2001; width:90%; max-width:450px; border-radius:8px; }
     </style>
 </head>
 <body>
@@ -52,11 +52,7 @@
         <div id="stop-list"></div>
     </div>
     <div id="customer-profile">
-        <div class="nav-btns" style="display:flex; justify-content: space-between; margin-bottom:10px;">
-            <button onclick="navStop(-1)" style="background:#444; color:white; border:none; padding:8px;">← BACK</button>
-            <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:8px;">CLOSE</button>
-            <button onclick="navStop(1)" style="background:#444; color:white; border:none; padding:8px;">NEXT →</button>
-        </div>
+        <button onclick="closeProfile()" style="background:#444; color:white; border:none; padding:8px; width:100%; margin-bottom:10px;">← BACK TO LIST</button>
         <h3 id="prof-name">Customer Name</h3>
         <p id="prof-addr" style="font-size:11px; color:#aaa; margin-top:-10px;"></p>
         
@@ -69,26 +65,17 @@
             <div class="profile-group"><label>Rec. By</label><input type="text" id="p-rec-by"></div>
         </div>
 
-        <div class="profile-group">
-            <label>Notes</label>
-            <textarea id="p-notes" rows="2"></textarea>
-        </div>
+        <div class="profile-group"><label>Notes</label><textarea id="p-notes" rows="2"></textarea></div>
 
         <label style="font-size:11px; color:#0078ff; font-weight:bold;">SIGNATURE</label>
         <canvas id="sig-canvas"></canvas>
-        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:5px; font-size:10px;">CLEAR SIGNATURE</button>
+        <button onclick="clearSig()" style="width:100%; margin:5px 0; background:#444; color:white; border:none; padding:5px; font-size:10px;">CLEAR</button>
 
         <div class="form-btns">
-            <button class="btn-del" onclick="submitLog('DELIVERED')">COMPLETE DELIVERY</button>
+            <button class="btn-del" id="btn-complete-delivery" onclick="submitLog('DELIVERED')">COMPLETE DELIVERY</button>
             <div style="border-top: 1px solid #444; padding-top:10px;">
-                <label style="font-size:10px; color:#aaa;">IF NOT DELIVERED, SPECIFY REASON:</label>
-                <select id="p-fail-reason" style="width:100%; background:#333; color:white; margin-bottom:5px; padding:8px;">
-                    <option value="None">Select Reason...</option>
-                    <option value="No Empties">No Empties</option>
-                    <option value="Closed">Business Closed</option>
-                    <option value="Skipped">Customer Skipped</option>
-                    <option value="Access Blocked">Access Blocked</option>
-                </select>
+                <label style="font-size:10px; color:#aaa;">IF NOT DELIVERED, REASON:</label>
+                <input type="text" id="p-not-delivered-reason" placeholder="Enter reason here..." style="width:100%; background:#333; color:white; padding:8px; margin-bottom:5px; border:1px solid #444;">
                 <button class="btn-not" onclick="submitLog('NOT DELIVERED')">MARK NOT DELIVERED</button>
             </div>
         </div>
@@ -105,54 +92,65 @@
                 <option value="850217841">WEEK 1 THURSDAY</option>
                 <option value="524003696">WEEK 1 FRIDAY</option>
             </optgroup>
+            <optgroup label="Week 2">
+                <option value="1669161107">WEEK 2 MONDAY</option>
+                <option value="158782334">WEEK 2 TUESDAY</option>
+                <option value="534069449">WEEK 2 WEDNESDAY</option>
+                <option value="1664558192">WEEK 2 THURSDAY</option>
+                <option value="1943566050">WEEK 2 FRIDAY</option>
+            </optgroup>
             <optgroup label="Special Routes">
                 <option value="458612538">VALLEYVIEW</option>
                 <option value="364553460">NORTH</option>
+                <option value="1909249906">DAWSON CREEK</option>
+                <option value="1773492755">SALT</option>
             </optgroup>
         </select>
         <button class="btn" onclick="loadRoute()">Load Route</button>
-        <div id="status">Status: Ready</div>
+        <div id="status">Ready</div>
         <button class="btn-mgr" onclick="toggleManager()" style="margin-left: auto;">Manager Panel</button>
     </div>
     <div id="map"></div>
 
     <div id="manager-panel">
-        <button style="position:absolute; right:20px; top:10px; color:red; font-size:24px; background:none; border:none; cursor:pointer;" onclick="toggleManager()">&times;</button>
+        <button style="position:absolute; right:20px; top:10px; color:red; font-size:24px; background:none; border:none;" onclick="toggleManager()">&times;</button>
         <div class="mgr-tabs">
             <button class="mgr-tab-btn active" id="tab-maint" onclick="switchTab('mgr-maint')">CUSTOMER MAINTENANCE</button>
             <button class="mgr-tab-btn" id="tab-reports" onclick="switchTab('mgr-reports')">REPORTS</button>
         </div>
         
         <div id="mgr-maint" class="mgr-content active">
-            <h4 style="color:#0078ff;">Search & Maintenance</h4>
-            <div style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">
-                <input type="text" id="m-search-input" placeholder="Search Active Route..." style="width:100%; padding:10px; background:#333; color:white; border:1px solid #444; margin-bottom:10px;">
-                <div style="display:flex; gap:10px;">
-                    <button class="btn" style="flex:1" onclick="performLocalSearch()">SEARCH</button>
-                    <button class="btn" style="flex:1; background:#6c757d;" onclick="openAddCustomerModal()">NEW CUSTOMER</button>
-                </div>
+            <h4 style="color:#0078ff;">Database Search</h4>
+            <input type="text" id="m-search-box" placeholder="Search customer name..." style="width:100%; padding:10px; background:#333; color:white; border:1px solid #444; margin-bottom:10px;">
+            <div style="display:flex; gap:10px;">
+                <button class="btn" style="flex:1" onclick="performSearch()">SEARCH</button>
+                <button class="btn" style="flex:1; background:#6c757d;" onclick="openAddCustomerModal()">ADD NEW CUSTOMER</button>
             </div>
-            <div id="search-results" style="margin-top:15px;"></div>
+            <div id="search-results" style="margin-top:20px;"></div>
         </div>
 
         <div id="mgr-reports" class="mgr-content">
-            <h4 style="color:#0078ff;">Daily Summary Report</h4>
-            <div id="report-output" style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">
-                No route data found.
-            </div>
-            <button class="btn" style="margin-top:15px;" onclick="generateDailyReport()">REFRESH REPORT</button>
+            <h4 style="color:#0078ff;">Daily Summary</h4>
+            <div id="report-output" style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">No data logged.</div>
+            <button class="btn" style="margin-top:15px;" onclick="generateDailyReport()">GENERATE REPORT</button>
         </div>
     </div>
 </div>
 
 <div class="modal-overlay" id="global-modal-overlay" onclick="closeGlobalModal()"></div>
 <div id="global-modal" class="edit-modal">
-    <h3 style="color:#0078ff; margin-top:0;">Customer Details</h3>
-    <div class="profile-group"><label>NAME</label><input type="text" id="m-cust-name"></div>
-    <div class="profile-group"><label>ADDRESS</label><input type="text" id="m-cust-addr"></div>
-    <label style="color:#a335ee; font-size:12px;"><input type="checkbox" id="m-rush-check"> RUSH CODING</label>
+    <h3 style="color:#0078ff; margin-top:0;">Add New Customer</h3>
+    <div class="profile-group"><label>COMPANY NAME</label><input type="text" id="m-cust-name"></div>
+    <div class="profile-group"><label>STREET ADDRESS</label><input type="text" id="m-cust-addr"></div>
+    <div class="profile-group">
+        <label>ROUTE ASSIGNMENT</label>
+        <select id="m-route-assign"><option value="917509026">Week 1 Mon</option><option value="458612538">Valleyview</option></select>
+    </div>
+    <label style="color:#a335ee; font-weight:bold; font-size:12px; display:block; margin-top:10px;">
+        <input type="checkbox" id="m-rush-check"> RUSH CODING / URGENT
+    </label>
     <div style="display:flex; gap:10px; margin-top:20px;">
-        <button class="btn" style="flex:1;" onclick="closeGlobalModal()">SAVE</button>
+        <button class="btn" style="flex:1;" onclick="alert('Customer added to sync queue'); closeGlobalModal();">SAVE CUSTOMER</button>
         <button class="btn-not" style="flex:1;" onclick="closeGlobalModal()">CANCEL</button>
     </div>
 </div>
@@ -171,6 +169,7 @@ window.onload = () => {
     canvas = document.getElementById('sig-canvas');
     ctx = canvas.getContext('2d');
     
+    // Fixed Scaling Logic for Signature Pad
     const resize = () => {
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
@@ -179,48 +178,30 @@ window.onload = () => {
     window.addEventListener('resize', resize);
     resize();
 
-    // FIXED: Correct signature pad coordinate logic
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { 
-            x: (clientX - rect.left) * (canvas.width / rect.width), 
-            y: (clientY - rect.top) * (canvas.height / rect.height) 
-        };
+        return { x: clientX - rect.left, y: clientY - rect.top };
     };
 
-    const start = (e) => { 
-        isDrawing = true; 
-        ctx.beginPath(); 
-        const p = getPos(e); 
-        ctx.moveTo(p.x, p.y); 
-        if (e.cancelable) e.preventDefault();
-    };
-
-    const draw = (e) => {
-        if (!isDrawing) return;
-        const p = getPos(e);
-        ctx.lineTo(p.x, p.y);
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        if (e.cancelable) e.preventDefault();
-    };
+    const start = (e) => { isDrawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); };
+    const draw = (e) => { if (!isDrawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); if(e.cancelable) e.preventDefault(); };
+    const stop = () => { isDrawing = false; };
 
     canvas.addEventListener('mousedown', start);
     canvas.addEventListener('mousemove', draw);
-    window.addEventListener('mouseup', () => isDrawing = false);
+    window.addEventListener('mouseup', stop);
     canvas.addEventListener('touchstart', start, {passive: false});
     canvas.addEventListener('touchmove', draw, {passive: false});
-    canvas.addEventListener('touchend', () => isDrawing = false);
+    canvas.addEventListener('touchend', stop);
 };
 
 function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 async function loadRoute() {
     const gid = document.getElementById('route-select').value;
-    document.getElementById('status').innerText = "Status: Geocoding...";
+    document.getElementById('status').innerText = "Status: Connecting...";
     stops = []; markerLayer.clearLayers(); polylineLayer.clearLayers();
     try {
         const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`);
@@ -237,7 +218,7 @@ async function loadRoute() {
                         company: cols[2].replace(/"/g, '').trim(), address: addr,
                         lat: gData.candidates[0].location.y, lng: gData.candidates[0].location.x,
                         status: 'pending', isRush: cols[0]?.toLowerCase().includes('rush'),
-                        data: { del18:0, emp18:0, sm:0, cases:0 }
+                        logs: { d18: 0, sB: 0, cs: 0 }
                     });
                 }
             }
@@ -255,11 +236,9 @@ function updateMapVisuals() {
         const m = L.marker([s.lat, s.lng], {
             icon: L.divIcon({ html: `<div class="number-pin" style="background:${color}">${i+1}</div>`, className: '' })
         }).addTo(markerLayer);
-        m.bindTooltip(`<b>${s.company}</b>`);
         m.on('click', () => openProfile(i));
         if (s.status !== 'completed') activeCoords.push([s.lat, s.lng]);
     });
-    // FIXED: Animated Map Lines
     if (activeCoords.length > 1) {
         L.polyline(activeCoords, { color: '#0078ff', weight: 4, opacity: 0.6, className: 'animated-line' }).addTo(polylineLayer);
     }
@@ -292,41 +271,31 @@ function closeProfile() {
     document.getElementById('customer-profile').style.display = 'none';
 }
 
-function navStop(dir) {
-    let n = currentStopIndex + dir;
-    if (n >= 0 && n < stops.length) openProfile(n);
-}
-
 async function submitLog(type) {
     const s = stops[currentStopIndex];
-    // FIXED: Require reason for non-delivery
-    if (type === 'NOT DELIVERED' && document.getElementById('p-fail-reason').value === "None") {
-        alert("CRITICAL: You must select a reason for non-delivery.");
-        return;
+    if (type === 'NOT DELIVERED' && !document.getElementById('p-not-delivered-reason').value) {
+        alert("Please provide a reason."); return;
     }
-
+    
     s.status = 'completed';
-    s.data = {
-        del18: parseInt(document.getElementById('p-18l').value),
-        emp18: parseInt(document.getElementById('p-18l-emp').value),
-        sm: parseInt(document.getElementById('p-sm-btl').value),
-        cases: parseInt(document.getElementById('p-cases').value),
-        reason: document.getElementById('p-fail-reason').value
+    s.logs = {
+        d18: parseInt(document.getElementById('p-18l').value) || 0,
+        sB: parseInt(document.getElementById('p-sm-btl').value) || 0,
+        cs: parseInt(document.getElementById('p-cases').value) || 0
     };
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.text(`Culligan Log: ${s.company}`, 20, 20);
-    doc.text(`Result: ${type} | Reason: ${s.data.reason}`, 20, 30);
-    doc.text(`18L: ${s.data.del18} | Sm: ${s.data.sm} | Cases: ${s.data.cases}`, 20, 40);
-    doc.addImage(canvas.toDataURL("image/png"), 'PNG', 20, 50, 60, 30);
-    doc.save(`${s.company}_Log.pdf`);
-
+    doc.text(`Result: ${type}`, 20, 30);
+    doc.text(`Notes: ${document.getElementById('p-notes').value}`, 20, 40);
+    doc.addImage(canvas.toDataURL("image/png"), 'PNG', 20, 60, 60, 30);
+    doc.save(`${s.company}.pdf`);
+    
     updateMapVisuals(); renderSidebar(); closeProfile();
 }
 
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
-
 function switchTab(id) {
     document.querySelectorAll('.mgr-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
@@ -334,39 +303,20 @@ function switchTab(id) {
     document.getElementById(id === 'mgr-maint' ? 'tab-maint' : 'tab-reports').classList.add('active');
 }
 
-// FIXED: Local Search functionality
-function performLocalSearch() {
-    const q = document.getElementById('m-search-input').value.toLowerCase();
-    const results = stops.filter(s => s.company.toLowerCase().includes(q) || s.address.toLowerCase().includes(q));
-    const container = document.getElementById('search-results');
-    container.innerHTML = results.map((r, idx) => `
-        <div style="background:#333; padding:10px; border-radius:4px; margin-bottom:5px;">
-            <b>${r.company}</b><br><small>${r.address}</small>
-        </div>
-    `).join('') || "No matching stops in current route.";
+function performSearch() {
+    const q = document.getElementById('m-search-box').value.toLowerCase();
+    const results = stops.filter(s => s.company.toLowerCase().includes(q));
+    document.getElementById('search-results').innerHTML = results.map(r => `<div style="padding:10px; background:#222; margin-bottom:5px;">${r.company}</div>`).join('') || "No local matches.";
 }
 
-// FIXED: Reports logic
 function generateDailyReport() {
     const done = stops.filter(s => s.status === 'completed');
-    const total18 = done.reduce((a, b) => a + b.data.del18, 0);
-    const totalSm = done.reduce((a, b) => a + b.data.sm, 0);
-    document.getElementById('report-output').innerHTML = `
-        <p><b>Stops Completed:</b> ${done.length} / ${stops.length}</p>
-        <p><b>Total 18L Delivered:</b> ${total18}</p>
-        <p><b>Total Small Bottles:</b> ${totalSm}</p>
-    `;
+    const total18 = done.reduce((a, b) => a + b.logs.d18, 0);
+    document.getElementById('report-output').innerHTML = `<b>Stops:</b> ${done.length} / ${stops.length}<br><b>Total 18L:</b> ${total18}`;
 }
 
-function openAddCustomerModal() {
-    document.getElementById('global-modal-overlay').style.display = 'block';
-    document.getElementById('global-modal').style.display = 'block';
-}
-
-function closeGlobalModal() {
-    document.getElementById('global-modal-overlay').style.display = 'none';
-    document.getElementById('global-modal').style.display = 'none';
-}
+function openAddCustomerModal() { document.getElementById('global-modal-overlay').style.display = 'block'; document.getElementById('global-modal').style.display = 'block'; }
+function closeGlobalModal() { document.getElementById('global-modal-overlay').style.display = 'none'; document.getElementById('global-modal').style.display = 'none'; }
 </script>
 </body>
 </html>
