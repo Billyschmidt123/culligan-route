@@ -1001,6 +1001,7 @@ function exportToCSV() {
     }
 }
 
+<script>
 function toggleManager() { document.getElementById('manager-panel').classList.toggle('open'); }
 function switchTab(e, id) {
     document.querySelectorAll('.mgr-tab-btn').forEach(b => b.classList.remove('active'));
@@ -1016,6 +1017,8 @@ function showToast(msg, type = 'success') {
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3000);
 }
+</script>
+
 <script src="online-sync.js"></script>
 </body>
 </html>
