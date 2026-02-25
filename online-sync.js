@@ -1,7 +1,7 @@
 // ===============================
 // Online Sync Configuration
 // ===============================
-const API_URL = "https://script.google.com/macros/s/REPLACE_WITH_YOUR_DEPLOYED_URL/exec";
+const API_URL = "https://script.google.com/macros/library/d/1D5UwgvCOBcBcTFC5Vvsr_h2SnyrhN3HA_lelm-iVy0UdhVhk5pTuegnK/59";
 
 // ===============================
 // Core helper: send payload to Apps Script
