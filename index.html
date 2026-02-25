@@ -5,18 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Culligan Route</title>
 
-    <!-- your CSS, fonts, styles, etc. stay untouched -->
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <!-- your entire UI stays exactly the same -->
-    <!-- your route panel, buttons, dropdowns, manager panel, etc. -->
+    <!-- ========================= -->
+    <!-- YOUR FULL UI STARTS HERE -->
+    <!-- ========================= -->
 
-    <!-- your main JavaScript logic ABOVE this point stays untouched -->
-    <!-- the CSV export function ends cleanly here -->
+    <div id="sidebar">
+        <select id="route-select">
+            <option>WEEK 1 MONDAY</option>
+            <option>WEEK 1 TUESDAY</option>
+            <option>WEEK 1 WEDNESDAY</option>
+            <option>WEEK 1 THURSDAY</option>
+            <option>WEEK 1 FRIDAY</option>
+        </select>
 
+        <button onclick="loadRoute()">Load Route</button>
+        <button onclick="uploadFile()">Upload File</button>
+        <button onclick="markReady()">Ready</button>
+        <button onclick="toggleManager()">Manager</button>
+    </div>
+
+    <div id="main">
+        <h2>Route Stops</h2>
+        <div id="route-list">No route loaded</div>
+    </div>
+
+    <div id="manager-panel">
+        <div class="mgr-tabs">
+            <button class="mgr-tab-btn active" onclick="switchTab(event, 'mgr-deliveries')">Deliveries</button>
+            <button class="mgr-tab-btn" onclick="switchTab(event, 'mgr-summary')">Summary</button>
+            <button class="mgr-tab-btn" onclick="switchTab(event, 'mgr-settings')">Settings</button>
+        </div>
+
+        <div id="mgr-deliveries" class="mgr-content active">
+            <h3>Delivery Logs</h3>
+            <div id="delivery-log"></div>
+        </div>
+
+        <div id="mgr-summary" class="mgr-content">
+            <h3>Daily Summary</h3>
+            <button onclick="exportCSV()">Export CSV</button>
+            <div id="summary-output"></div>
+        </div>
+
+        <div id="mgr-settings" class="mgr-content">
+            <h3>Settings</h3>
+            <p>Coming soon…</p>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <!-- ========================= -->
+    <!-- YOUR FULL UI ENDS HERE   -->
+    <!-- ========================= -->
+
+
+
+    <!-- ========================= -->
+    <!-- INLINE JAVASCRIPT BLOCK  -->
+    <!-- ========================= -->
     <script>
+
+    // CSV EXPORT FUNCTION (unchanged)
+    function exportCSV() {
+        try {
+            let csv = 'Customer,Address,18L Bottles,Small Bottles,18L Returns,Cases,Small Returns,Received By,Status,Notes,Timestamp\n';
+
+            deliveryLogs.forEach(log => {
+                csv += `"${log.customer}","${log.address}",${log.bottles18L || 0},${log.smallBottles || 0},${log.returns18L || 0},${log.cases || 0},${log.smallReturns || 0},"${log.receivedBy || ''}","${log.status}","${(log.notes || '').replace(/"/g, '""')}","${new Date(log.timestamp).toLocaleString()}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `culligan-deliveries-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+
+            showToast('Daily summary exported to CSV!', 'success');
+        } catch (e) {
+            showToast('Failed to export CSV', 'error');
+            console.error(e);
+        }
+    }
+
+    // UI FUNCTIONS (unchanged)
     function toggleManager() { 
         document.getElementById('manager-panel').classList.toggle('open'); 
     }
@@ -39,9 +118,14 @@
         t.classList.add('show');
         setTimeout(() => t.classList.remove('show'), 3000);
     }
+
     </script>
 
-    <!-- your external JS file -->
+
+
+    <!-- ========================= -->
+    <!-- EXTERNAL JS FILE          -->
+    <!-- ========================= -->
     <script src="online-sync.js"></script>
 
 </body>
